@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "design_version": "design-v0",
+  "canvas": {"width": 1920, "height": 1080},
+  "colors": {
+    "background": "#07111F",
+    "surface": "#10243B",
+    "text": "#F4F7FB",
+    "muted": "#9CB0C7",
+    "accent": "#53D4FF",
+    "accent_2": "#FFB45B"
+  },
+  "fonts": {
+    "display": "Microsoft YaHei, PingFang SC, sans-serif",
+    "body": "Microsoft YaHei, PingFang SC, sans-serif"
+  },
+  "spacing": {"safe_x": 96, "safe_y": 72},
+  "radii": {"panel": 28, "pill": 999},
+  "visual_language": "Replace after visual sample approval"
+}

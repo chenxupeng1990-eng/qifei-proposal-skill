@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "model_policy": "Codex built-in Image2 only; do not switch models when unavailable",
+  "assets": [
+    {
+      "asset_id": "demo-hero",
+      "status": "generated",
+      "file": "assets/image2/demo-hero.png",
+      "purpose": "cover and visual continuity"
+    },
+    {
+      "asset_id": "demo-daily-breakfast",
+      "status": "prompt_only_after_timeout",
+      "purpose": "split-layout lifestyle scene",
+      "prompt": "Cinematic editorial photograph of a healthy Chinese couple in their late 50s having a calm everyday breakfast in a refined contemporary apartment, with their adult daughter naturally joining them and placing an unbranded glass of milk on the table; medium-wide landscape frame; soft early-morning window light; cream, warm wood, muted navy and subtle amber; no text, logos, branded packaging, medical props or watermark."
+    },
+    {
+      "asset_id": "demo-retention-element",
+      "status": "prompt_only_after_timeout",
+      "purpose": "candidate transparent PNG element; requires human approval before company library promotion",
+      "prompt": "A single elegant mineral-retention lattice made of translucent midnight-blue cells with restrained warm-gold cores and small cyan particles, isolated on a perfectly flat solid #00ff00 chroma-key background; centered, generous padding, crisp edges, no shadow, no reflection, no text, no logo, do not use #00ff00 in the subject."
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "project_id": "{{PROJECT_ID}}",
+  "project_name": "{{PROJECT_NAME}}",
+  "proposal_owner": "{{OWNER}}",
+  "created_at": "{{CREATED_AT}}",
+  "phase": "intake",
+  "content_freeze_id": null,
+  "design_version": null,
+  "approvals": {
+    "materials_scope": {"approved": false, "by": null, "at": null, "record_id": null},
+    "requirements": {"approved": false, "by": null, "at": null, "record_id": null},
+    "strategy": {"approved": false, "by": null, "at": null, "record_id": null},
+    "outline": {"approved": false, "by": null, "at": null, "record_id": null},
+    "project_agents": {"approved": false, "by": null, "at": null, "record_id": null},
+    "full_redteam": {"approved": false, "by": null, "at": null, "record_id": null},
+    "content_freeze": {"approved": false, "by": null, "at": null, "record_id": null},
+    "visual_direction": {"approved": false, "by": null, "at": null, "record_id": null},
+    "visual_sample": {"approved": false, "by": null, "at": null, "record_id": null},
+    "design": {"approved": false, "by": null, "at": null, "record_id": null},
+    "generation_ready": {"approved": false, "by": null, "at": null, "record_id": null},
+    "content_qa": {"approved": false, "by": null, "at": null, "record_id": null},
+    "visual_qa": {"approved": false, "by": null, "at": null, "record_id": null}
+  },
+  "chapters": [],
+  "reopen_log": []
+}

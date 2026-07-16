@@ -1,0 +1,107 @@
+{
+  "schema_version": "1.0",
+  "project_id": "qfp-visual-demo",
+  "project_name": "祈飞提案生成层视觉Demo",
+  "proposal_owner": "总悟",
+  "created_at": "2026-07-16T00:00:00+08:00",
+  "phase": "export",
+  "content_freeze_id": "demo-freeze-v1",
+  "design_version": "design-v1",
+  "approvals": {
+    "materials_scope": {
+      "approved": true,
+      "by": "总悟",
+      "at": "2026-07-16T00:00:00+08:00",
+      "record_id": "demo-materials"
+    },
+    "requirements": {
+      "approved": true,
+      "by": "总悟",
+      "at": "2026-07-16T00:00:00+08:00",
+      "record_id": "demo-requirements"
+    },
+    "strategy": {
+      "approved": true,
+      "by": "总悟",
+      "at": "2026-07-16T00:00:00+08:00",
+      "record_id": "demo-strategy"
+    },
+    "outline": {
+      "approved": true,
+      "by": "总悟",
+      "at": "2026-07-16T00:00:00+08:00",
+      "record_id": "demo-outline"
+    },
+    "project_agents": {
+      "approved": true,
+      "by": "总悟",
+      "at": "2026-07-16T00:00:00+08:00",
+      "record_id": "demo-agents"
+    },
+    "full_redteam": {
+      "approved": true,
+      "by": "总悟",
+      "at": "2026-07-16T00:00:00+08:00",
+      "record_id": "demo-redteam"
+    },
+    "content_freeze": {
+      "approved": true,
+      "by": "总悟",
+      "at": "2026-07-16T14:18:41+08:00",
+      "record_id": "demo-freeze-v1"
+    },
+    "visual_direction": {
+      "approved": true,
+      "by": "总悟",
+      "at": "2026-07-16T00:00:00+08:00",
+      "record_id": "demo-visual-direction"
+    },
+    "visual_sample": {
+      "approved": true,
+      "by": "总悟",
+      "at": "2026-07-16T00:00:00+08:00",
+      "record_id": "demo-visual-sample"
+    },
+    "design": {
+      "approved": true,
+      "by": "总悟",
+      "at": "2026-07-16T00:00:00+08:00",
+      "record_id": "demo-design"
+    },
+    "generation_ready": {
+      "approved": true,
+      "by": "总悟",
+      "at": "2026-07-16T00:00:00+08:00",
+      "record_id": "demo-generation"
+    },
+    "content_qa": {
+      "approved": true,
+      "by": "总悟",
+      "at": "2026-07-16T14:30:00+08:00",
+      "record_id": "demo-content-qa"
+    },
+    "visual_qa": {
+      "approved": true,
+      "by": "总悟",
+      "at": "2026-07-16T14:30:00+08:00",
+      "record_id": "demo-visual-qa"
+    }
+  },
+  "chapters": [
+    {
+      "chapter_id": "DEMO",
+      "slides": [
+        "D01",
+        "D02",
+        "D03",
+        "D04",
+        "D05"
+      ],
+      "manuscript_confirmed": true,
+      "confirmation_record_id": "demo-pages-confirmed",
+      "redteam_passed": true,
+      "redteam_report": "reviews/redteam/DEMO.json"
+    }
+  ],
+  "reopen_log": []
+}

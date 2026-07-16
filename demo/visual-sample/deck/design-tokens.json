@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "design_version": "design-v1",
+  "canvas": {"width": 1920, "height": 1080},
+  "colors": {
+    "background": "#040B16",
+    "surface": "#0C2138",
+    "text": "#F3F7FC",
+    "muted": "#9DB2C8",
+    "accent": "#59D7FF",
+    "accent_2": "#F1B65A"
+  },
+  "fonts": {
+    "display": "Microsoft YaHei, PingFang SC, sans-serif",
+    "body": "Microsoft YaHei, PingFang SC, sans-serif"
+  },
+  "spacing": {"safe_x": 104, "safe_y": 76},
+  "radii": {"panel": 30, "pill": 999},
+  "visual_language": "Midnight navy, cool cyan explanation signals, restrained amber retention signals, cinematic transparent materials"
+}

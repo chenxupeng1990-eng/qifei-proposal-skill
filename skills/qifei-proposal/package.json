@@ -1,0 +1,15 @@
+{
+  "name": "qifei-proposal-runtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "review": "node scripts/serve_review.mjs",
+    "export": "node scripts/export_deck.mjs"
+  },
+  "dependencies": {
+    "pdf-lib": "^1.17.1",
+    "playwright-core": "^1.60.0",
+    "pptxgenjs": "^4.0.1"
+  }
+}
