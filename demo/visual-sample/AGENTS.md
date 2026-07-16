@@ -6,7 +6,7 @@
 - Proposal Owner：总悟
 - 类型：隔离视觉与生成链路测试
 - 客户：虚构熟龄营养项目
-- 范围：只验证内容冻结、Image2/HTML 统一、批注、PNG/PDF/PPT 导出
+- 范围：只验证内容冻结、Image2/HTML 统一、Codex 浏览器原生评论、PNG/PDF/PPT 导出
 - 禁止：引用或修改伊利正式提案内容
 - 提案策划书：`content/proposal-brief.md`
 - 品牌视觉依据：`DEMO-BRAND-001`，见 `inputs/brand-official/demo-brand-reference.svg`

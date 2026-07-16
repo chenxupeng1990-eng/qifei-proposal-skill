@@ -21,6 +21,7 @@ LEAK_PATTERN = re.compile(
 HTML_PATTERN = re.compile(r"<\s*/?\s*[a-z][^>]*>", re.IGNORECASE)
 REMOTE_PATTERN = re.compile(r"^(?:https?:|file:|data:)", re.IGNORECASE)
 WINDOWS_ABSOLUTE = re.compile(r"^[A-Za-z]:[\\/]")
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -83,6 +84,48 @@ def media_sources(slide: dict[str, Any]) -> list[tuple[str, str]]:
     return sources
 
 
+def transparent_media(slide: dict[str, Any]) -> list[tuple[str, str, str]]:
+    sources: list[tuple[str, str, str]] = []
+    visual = slide.get("visual")
+    if isinstance(visual, dict) and visual.get("transparent") is True and isinstance(visual.get("src"), str):
+        sources.append(("visual.src", visual["src"].strip(), str(visual.get("slot_id") or "").strip()))
+    for index, block in enumerate(slide.get("blocks") or []):
+        if isinstance(block, dict) and block.get("type") == "image" and block.get("transparent") is True and isinstance(block.get("src"), str):
+            sources.append((f"blocks[{index}].src", block["src"].strip(), str(block.get("slot_id") or "").strip()))
+    return sources
+
+
+def png_has_alpha(path: Path) -> bool:
+    try:
+        with path.open("rb") as handle:
+            if handle.read(8) != PNG_SIGNATURE:
+                return False
+            color_type: int | None = None
+            while True:
+                length_bytes = handle.read(4)
+                if len(length_bytes) != 4:
+                    return False
+                length = int.from_bytes(length_bytes, "big")
+                chunk_type = handle.read(4)
+                data = handle.read(length)
+                if len(data) != length or len(handle.read(4)) != 4:
+                    return False
+                if chunk_type == b"IHDR":
+                    if len(data) < 10:
+                        return False
+                    color_type = data[9]
+                    if color_type in {4, 6}:
+                        return True
+                elif chunk_type == b"tRNS":
+                    return True
+                elif chunk_type == b"IDAT":
+                    return False
+                elif chunk_type == b"IEND":
+                    return False
+    except OSError:
+        return False
+
+
 def valid_local_media(project: Path, src: str) -> str | None:
     if not src:
         return "media source is empty"
@@ -118,6 +161,7 @@ def validate_deck(project: Path) -> list[str]:
     try:
         deck = load_json(project / "deck" / "deck-spec.json")
         contracts_doc = load_json(project / "deck" / "slide-contracts.json")
+        design_tokens = load_json(project / "deck" / "design-tokens.json")
         known_evidence = evidence_ids(project)
     except ValueError as exc:
         return [str(exc)]
@@ -127,6 +171,13 @@ def validate_deck(project: Path) -> list[str]:
             errors.append(f"deck.{key} is required")
 
     contracts = contracts_doc.get("layouts") if isinstance(contracts_doc.get("layouts"), dict) else {}
+    alpha_tokens = design_tokens.get("transparent_png") if isinstance(design_tokens.get("transparent_png"), dict) else {}
+    approved_alpha_dir = str(alpha_tokens.get("approved_dir") or "assets/approved/alpha").strip().rstrip("/") + "/"
+    alpha_slots = {
+        str(item.get("slot_id"))
+        for item in alpha_tokens.get("slots") or []
+        if isinstance(item, dict) and item.get("slot_id")
+    }
     slides = deck.get("slides") if isinstance(deck.get("slides"), list) else []
     if not slides:
         errors.append("deck.slides must contain at least one slide")
@@ -183,6 +234,7 @@ def validate_deck(project: Path) -> list[str]:
                     errors.append(f"{scope}: blocks[{block_index}] has {count} items, max {max_items} for {layout}")
 
         sources = media_sources(slide)
+        alpha_sources = transparent_media(slide)
         media_slots = contract.get("media_slots")
         if isinstance(media_slots, int) and len(sources) > media_slots:
             errors.append(f"{scope}: {len(sources)} media item(s) exceed {layout}.media_slots={media_slots}")
@@ -190,6 +242,25 @@ def validate_deck(project: Path) -> list[str]:
             problem = valid_local_media(project, src)
             if problem:
                 errors.append(f"{scope}.{field}: {problem}")
+
+        transparent_slots = contract.get("transparent_png_slots")
+        if isinstance(transparent_slots, int) and len(alpha_sources) > transparent_slots:
+            errors.append(f"{scope}: {len(alpha_sources)} transparent PNG item(s) exceed {layout}.transparent_png_slots={transparent_slots}")
+        for field, src, slot_id in alpha_sources:
+            if not slot_id:
+                errors.append(f"{scope}.{field}: transparent PNG requires slot_id from DESIGN.md")
+            elif slot_id not in alpha_slots:
+                errors.append(f"{scope}.{field}: transparent PNG uses unknown design slot_id {slot_id!r}")
+            problem = valid_local_media(project, src)
+            if problem:
+                continue
+            if not src.startswith(approved_alpha_dir):
+                errors.append(f"{scope}.{field}: transparent PNG must use an approved asset under {approved_alpha_dir}")
+            target = project / Path(*PurePosixPath(src).parts)
+            if target.suffix.lower() != ".png":
+                errors.append(f"{scope}.{field}: transparent visual must be a PNG file")
+            elif not png_has_alpha(target):
+                errors.append(f"{scope}.{field}: transparent PNG does not contain an alpha channel")
 
         slide_evidence = slide.get("evidence_ids")
         if not isinstance(slide_evidence, list):

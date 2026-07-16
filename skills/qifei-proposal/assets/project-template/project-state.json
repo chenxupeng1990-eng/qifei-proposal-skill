@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.1",
+  "schema_version": "1.2",
   "project_id": "{{PROJECT_ID}}",
   "project_name": "{{PROJECT_NAME}}",
   "proposal_owner": "{{OWNER}}",
@@ -12,6 +12,22 @@
     "source_files": [],
     "audit_path": "evidence/brand-visual-audit.md",
     "design_incorporation_record_id": null
+  },
+  "design_calibration": {
+    "path": "deck/design-calibration.html",
+    "required_sample_types": [
+      "cover",
+      "toc",
+      "chapter-type-led",
+      "chapter-image-led",
+      "chapter-data-led",
+      "content-low",
+      "content-medium",
+      "content-high",
+      "content-visual-module",
+      "closing"
+    ],
+    "approval_record_id": null
   },
   "approvals": {
     "materials_scope": {"approved": false, "by": null, "at": null, "record_id": null},
@@ -28,6 +44,7 @@
     "brand_visual_incorporation": {"approved": false, "by": null, "at": null, "record_id": null},
     "visual_direction": {"approved": false, "by": null, "at": null, "record_id": null},
     "visual_sample": {"approved": false, "by": null, "at": null, "record_id": null},
+    "design_calibration": {"approved": false, "by": null, "at": null, "record_id": null},
     "design": {"approved": false, "by": null, "at": null, "record_id": null},
     "generation_ready": {"approved": false, "by": null, "at": null, "record_id": null},
     "content_qa": {"approved": false, "by": null, "at": null, "record_id": null},

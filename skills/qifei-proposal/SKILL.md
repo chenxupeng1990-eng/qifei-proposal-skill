@@ -42,11 +42,12 @@ description: Govern and produce QIFEI/祈飞 client-specific competitive proposa
 6. **逐章对抗检测**：每章全部页面确认后，启动新的子 Agent，对照标书、策划书、策略、证据和项目 `AGENTS.md` 做对抗检查；修复后由用户再次确认。
 7. **全案对抗检测与内容冻结**：所有章节通过后再做一次全案检测。只有 Proposal Owner 可冻结或重新打开页面。
 8. **品牌官方视觉审计**：要求用户上传品牌官方视觉参考至 `inputs/brand-official/`，登记来源 ID，提取品牌视觉符号、Logo 规则、字体、色卡、图形、材质、摄影和禁忌，写入 `evidence/brand-visual-audit.md` 并确认。没有官方资料不得进入视觉方向。
-9. **视觉方向与样张**：依据冻结内容和品牌视觉审计提出 2-3 个客户定制方向；生成代表页样张并取得确认。
-10. **生成 `DESIGN.md`**：把官方品牌视觉审计和确认样张共同编译为可执行视觉规范，并记录来源 ID。设计与生成规则见 [references/design-and-generation.md](references/design-and-generation.md)。
-11. **合同式 HTML 生成**：把冻结内容编译为 `deck-spec.json` 和 `slide-contracts.json`，再生成 Image2 素材和 HTML。HTML 是唯一视觉母版。
-12. **本地批注与修订**：批注写入 `reviews/review-comments.json`。修订源文件并重建 HTML，不让浏览器直接覆盖冻结内容。
-13. **双轴 QA 与导出**：分别完成内容忠实度和视觉质量 QA，修复只回到 HTML 源，再导出 HTML、PNG、PDF 和图片型 PPT 预览。
+9. **视觉方向与初始样张**：依据冻结内容和品牌视觉审计提出 2-3 个客户定制方向；先用少量代表页选定方向。
+10. **设计语言校准集**：选定方向后生成独立 `deck/design-calibration.html`，必须包含首页、目录页、至少 3 种同源章节页、覆盖低/中/高密度的内容页和结尾感谢页。使用 Codex 浏览器逐页评论、修订并确认；只有全部类型确认后才批准 `design_calibration`。
+11. **生成 `DESIGN.md`**：把官方品牌视觉审计和已确认校准集编译为可执行视觉规范；冻结设计语言、固定页面和正文页弹性合同，并记录来源 ID。设计与生成规则见 [references/design-and-generation.md](references/design-and-generation.md)。
+12. **按章节合同式 HTML 生成**：把冻结内容编译为 `deck-spec.json` 和 `slide-contracts.json`，再按章节生成 Image2 素材和 HTML 供评审；所有章节共用同一 `design_version`。最后编译全案 HTML，HTML 是唯一视觉母版。
+13. **Codex 浏览器评论与修订**：使用 Codex 浏览器原生评论功能定位页面与问题。Agent 根据评论回到章节源稿、`deck-spec.json` 或 `DESIGN.md` 修改并重建受影响章节；评论不写入 HTML，也不直接覆盖冻结内容。设计语言变更会使全部章节预览过期。
+14. **双轴 QA 与导出**：分别完成内容忠实度和视觉质量 QA，修复只回到 HTML 源，再导出 HTML、PNG、PDF 和图片型 PPT 预览。
 
 ## 不可跨越的门禁
 
@@ -56,9 +57,10 @@ description: Govern and produce QIFEI/祈飞 client-specific competitive proposa
 - 逐章与全案对抗检测未通过：不得内容冻结。
 - 内容未冻结：不得调用 Image2 生产正式素材。
 - 未上传并核准品牌官方视觉参考，或未完成品牌视觉审计：不得提出正式视觉方向或生成样张。
-- 样张未确认：不得生成 `DESIGN.md` 或全量页面。
+- 初始样张未确认：不得生成设计语言校准集。
+- `deck/design-calibration.html` 未覆盖首页、目录页、至少 3 种章节页、低/中/高密度内容页和结尾感谢页，或未逐页确认：不得生成或批准 `DESIGN.md`。
 - `DESIGN.md` 未记录品牌视觉来源 ID、视觉符号和色卡：不得批准设计系统。
-- `DESIGN.md` 未确认：不得全量渲染。
+- `DESIGN.md` 未定义固定设计语言、内容页弹性合同和章节批量生成规则，或未确认：不得按章节渲染。
 - 内容 QA 或视觉 QA 未通过：不得导出最终文件。
 - 缺失信息只阻塞受影响页面；若缺口改变策略、报价、承诺或核心结论，则阻塞对应阶段。
 
@@ -97,8 +99,8 @@ python scripts/init_project.py --project <项目目录> --name <项目名> --own
 python scripts/validate_project.py <项目目录>
 python scripts/freeze_deck_spec.py <项目目录> --approved-by <Owner> --approval-id <确认记录>
 python scripts/validate_deck_spec.py <项目目录>
+python scripts/render_deck.py <项目目录> --chapter-id <章节ID>
 python scripts/render_deck.py <项目目录>
-node scripts/serve_review.mjs <项目目录>
 node scripts/export_deck.mjs <项目目录>
 ```
 
@@ -109,7 +111,9 @@ node scripts/export_deck.mjs <项目目录>
 - 独立实现，不依赖或复制 Dashi PPT 的代码或专有导出引擎。
 - `AGENTS.md` 是项目内容与治理权威；`DESIGN.md` 是视觉权威；`deck-spec.json` 是冻结内容的编译产物；HTML 是视觉母版。
 - 使用页面合同限制文字、数组和媒体槽位；字符预算只做预检，最终必须在浏览器测量溢出和越界。
-- Image2 只负责背景、主视觉、场景、概念图和高表现力模块；正文、数据、图表和注释由 HTML 统一排版。
+- 首页、目录页、章节页和结尾感谢页按确认样张收紧自由度；正文页只冻结品牌语言、网格、字体、色彩、组件、密度和边界，允许 Agent 在合同内选择最适合内容的版式。
+- 优先按章节生成和评审，避免等待全案一次性渲染；最终全案构建必须重新校验页序、设计版本和章节输出一致性。
+- Image2 负责背景、主视觉、场景、概念图，以及 HTML 难以完成的透明 PNG 高表现力模块；正文、数据、图表和注释由 HTML 统一排版。透明模块只能进入 `DESIGN.md` 和页面合同声明的图层槽位。
 - 正式资产只允许项目内相对路径。禁止远程 URL、绝对本机路径、`file://` 和 `data:` 进入最终 `deck-spec.json`。
 - Image2 不可用时输出提示词包，不擅自切换模型。
 
@@ -127,6 +131,7 @@ node scripts/export_deck.mjs <项目目录>
 - 所有章节和页面有确认记录。
 - 逐章及全案对抗检测通过。
 - 内容冻结与视觉样张确认可追溯。
+- 设计语言校准集包含全部规定页面类型，且逐页确认记录可追溯。
 - `AGENTS.md`、`DESIGN.md`、`deck-spec.json` 与 HTML 无漂移。
 - Grill Me 完成记录、提案策划书、品牌官方视觉来源和品牌视觉审计均可追溯。
 - 内容 QA 和视觉 QA 均通过。

@@ -22,7 +22,6 @@
     * { box-sizing: border-box; }
     html, body { margin: 0; min-height: 100%; background: #02060c; color: var(--text); font-family: var(--font-body); }
     body { overflow-x: hidden; }
-    button, input, textarea { font: inherit; }
     .chrome {
       position: fixed; inset: 0 0 auto 0; height: 58px; z-index: 100;
       display: flex; align-items: center; gap: 14px; padding: 0 20px;
@@ -31,10 +30,6 @@
     }
     .chrome strong { letter-spacing: .04em; }
     .chrome .build { margin-left: auto; color: #7890a9; font-size: 13px; }
-    .chrome button {
-      color: #dce7f5; background: #132236; border: 1px solid #2b425d; border-radius: 10px;
-      padding: 8px 12px; cursor: pointer;
-    }
     .deck-root { display: flex; flex-direction: column; align-items: center; gap: 42px; padding: 100px 24px 80px; }
     .slide-frame {
       position: relative; width: calc(1920px * var(--preview-scale)); height: calc(1080px * var(--preview-scale));
@@ -104,30 +99,8 @@
     .layout-split .copy-stack, .layout-case .copy-stack { min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 28px; }
     .layout-cards .content, .layout-metrics .content, .layout-process .content { justify-content: center; }
 
-    .review-panel {
-      position: fixed; z-index: 120; top: 58px; right: 0; bottom: 0; width: 390px; padding: 20px;
-      color: #dce7f5; background: #07111f; border-left: 1px solid #243b55; transform: translateX(100%); transition: transform .2s ease;
-      overflow: auto;
-    }
-    .review-open .review-panel { transform: translateX(0); }
-    .review-panel h2 { margin: 0 0 8px; font-size: 22px; }
-    .review-panel .hint { color: #7890aa; font-size: 13px; line-height: 1.5; }
-    .review-panel label { display: block; margin-top: 16px; color: #9fb3c8; font-size: 13px; }
-    .review-panel input, .review-panel textarea {
-      width: 100%; margin-top: 6px; padding: 10px 12px; color: #edf5ff; background: #0e1d2e; border: 1px solid #29425d; border-radius: 9px;
-    }
-    .review-panel textarea { min-height: 90px; resize: vertical; }
-    .review-panel .primary { width: 100%; margin-top: 10px; padding: 10px; color: #021019; background: var(--accent); border: 0; border-radius: 9px; font-weight: 800; cursor: pointer; }
-    .comment-list { display: grid; gap: 10px; margin-top: 20px; }
-    .comment { padding: 12px; background: #0d1a2a; border: 1px solid #20374f; border-radius: 10px; }
-    .comment.resolved { opacity: .55; }
-    .comment .meta { display: flex; gap: 8px; color: #7d94aa; font-size: 12px; }
-    .comment p { margin: 8px 0; font-size: 14px; line-height: 1.45; }
-    .comment button { color: #9dcdf0; background: transparent; border: 0; padding: 0; cursor: pointer; font-size: 12px; }
-    .slide-canvas.active-review { outline: 5px solid var(--accent); outline-offset: 8px; }
-
     body.export-mode { background: transparent; }
-    body.export-mode .chrome, body.export-mode .review-panel { display: none !important; }
+    body.export-mode .chrome { display: none !important; }
     body.export-mode .deck-root { gap: 0; padding: 0; align-items: flex-start; }
     body.export-mode .slide-frame { width: 1920px; height: 1080px; }
     body.export-mode .slide-canvas { transform: none; box-shadow: none; }
@@ -136,24 +109,12 @@
 <body>
   <header class="chrome">
     <strong id="deck-title">QIFEI Proposal</strong>
-    <button id="review-toggle" type="button">批注</button>
-    <span id="review-count"></span>
     <span class="build">build __BUILD_ID__</span>
   </header>
   <main id="deck" class="deck-root"></main>
-  <aside class="review-panel" aria-label="页面批注">
-    <h2>本地批注</h2>
-    <div class="hint">批注只写入 reviews/review-comments.json，不会直接修改冻结内容。</div>
-    <label>页面<input id="comment-slide" readonly></label>
-    <label>作者<input id="comment-author" value="Reviewer"></label>
-    <label>批注<textarea id="comment-body" placeholder="说明问题与期望修改"></textarea></label>
-    <button class="primary" id="comment-add" type="button">添加批注</button>
-    <div id="comment-list" class="comment-list"></div>
-  </aside>
   <script>
     const deckData = __DECK_JSON__;
     const design = __DESIGN_JSON__;
-    const embeddedComments = __COMMENTS_JSON__;
     const buildId = "__BUILD_ID__";
     const exportMode = new URLSearchParams(location.search).get("export") === "1";
     if (exportMode) document.body.classList.add("export-mode");
@@ -302,70 +263,6 @@
 
     const deck = document.getElementById("deck");
     (deckData.slides || []).forEach(slide => deck.append(renderSlide(slide)));
-
-    let reviewData = embeddedComments && Array.isArray(embeddedComments.comments) ? embeddedComments : {schema_version:"1.0", comments:[]};
-    let currentSlide = deckData.slides?.[0]?.slide_id || "";
-    const selectSlide = slideId => {
-      currentSlide = slideId;
-      document.getElementById("comment-slide").value = slideId;
-      document.querySelectorAll(".slide-canvas").forEach(slide => slide.classList.toggle("active-review", slide.dataset.slideId === slideId && document.body.classList.contains("review-open")));
-      paintComments();
-    };
-    document.querySelectorAll(".slide-canvas").forEach(slide => slide.addEventListener("click", () => selectSlide(slide.dataset.slideId)));
-    selectSlide(currentSlide);
-
-    async function loadComments() {
-      if (!/^https?:$/.test(location.protocol)) return;
-      try {
-        const response = await fetch("/api/review-comments", {cache:"no-store"});
-        if (response.ok) reviewData = await response.json();
-      } catch {}
-      paintComments();
-    }
-    async function saveComments() {
-      if (!/^https?:$/.test(location.protocol)) throw new Error("请通过本地批注服务打开 HTML 才能保存批注");
-      const response = await fetch("/api/review-comments", {
-        method:"PUT", headers:{"content-type":"application/json"}, body:JSON.stringify(reviewData)
-      });
-      if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || "保存失败");
-    }
-    function paintComments() {
-      const rows = (reviewData.comments || []).filter(item => item.slide_id === currentSlide);
-      const list = document.getElementById("comment-list");
-      list.replaceChildren();
-      rows.forEach(item => {
-        const card = make("article", `comment ${item.status === "resolved" ? "resolved" : ""}`);
-        const meta = make("div", "meta");
-        meta.append(make("span", "", item.author || "Reviewer"), make("span", "", item.created_at || ""));
-        card.append(meta, make("p", "", item.body || ""));
-        const toggle = make("button", "", item.status === "resolved" ? "重新打开" : "标为已解决");
-        toggle.addEventListener("click", async () => {
-          item.status = item.status === "resolved" ? "open" : "resolved";
-          item.resolved_at = item.status === "resolved" ? new Date().toISOString() : null;
-          try { await saveComments(); paintComments(); } catch (error) { alert(error.message); }
-        });
-        card.append(toggle); list.append(card);
-      });
-      const openCount = (reviewData.comments || []).filter(item => item.status !== "resolved").length;
-      document.getElementById("review-count").textContent = openCount ? `${openCount} 条未解决` : "";
-    }
-    document.getElementById("review-toggle").addEventListener("click", () => {
-      document.body.classList.toggle("review-open"); selectSlide(currentSlide);
-    });
-    document.getElementById("comment-add").addEventListener("click", async () => {
-      const body = document.getElementById("comment-body").value.trim();
-      if (!body) return;
-      reviewData.comments.push({
-        comment_id:`c-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`,
-        slide_id:currentSlide,
-        author:document.getElementById("comment-author").value.trim() || "Reviewer",
-        body, status:"open", created_at:new Date().toISOString(), resolved_at:null
-      });
-      try {
-        await saveComments(); document.getElementById("comment-body").value = ""; paintComments();
-      } catch (error) { alert(error.message); }
-    });
-    loadComments();
 
     function runQa() {
       const errors = [];

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>祈飞提案｜设计语言校准集</title>
+  <style>
+    :root { --bg:#040b16; --surface:#0c2138; --ink:#f3f7fc; --muted:#9db2c8; --cyan:#59d7ff; --gold:#f1b65a; }
+    * { box-sizing:border-box; }
+    html, body { margin:0; width:100%; height:100%; overflow:hidden; background:#000; font-family:"Microsoft YaHei","PingFang SC",sans-serif; }
+    main { position:absolute; width:1920px; height:1080px; transform-origin:0 0; background:var(--bg); }
+    .sample { position:absolute; inset:0; display:none; overflow:hidden; padding:76px 104px; color:var(--ink); background:radial-gradient(circle at 78% 25%,#123e5b 0,transparent 34%),linear-gradient(135deg,#040b16,#081a2e); }
+    .sample.active { display:block; }
+    .sample::after { content:""; position:absolute; width:720px; height:720px; right:-180px; bottom:-250px; border:2px solid rgba(89,215,255,.2); border-radius:50%; box-shadow:0 0 100px rgba(89,215,255,.08); }
+    .kicker { color:var(--cyan); font-size:20px; letter-spacing:.24em; font-weight:700; }
+    h1 { margin:56px 0 24px; max-width:1200px; font-size:86px; line-height:1.08; letter-spacing:-.04em; }
+    h2 { margin:34px 0 20px; font-size:58px; line-height:1.15; }
+    p { max-width:1060px; color:var(--muted); font-size:30px; line-height:1.65; }
+    .gold { color:var(--gold); }
+    .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; margin-top:58px; }
+    .card { min-height:190px; padding:30px; border:1px solid rgba(89,215,255,.22); background:rgba(12,33,56,.72); border-radius:28px; }
+    .card strong { display:block; margin-bottom:14px; font-size:30px; }
+    .card span { color:var(--muted); font-size:22px; line-height:1.55; }
+    .toc { display:grid; grid-template-columns:1fr 1fr; gap:24px 80px; width:1250px; margin-top:56px; }
+    .toc div { padding:24px 0; border-bottom:1px solid rgba(255,255,255,.14); font-size:30px; }
+    .toc b { display:inline-block; width:82px; color:var(--cyan); }
+    .chapter-no { margin-top:150px; color:var(--gold); font-size:28px; letter-spacing:.2em; }
+    .metric { font-size:150px; font-weight:800; letter-spacing:-.06em; color:var(--cyan); }
+    .split { display:grid; grid-template-columns:1.05fr .95fr; gap:78px; align-items:center; height:100%; }
+    .visual { position:relative; min-height:720px; border-radius:44px; background:radial-gradient(circle at 55% 42%,rgba(89,215,255,.85),rgba(16,70,102,.45) 28%,transparent 62%); }
+    .visual::before { content:""; position:absolute; inset:150px; border:34px solid rgba(241,182,90,.55); border-radius:50%; transform:rotate(-24deg); }
+    .dense { grid-template-columns:repeat(4,1fr); }
+    .alpha-slot { position:absolute; right:160px; top:180px; width:620px; height:620px; border:1px dashed rgba(89,215,255,.5); border-radius:50%; background:radial-gradient(circle,rgba(89,215,255,.7),rgba(89,215,255,.08) 52%,transparent 70%); filter:drop-shadow(0 0 80px rgba(89,215,255,.25)); }
+    .alpha-slot::after { content:"透明 PNG 表现层 / alpha-primary"; position:absolute; left:90px; bottom:20px; color:var(--cyan); font-size:20px; letter-spacing:.08em; }
+    .closing { display:flex; flex-direction:column; justify-content:center; align-items:flex-start; }
+  </style>
+</head>
+<body>
+  <main id="stage">
+    <section class="sample active" data-slide-id="CAL-01" data-design-sample="cover"><div class="kicker">QIFEI PROPOSAL SYSTEM</div><h1>把复杂价值，变成<span class="gold">清晰的选择</span></h1><p>首页固定品牌身份、标题层级、主视觉槽位与安全区。</p></section>
+    <section class="sample" data-slide-id="CAL-02" data-design-sample="toc"><div class="kicker">CONTENTS</div><h2>目录页</h2><div class="toc"><div><b>01</b>项目理解</div><div><b>02</b>核心策略</div><div><b>03</b>内容与运营</div><div><b>04</b>投放与增长</div><div><b>05</b>组织与保障</div><div><b>06</b>合作展望</div></div></section>
+    <section class="sample" data-slide-id="CAL-03" data-design-sample="chapter-type-led"><div class="chapter-no">01 / TYPE LED</div><h1>先回答为什么，<br>再回答怎么做</h1><p>文字主导章节页，用字号和留白完成转场。</p></section>
+    <section class="sample" data-slide-id="CAL-04" data-design-sample="chapter-image-led"><div class="split"><div><div class="kicker">02 / IMAGE LED</div><h1>让视觉承担<br><span class="gold">情绪与记忆</span></h1></div><div class="visual"></div></div></section>
+    <section class="sample" data-slide-id="CAL-05" data-design-sample="chapter-data-led"><div class="kicker">03 / DATA LED</div><div class="metric">18.3%</div><h2>用关键数字开启经营章节</h2><p>数据主导章节页只保留一个核心信号与一句解释。</p></section>
+    <section class="sample" data-slide-id="CAL-06" data-design-sample="content-low"><div class="kicker">CONTENT / LOW</div><h1>一页，只承担一个<br><span class="gold">可复述结论</span></h1><p>低密度页保留最大留白，适合观点、判断和关键转折。</p></section>
+    <section class="sample" data-slide-id="CAL-07" data-design-sample="content-medium"><div class="kicker">CONTENT / MEDIUM</div><h2>中密度内容页</h2><div class="grid"><div class="card"><strong>事实</strong><span>建立共同背景与可信起点。</span></div><div class="card"><strong>判断</strong><span>把信息转成清晰的项目选择。</span></div><div class="card"><strong>行动</strong><span>落到责任、节奏和验证方式。</span></div></div></section>
+    <section class="sample" data-slide-id="CAL-08" data-design-sample="content-high"><div class="kicker">CONTENT / HIGH</div><h2>高密度内容页仍保持结构清晰</h2><div class="grid dense"><div class="card"><strong>人群</strong><span>对象与任务</span></div><div class="card"><strong>内容</strong><span>主题与形式</span></div><div class="card"><strong>渠道</strong><span>分发与承接</span></div><div class="card"><strong>验证</strong><span>指标与迭代</span></div></div></section>
+    <section class="sample" data-slide-id="CAL-09" data-design-sample="content-visual-module"><div class="kicker">HTML + TRANSPARENT PNG</div><h2>结构可编辑，<br>表现力由透明模块补足</h2><p>HTML 保留标题、正文和数据；透明 PNG 进入批准的图层槽位，不遮挡关键信息。</p><div class="alpha-slot" aria-label="透明 PNG 模块槽位预览"></div></section>
+    <section class="sample closing" data-slide-id="CAL-10" data-design-sample="closing"><div class="kicker">QIFEI / END</div><h1>感谢聆听</h1><p>结尾回到同一视觉语言，只保留品牌收束与必要信息。</p></section>
+  </main>
+  <script>
+    const samples = [...document.querySelectorAll('.sample')]; let index = 0;
+    const show = value => { index = (value + samples.length) % samples.length; samples.forEach((item, i) => item.classList.toggle('active', i === index)); };
+    const scale = () => { const stage = document.getElementById('stage'); const f = Math.min(innerWidth / 1920, innerHeight / 1080); stage.style.transform = `translate(${(innerWidth - 1920*f)/2}px, ${(innerHeight - 1080*f)/2}px) scale(${f})`; };
+    addEventListener('keydown', event => { if (['ArrowRight','PageDown',' '].includes(event.key)) show(index + 1); if (['ArrowLeft','PageUp'].includes(event.key)) show(index - 1); }); addEventListener('resize', scale); scale();
+  </script>
+</body>
+</html>

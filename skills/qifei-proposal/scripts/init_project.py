@@ -22,8 +22,11 @@ REQUIRED_DIRS = (
     "reviews/redteam",
     "assets/source",
     "assets/image2",
+    "assets/image2/alpha",
     "assets/approved",
+    "assets/approved/alpha",
     "deck",
+    "deck/chapters",
     "exports/png",
 )
 

@@ -25,5 +25,23 @@
   },
   "spacing": {"safe_x": 104, "safe_y": 76},
   "radii": {"panel": 30, "pill": 999},
-  "visual_language": "Midnight navy, cool cyan explanation signals, restrained amber retention signals, cinematic transparent materials"
+  "visual_language": "Midnight navy, cool cyan explanation signals, restrained amber retention signals, cinematic transparent materials",
+  "page_system": {
+    "fixed_page_types": ["cover", "toc", "chapter", "closing"],
+    "chapter_variants": ["chapter-type-led", "chapter-image-led", "chapter-data-led"],
+    "content_layouts": ["statement", "split", "cards", "metrics", "process", "case"],
+    "density_levels": ["low", "medium", "high"],
+    "frozen_invariants": ["brand_symbols", "logo_rules", "palette", "typography", "grid", "safe_area", "spacing_scale", "component_language"],
+    "flexible_dimensions": ["columns", "module_mix", "media_ratio", "whitespace", "emphasis"]
+  },
+  "transparent_png": {
+    "enabled": true,
+    "source_dir": "assets/image2/alpha",
+    "approved_dir": "assets/approved/alpha",
+    "alpha_required": true,
+    "text_forbidden": true,
+    "slots": [
+      {"slot_id": "alpha-primary", "anchor": "right-center", "max_width": 760, "max_height": 820, "z_index": 3}
+    ]
+  }
 }

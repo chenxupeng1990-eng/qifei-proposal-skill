@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.1",
+  "schema_version": "1.2",
   "project_id": "qfp-visual-demo",
   "project_name": "祈飞提案生成层视觉Demo",
   "proposal_owner": "总悟",
@@ -12,6 +12,22 @@
     "source_files": ["inputs/brand-official/demo-brand-reference.svg"],
     "audit_path": "evidence/brand-visual-audit.md",
     "design_incorporation_record_id": "demo-brand-incorporation"
+  },
+  "design_calibration": {
+    "path": "deck/design-calibration.html",
+    "required_sample_types": [
+      "cover",
+      "toc",
+      "chapter-type-led",
+      "chapter-image-led",
+      "chapter-data-led",
+      "content-low",
+      "content-medium",
+      "content-high",
+      "content-visual-module",
+      "closing"
+    ],
+    "approval_record_id": "demo-design-calibration"
   },
   "approvals": {
     "materials_scope": {
@@ -97,6 +113,12 @@
       "by": "总悟",
       "at": "2026-07-16T00:00:00+08:00",
       "record_id": "demo-visual-sample"
+    },
+    "design_calibration": {
+      "approved": true,
+      "by": "总悟",
+      "at": "2026-07-16T00:00:00+08:00",
+      "record_id": "demo-design-calibration"
     },
     "design": {
       "approved": true,

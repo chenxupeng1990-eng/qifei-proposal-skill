@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import struct
 import sys
 import tempfile
 import unittest
+import zlib
 from pathlib import Path
 
 
@@ -11,7 +13,7 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 from freeze_deck_spec import content_hash  # noqa: E402
-from validate_deck_spec import valid_local_media, visual_length  # noqa: E402
+from validate_deck_spec import png_has_alpha, valid_local_media, visual_length  # noqa: E402
 from validate_project import validate_project  # noqa: E402
 
 
@@ -45,6 +47,23 @@ class ContractTests(unittest.TestCase):
             self.assertIsNone(valid_local_media(project, "assets/image2/hero.png"))
             self.assertIsNotNone(valid_local_media(project, "https://example.com/hero.png"))
             self.assertIsNotNone(valid_local_media(project, "../hero.png"))
+
+    def test_transparent_png_requires_real_alpha_channel(self) -> None:
+        def png_chunk(name: bytes, data: bytes) -> bytes:
+            checksum = zlib.crc32(name + data) & 0xFFFFFFFF
+            return struct.pack(">I", len(data)) + name + data + struct.pack(">I", checksum)
+
+        def minimal_png(color_type: int) -> bytes:
+            ihdr = struct.pack(">IIBBBBB", 1, 1, 8, color_type, 0, 0, 0)
+            return b"\x89PNG\r\n\x1a\n" + png_chunk(b"IHDR", ihdr) + png_chunk(b"IEND", b"")
+
+        with tempfile.TemporaryDirectory() as temp:
+            rgba = Path(temp) / "rgba.png"
+            rgb = Path(temp) / "rgb.png"
+            rgba.write_bytes(minimal_png(6))
+            rgb.write_bytes(minimal_png(2))
+            self.assertTrue(png_has_alpha(rgba))
+            self.assertFalse(png_has_alpha(rgb))
 
     def test_export_phase_requires_both_qa_gates(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -100,6 +119,26 @@ class ContractTests(unittest.TestCase):
             self.assertTrue(any("source_files" in error for error in errors))
             self.assertTrue(any("brand_visual_sources" in error for error in errors))
 
+    def test_design_calibration_requires_full_sample_set(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = Path(temp)
+            calibration = project / "deck" / "design-calibration.html"
+            calibration.parent.mkdir(parents=True)
+            calibration.write_text('<section data-design-sample="cover"></section>', encoding="utf-8")
+            state = {
+                "phase": "design_calibration",
+                "proposal_owner": "Owner",
+                "approvals": {},
+                "design_calibration": {"path": "deck/design-calibration.html"},
+                "chapters": [],
+                "reopen_log": [],
+            }
+            (project / "project-state.json").write_text(json.dumps(state), encoding="utf-8")
+            errors = validate_project(project)
+            self.assertTrue(any("sample type: toc" in error for error in errors))
+            self.assertTrue(any("sample type: chapter-data-led" in error for error in errors))
+            self.assertTrue(any("sample type: content-visual-module" in error for error in errors))
+
     def test_generation_requires_brand_source_ids_in_design(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             project = Path(temp)
@@ -123,8 +162,12 @@ class ContractTests(unittest.TestCase):
                     for key in (
                         "brief_grill", "proposal_brief", "content_freeze", "brand_visual_sources",
                         "brand_visual_audit", "brand_visual_incorporation", "visual_sample", "design",
-                        "generation_ready",
+                        "design_calibration", "generation_ready",
                     )
+                },
+                "design_calibration": {
+                    "path": "deck/design-calibration.html",
+                    "approval_record_id": "design_calibration",
                 },
                 "brand_visual": {
                     "source_ids": ["BRAND-001"],

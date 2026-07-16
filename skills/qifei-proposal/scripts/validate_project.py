@@ -19,6 +19,7 @@ PHASES = [
     "content_frozen",
     "visual_direction",
     "visual_sample",
+    "design_calibration",
     "design_system",
     "generation",
     "review",
@@ -36,14 +37,38 @@ GATES = {
     "content_frozen": ["full_redteam", "content_freeze"],
     "visual_direction": ["content_freeze", "brand_visual_sources", "brand_visual_audit"],
     "visual_sample": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "visual_direction"],
-    "design_system": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "visual_direction", "visual_sample"],
-    "generation": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "visual_sample", "design", "generation_ready"],
-    "review": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "design", "generation_ready"],
-    "qa": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "design", "generation_ready"],
-    "export": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "design", "generation_ready", "content_qa", "visual_qa"],
+    "design_calibration": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "visual_direction", "visual_sample"],
+    "design_system": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "visual_direction", "visual_sample", "design_calibration"],
+    "generation": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "visual_sample", "design_calibration", "design", "generation_ready"],
+    "review": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "design_calibration", "design", "generation_ready"],
+    "qa": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "design_calibration", "design", "generation_ready"],
+    "export": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "design_calibration", "design", "generation_ready", "content_qa", "visual_qa"],
 }
 
 BRAND_SOURCE_SUFFIXES = {".ai", ".eps", ".jpg", ".jpeg", ".key", ".pdf", ".png", ".ppt", ".pptx", ".svg", ".webp"}
+DEFAULT_DESIGN_SAMPLE_TYPES = (
+    "cover",
+    "toc",
+    "chapter-type-led",
+    "chapter-image-led",
+    "chapter-data-led",
+    "content-low",
+    "content-medium",
+    "content-high",
+    "content-visual-module",
+    "closing",
+)
+DESIGN_REQUIRED_MARKERS = (
+    "## 6. 设计语言冻结",
+    "### 6.1 首页",
+    "### 6.2 目录页",
+    "### 6.3 章节页系统",
+    "### 6.4 内容页系统",
+    "### 6.5 结尾感谢页",
+    "## 7. 内容页弹性合同",
+    "## 8. 透明 PNG 表现层",
+    "## 9. 章节批量生成规则",
+)
 
 
 def load_json(path: Path) -> dict:
@@ -118,7 +143,27 @@ def validate_project(project: Path) -> list[str]:
     if phase_index >= PHASES.index("project_agents") and not (project / "AGENTS.md").is_file():
         errors.append("AGENTS.md is required after outline confirmation")
     if phase_index >= PHASES.index("design_system") and not (project / "DESIGN.md").is_file():
-        errors.append("DESIGN.md is required after visual sample confirmation")
+        errors.append("DESIGN.md is required after design calibration confirmation")
+    if phase_index >= PHASES.index("design_calibration"):
+        calibration = state.get("design_calibration") if isinstance(state.get("design_calibration"), dict) else {}
+        calibration_value = calibration.get("path") or "deck/design-calibration.html"
+        calibration_path, calibration_error = registered_project_file(project, calibration_value, "deck")
+        if calibration_error:
+            errors.append(f"design_calibration.path: {calibration_error}")
+        elif calibration_path:
+            calibration_text = calibration_path.read_text(encoding="utf-8")
+            configured_types = calibration.get("required_sample_types")
+            required_types = configured_types if isinstance(configured_types, list) and configured_types else DEFAULT_DESIGN_SAMPLE_TYPES
+            for sample_type in required_types:
+                marker_double = f'data-design-sample="{sample_type}"'
+                marker_single = f"data-design-sample='{sample_type}'"
+                if marker_double not in calibration_text and marker_single not in calibration_text:
+                    errors.append(f"Design calibration is missing required sample type: {sample_type}")
+        if phase_index >= PHASES.index("design_system"):
+            approval = approvals.get("design_calibration") if isinstance(approvals.get("design_calibration"), dict) else {}
+            approval_id = str(calibration.get("approval_record_id") or "").strip()
+            if is_approved(approvals, "design_calibration") and (not approval_id or approval.get("record_id") != approval_id):
+                errors.append("design_calibration.approval_record_id must match its approval record")
     if phase_index >= PHASES.index("generation"):
         for relative in ("deck/deck-spec.json", "deck/slide-contracts.json", "deck/design-tokens.json"):
             if not (project / relative).is_file():
@@ -175,6 +220,9 @@ def validate_project(project: Path) -> list[str]:
                         errors.append(f"DESIGN.md does not cite brand visual source id: {source_id}")
                 if any(marker in design_text for marker in ("待确认", "待填写")):
                     errors.append("Approved DESIGN.md still contains unresolved placeholder markers")
+                for marker in DESIGN_REQUIRED_MARKERS:
+                    if marker not in design_text:
+                        errors.append(f"Approved DESIGN.md is missing required section: {marker}")
             tokens_path = project / "deck" / "design-tokens.json"
             if tokens_path.is_file():
                 try:
@@ -194,6 +242,14 @@ def validate_project(project: Path) -> list[str]:
                     for index, item in enumerate(palette, start=1):
                         if not isinstance(item, dict) or item.get("classification") not in allowed_classes:
                             errors.append(f"design-tokens.json brand_visual.palette[{index}] has invalid classification")
+                    page_system = tokens.get("page_system") if isinstance(tokens.get("page_system"), dict) else {}
+                    if len(page_system.get("chapter_variants") or []) < 3:
+                        errors.append("design-tokens.json page_system.chapter_variants must include at least three chapter variants")
+                    if set(page_system.get("density_levels") or []) != {"low", "medium", "high"}:
+                        errors.append("design-tokens.json page_system.density_levels must include low, medium, and high")
+                    alpha_tokens = tokens.get("transparent_png") if isinstance(tokens.get("transparent_png"), dict) else {}
+                    if alpha_tokens.get("enabled") is not True or alpha_tokens.get("alpha_required") is not True:
+                        errors.append("design-tokens.json transparent_png must enable real alpha-channel modules")
 
     chapters = state.get("chapters") if isinstance(state.get("chapters"), list) else []
     if phase_index >= PHASES.index("full_redteam"):

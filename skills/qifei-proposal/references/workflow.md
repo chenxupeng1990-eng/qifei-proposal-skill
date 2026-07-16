@@ -13,10 +13,11 @@
 | full_redteam | 全部确认章节 | 全案对抗报告 | 无阻断问题 |
 | content_frozen | 全案确认稿 | 内容冻结 ID、逐页哈希 | Owner 冻结 |
 | visual_direction | 冻结内容、品牌官方视觉资料、品牌视觉审计 | 2-3 个视觉方向 | 选定方向 |
-| visual_sample | 选定方向 | 代表页样张 | 样张确认 |
-| design_system | 样张 | `DESIGN.md`、设计令牌 | Owner 确认 |
-| generation | 冻结内容与设计系统 | Image2 资产、HTML | 合同校验和浏览器预检通过 |
-| review | HTML | 本地批注、修订记录 | 批注全部解决或明确接受 |
+| visual_sample | 选定方向 | 少量代表页样张 | 初始方向确认 |
+| design_calibration | 已确认方向、冻结内容 | `deck/design-calibration.html`：首页、目录页、3 种章节页、低/中/高密度内容页、结尾感谢页 | 全部样张逐页确认 |
+| design_system | 已确认设计语言校准集 | `DESIGN.md`、设计令牌、正文页弹性合同 | Owner 确认 |
+| generation | 冻结内容与设计系统 | 按章节 Image2 资产和 HTML、最终全案 HTML | 章节合同校验和浏览器预检通过 |
+| review | HTML | Codex 浏览器原生评论、修订记录 | 评论全部解决或明确接受 |
 | qa | 最终 HTML | 内容 QA、视觉 QA | 两轴分别通过 |
 | export | QA 通过的 HTML | HTML、PNG、PDF、PPT 预览 | 页数、顺序和版本一致 |
 
@@ -25,11 +26,32 @@
 `project-state.json` 必须记录：
 
 - 当前阶段、Proposal Owner、项目 ID。
-- 资料审计、Grill Me、提案策划书、需求、策略、目录、`AGENTS.md`、品牌官方视觉资料、品牌视觉审计、内容冻结、样张、`DESIGN.md`、内容 QA、视觉 QA 的批准人、时间和确认记录 ID。
+- 资料审计、Grill Me、提案策划书、需求、策略、目录、`AGENTS.md`、品牌官方视觉资料、品牌视觉审计、内容冻结、初始样张、设计语言校准集、`DESIGN.md`、内容 QA、视觉 QA 的批准人、时间和确认记录 ID。
 - 每章页面列表、逐页确认状态、章节对抗结果。
 - 页面重开记录；`reopened_by` 必须等于 Proposal Owner。
 - 当前内容冻结 ID 和设计版本。
 - 品牌官方视觉资料的来源 ID、项目内相对路径、审计文件和 `DESIGN.md` 融合记录。
+- `design_calibration.path`、必需样张类型、逐页确认记录和当前 `design_version`。
+
+## 设计语言校准门禁
+
+初始视觉方向确认后，先创建独立 `deck/design-calibration.html`，不得直接生成正式章节。校准集至少包含：
+
+1. 首页：项目身份、品牌组合、主视觉和标题层级。
+2. 目录页：章节层级、编号、节奏和导航规则。
+3. 章节页：至少 3 个同源变体，例如文字主导、图片主导、数据/结构主导；变体共享色彩、字体、材质、品牌符号与章节识别规则。
+4. 内容页：覆盖低、中、高三档密度，并验证观点、图文、卡片/框架、数据/图表、案例或工作件等主要内容族；至少一页验证 HTML 内容模板叠加透明 PNG 表现模块。
+5. 结尾感谢页：品牌收束、联系信息边界和结束语层级。
+
+在 Codex 浏览器中逐页批注。全部样张确认后记录 `approvals.design_calibration`，再把其规则编译进 `DESIGN.md` 和 `design-tokens.json`。校准集固定设计语言，不固定每一张正文页的具体构图。
+
+## 按章节生成
+
+- `DESIGN.md` 和设计令牌批准后，用 `python scripts/render_deck.py <项目目录> --chapter-id <章节ID>` 生成单章评审 HTML。
+- 同一批次的所有章节必须使用同一个 `design_version`、页面合同和资产规则。
+- 正文页可在弹性合同内选择版式、密度和媒体比例；不得改写字体体系、色卡、品牌符号、网格、安全区或组件语法。
+- 内容修改只重建受影响章节；`DESIGN.md`、设计令牌或公共组件改变时，全部章节输出过期并必须重建。
+- 单章评审完成不等于最终导出完成；全案仍需重新编译并执行页序、跨章节奏和双轴 QA。
 
 ## 项目启动 Grill Me
 

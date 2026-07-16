@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "review": "node scripts/serve_review.mjs",
     "export": "node scripts/export_deck.mjs"
   },
   "dependencies": {
