@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Fictional demo brand visual reference</title>
+  <desc id="desc">A fictional internal-only reference demonstrating midnight blue, cyan, and warm gold.</desc>
+  <rect width="1600" height="900" fill="#061426"/>
+  <circle cx="1160" cy="450" r="260" fill="#0B2944" stroke="#56D9FF" stroke-width="12"/>
+  <circle cx="1160" cy="450" r="150" fill="#C69442" fill-opacity="0.72"/>
+  <path d="M120 650 C420 240 680 240 980 650" fill="none" stroke="#56D9FF" stroke-width="18"/>
+</svg>

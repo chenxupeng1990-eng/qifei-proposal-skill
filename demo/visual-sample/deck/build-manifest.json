@@ -1,23 +1,27 @@
 {
   "schema_version": "1.0",
-  "build_id": "84a3219d4aa113d9",
-  "rendered_at": "2026-07-16T14:45:16+08:00",
+  "build_id": "09c4cf5d900239b2",
+  "rendered_at": "2026-07-16T15:25:21+08:00",
   "content_freeze_id": "demo-freeze-v1",
   "design_version": "design-v1",
   "inputs": {
-    "AGENTS.md": "c6e16239d36fd871bb3f517c45e3d6344382223f3895f6671269cf28a4692558",
-    "DESIGN.md": "4afc5c0885ec31f447fa69a70b35ca09d3d20e9d25a3f4799c48316bab4f2b18",
+    "AGENTS.md": "0c43b9880e448bd438f4f94b7efa3ab9f7e9021050afd1e3a3924e8022c47b81",
+    "DESIGN.md": "b95f1e08427c0d650beefe740dd7d3485ba084209e38f8f532a68a9ca43ef21d",
+    "content/proposal-brief.md": "c8a44facf47e780bc37dbe02b5ff8988705b8e5d440f17ea6686e0634ba6f4c8",
     "deck/deck-spec.json": "21a04a6da06dd4cb825cec3b58670d434b83f57b6184026061fc1d1c68cda017",
-    "deck/design-tokens.json": "6df32a74e3110404d2caf414fb5ecd0d5c3d6eedd94e1cedaee00461dd6b05b8",
+    "deck/design-tokens.json": "8e52a3d03d43520ef823658cf4915a559a6e9fa5fece44f7aaabcfe16e95dae9",
     "deck/slide-contracts.json": "af4bef9e2be39292dd2d77502b3ddb68bb6f5d66e2bd42d6d50c07928fab1968",
+    "evidence/brand-visual-audit.md": "b748f47dd4c331cc70e976de50593920d85d9175192622178f5fed74caf37df0",
+    "inputs/brand-official/demo-brand-reference.svg": "7c979c3ea97fb2dbaf1bb18a6a8fa1eb8af769bef476e4257955bae852fd85eb",
     "assets/image2/demo-hero.png": "a96bbd484578b9bc03ac1f81d246ad8e5389ce30350ee18393373d41505e994c"
   },
   "runtime": {
     "skill:assets/html-runtime/deck-template.html": "d61cb4a2c2dca33e79a27de964745e326a073d09d4525197b2f974729dfff6ac",
-    "skill:scripts/render_deck.py": "0891c80122e7f2d83c03253a1daf679ebe944b8201609eaa99fe5266b218beef",
+    "skill:scripts/render_deck.py": "6ef25e384168ac576ceeeea6e8e57aa94c583f9d4300140ef165595998db5059",
     "skill:scripts/validate_deck_spec.py": "2d94d56d8e1a3833910808813e6d2fc1cf64c6083eb97f8e19e62bed4f5a9097",
+    "skill:scripts/validate_project.py": "69605a2fedcecd8d5957d310e4977bcda798bdbbc21c52104d17ee6a721706fd",
     "skill:scripts/export_deck.mjs": "1ef172ad86b932f260fed8bc45f7c68c195f737a14f75be57cb06a335fc6dc2c"
   },
   "output": "deck/proposal.html",
-  "output_sha256": "2f06b835d6a91627e7fa99672bda6558395b1fb3564e259714cd6aa43aeaf37f"
+  "output_sha256": "1b8904687ea01a01cd5ae893258761e11be9362e1dbdc4633b6948b8b26264f1"
 }

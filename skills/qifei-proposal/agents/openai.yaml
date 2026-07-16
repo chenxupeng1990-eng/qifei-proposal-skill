@@ -1,4 +1,4 @@
 interface:
   display_name: "祈飞提案总控"
-  short_description: "公司知识驱动的比稿提案策划、逐页确认与HTML交付总控"
-  default_prompt: "Use $qifei-proposal to create and govern a client-specific pitch proposal from intake through confirmed HTML, PDF, PNG, PPT preview, and Feishu speaker notes."
+  short_description: "Grill需求、品牌视觉治理与HTML提案交付总控"
+  default_prompt: "Use $qifei-proposal to grill the project brief, confirm the proposal plan, govern official brand visual references, and deliver a gated HTML, PDF, PNG, PPT preview, and Feishu speaker-note proposal."

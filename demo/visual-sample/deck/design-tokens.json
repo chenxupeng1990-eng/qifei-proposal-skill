@@ -2,6 +2,15 @@
   "schema_version": "1.0",
   "design_version": "design-v1",
   "canvas": {"width": 1920, "height": 1080},
+  "brand_visual": {
+    "source_ids": ["DEMO-BRAND-001"],
+    "symbols": ["circular retention cell", "continuous cyan arc"],
+    "palette": [
+      {"name": "official midnight blue", "value": "#061426", "classification": "official_explicit", "source_id": "DEMO-BRAND-001"},
+      {"name": "official cyan", "value": "#56D9FF", "classification": "official_explicit", "source_id": "DEMO-BRAND-001"},
+      {"name": "official warm gold", "value": "#C69442", "classification": "official_explicit", "source_id": "DEMO-BRAND-001"}
+    ]
+  },
   "colors": {
     "background": "#040B16",
     "surface": "#0C2138",

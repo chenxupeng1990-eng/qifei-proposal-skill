@@ -1,6 +1,6 @@
 ---
 name: qifei-proposal
-description: Govern and produce QIFEI/祈飞 client-specific competitive proposals for Douyin brand operations, live commerce, short video, paid media, influencer marketing, integrated campaigns, retail AI systems, tenders, and pitches. Use when Codex must turn tender/client materials plus company knowledge into a fully confirmed strategy, chapter-by-chapter and page-by-page PPT manuscript, Feishu speaker notes, customer-specific visual system, Image2 assets, HTML master deck, PNG/PDF/image-based PPT preview, or when auditing an existing proposal against requirements, evidence, strategy, and delivery gates.
+description: Govern and produce QIFEI/祈飞 client-specific competitive proposals for Douyin brand operations, live commerce, short video, paid media, influencer marketing, integrated campaigns, retail AI systems, tenders, and pitches. Use when Codex must grill stakeholders after background intake, confirm a proposal brief, turn tender/client materials plus company knowledge into a fully confirmed strategy, extract official brand visual references into DESIGN.md, produce chapter-by-chapter and page-by-page PPT manuscripts, Feishu speaker notes, Image2 assets, an HTML master deck, PNG/PDF/image-based PPT preview, or audit an existing proposal against requirements, evidence, brand, strategy, and delivery gates.
 ---
 
 # 祈飞提案总控
@@ -15,6 +15,7 @@ description: Govern and produce QIFEI/祈飞 client-specific competitive proposa
 4. 读取公司 Base 时先看 [references/company-base.md](references/company-base.md)；需要数字、履历、案例成绩或来源页时再读 [references/company-facts.json](references/company-facts.json)。
 5. 需要判断资料权威、版本、证据和保密边界时，读取 [references/knowledge-policy.md](references/knowledge-policy.md)。
 6. 不把锐步方案的视觉或客户策略当作通用模板。它只提供公司介绍的内容顺序原型和 Base 事实来源。
+7. 背景资料提交后，调用 `grilling` Skill 逐题确认项目决策；视觉阶段开始前，确认 `inputs/brand-official/` 已上传客户品牌官方视觉参考。
 
 ## 权威层级
 
@@ -34,25 +35,29 @@ description: Govern and produce QIFEI/祈飞 client-specific competitive proposa
 严格按下列顺序推进。详细门禁见 [references/workflow.md](references/workflow.md)。
 
 1. **立项与资料审计**：初始化目录，登记客户资料、标书、临时参考和缺口。
-2. **需求确认**：确认提案类型、受众、评审机制、范围、目标、承诺边界和最终格式。
-3. **策略与动态目录**：形成策略因果链、提案主张和目录；让用户确认。
-4. **生成项目 `AGENTS.md`**：目录确认后立即生成，记录项目事实、策略、角色、页级规则和门禁。
+2. **Grill Me 与提案策划书**：背景资料提交后立即调用 `grilling`，一次只问一个决策问题并提供推荐答案；达成共同理解后生成 `content/proposal-brief.md`，由 Owner 确认。若会话已安装并提供 `Visualize:visualize`，可生成决策树、范围地图或策划书确认视图；可视化只辅助确认，不替代书面策划书。
+3. **策略与动态目录**：仅在 Grill Me 和提案策划书确认后，形成策略因果链、提案主张和目录；让用户确认。
+4. **生成项目 `AGENTS.md`**：目录确认后立即生成，记录项目事实、策划书、策略、角色、页级规则和门禁。
 5. **逐章逐页 PPT 讲稿**：逐页确认标题、上屏文案、证据、页面角色、视觉意图和演讲任务。讲稿规则见 [references/content-and-speaker.md](references/content-and-speaker.md)。
-6. **逐章对抗检测**：每章全部页面确认后，启动新的子 Agent，对照标书、策略、证据和项目 `AGENTS.md` 做对抗检查；修复后由用户再次确认。
+6. **逐章对抗检测**：每章全部页面确认后，启动新的子 Agent，对照标书、策划书、策略、证据和项目 `AGENTS.md` 做对抗检查；修复后由用户再次确认。
 7. **全案对抗检测与内容冻结**：所有章节通过后再做一次全案检测。只有 Proposal Owner 可冻结或重新打开页面。
-8. **视觉方向与样张**：内容冻结后提出 2-3 个客户定制方向；生成代表页样张并取得确认。
-9. **生成 `DESIGN.md`**：把确认样张转成可执行视觉规范。设计与生成规则见 [references/design-and-generation.md](references/design-and-generation.md)。
-10. **合同式 HTML 生成**：把冻结内容编译为 `deck-spec.json` 和 `slide-contracts.json`，再生成 Image2 素材和 HTML。HTML 是唯一视觉母版。
-11. **本地批注与修订**：批注写入 `reviews/review-comments.json`。修订源文件并重建 HTML，不让浏览器直接覆盖冻结内容。
-12. **双轴 QA 与导出**：分别完成内容忠实度和视觉质量 QA，修复只回到 HTML 源，再导出 HTML、PNG、PDF 和图片型 PPT 预览。
+8. **品牌官方视觉审计**：要求用户上传品牌官方视觉参考至 `inputs/brand-official/`，登记来源 ID，提取品牌视觉符号、Logo 规则、字体、色卡、图形、材质、摄影和禁忌，写入 `evidence/brand-visual-audit.md` 并确认。没有官方资料不得进入视觉方向。
+9. **视觉方向与样张**：依据冻结内容和品牌视觉审计提出 2-3 个客户定制方向；生成代表页样张并取得确认。
+10. **生成 `DESIGN.md`**：把官方品牌视觉审计和确认样张共同编译为可执行视觉规范，并记录来源 ID。设计与生成规则见 [references/design-and-generation.md](references/design-and-generation.md)。
+11. **合同式 HTML 生成**：把冻结内容编译为 `deck-spec.json` 和 `slide-contracts.json`，再生成 Image2 素材和 HTML。HTML 是唯一视觉母版。
+12. **本地批注与修订**：批注写入 `reviews/review-comments.json`。修订源文件并重建 HTML，不让浏览器直接覆盖冻结内容。
+13. **双轴 QA 与导出**：分别完成内容忠实度和视觉质量 QA，修复只回到 HTML 源，再导出 HTML、PNG、PDF 和图片型 PPT 预览。
 
 ## 不可跨越的门禁
 
+- Grill Me 未完成或提案策划书未确认：不得进入策略与目录。
 - 目录未确认：不得生成项目 `AGENTS.md` 之后的内容。
 - 逐章逐页讲稿未确认：不得生成视觉成品。
 - 逐章与全案对抗检测未通过：不得内容冻结。
 - 内容未冻结：不得调用 Image2 生产正式素材。
+- 未上传并核准品牌官方视觉参考，或未完成品牌视觉审计：不得提出正式视觉方向或生成样张。
 - 样张未确认：不得生成 `DESIGN.md` 或全量页面。
+- `DESIGN.md` 未记录品牌视觉来源 ID、视觉符号和色卡：不得批准设计系统。
 - `DESIGN.md` 未确认：不得全量渲染。
 - 内容 QA 或视觉 QA 未通过：不得导出最终文件。
 - 缺失信息只阻塞受影响页面；若缺口改变策略、报价、承诺或核心结论，则阻塞对应阶段。
@@ -123,6 +128,7 @@ node scripts/export_deck.mjs <项目目录>
 - 逐章及全案对抗检测通过。
 - 内容冻结与视觉样张确认可追溯。
 - `AGENTS.md`、`DESIGN.md`、`deck-spec.json` 与 HTML 无漂移。
+- Grill Me 完成记录、提案策划书、品牌官方视觉来源和品牌视觉审计均可追溯。
 - 内容 QA 和视觉 QA 均通过。
 - HTML、PNG、PDF、图片型 PPT 预览和飞书演讲稿页码一致。
 - 最终文件不含内部备注、本机路径、未确认占位符或客户敏感信息泄漏。

@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "project_id": "qfp-visual-demo",
   "project_name": "祈飞提案生成层视觉Demo",
   "proposal_owner": "总悟",
@@ -7,12 +7,30 @@
   "phase": "export",
   "content_freeze_id": "demo-freeze-v1",
   "design_version": "design-v1",
+  "brand_visual": {
+    "source_ids": ["DEMO-BRAND-001"],
+    "source_files": ["inputs/brand-official/demo-brand-reference.svg"],
+    "audit_path": "evidence/brand-visual-audit.md",
+    "design_incorporation_record_id": "demo-brand-incorporation"
+  },
   "approvals": {
     "materials_scope": {
       "approved": true,
       "by": "总悟",
       "at": "2026-07-16T00:00:00+08:00",
       "record_id": "demo-materials"
+    },
+    "brief_grill": {
+      "approved": true,
+      "by": "总悟",
+      "at": "2026-07-16T00:00:00+08:00",
+      "record_id": "demo-brief-grill"
+    },
+    "proposal_brief": {
+      "approved": true,
+      "by": "总悟",
+      "at": "2026-07-16T00:00:00+08:00",
+      "record_id": "demo-proposal-brief"
     },
     "requirements": {
       "approved": true,
@@ -49,6 +67,24 @@
       "by": "总悟",
       "at": "2026-07-16T14:18:41+08:00",
       "record_id": "demo-freeze-v1"
+    },
+    "brand_visual_sources": {
+      "approved": true,
+      "by": "总悟",
+      "at": "2026-07-16T00:00:00+08:00",
+      "record_id": "demo-brand-sources"
+    },
+    "brand_visual_audit": {
+      "approved": true,
+      "by": "总悟",
+      "at": "2026-07-16T00:00:00+08:00",
+      "record_id": "demo-brand-audit"
+    },
+    "brand_visual_incorporation": {
+      "approved": true,
+      "by": "总悟",
+      "at": "2026-07-16T00:00:00+08:00",
+      "record_id": "demo-brand-incorporation"
     },
     "visual_direction": {
       "approved": true,

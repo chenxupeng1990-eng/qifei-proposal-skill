@@ -14,6 +14,7 @@ SKILL_ROOT = Path(__file__).resolve().parent.parent
 TEMPLATE_ROOT = SKILL_ROOT / "assets" / "project-template"
 REQUIRED_DIRS = (
     "inputs/client",
+    "inputs/brand-official",
     "inputs/temporary-references",
     "evidence",
     "content/strategy",

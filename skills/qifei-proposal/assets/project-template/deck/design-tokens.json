@@ -2,6 +2,11 @@
   "schema_version": "1.0",
   "design_version": "design-v0",
   "canvas": {"width": 1920, "height": 1080},
+  "brand_visual": {
+    "source_ids": [],
+    "symbols": [],
+    "palette": []
+  },
   "colors": {
     "background": "#07111F",
     "surface": "#10243B",

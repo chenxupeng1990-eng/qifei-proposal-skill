@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 
 from validate_deck_spec import load_json, media_sources, validate_deck
+from validate_project import validate_project
 
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
@@ -41,7 +42,7 @@ def main() -> int:
     parser.add_argument("project")
     args = parser.parse_args()
     project = Path(args.project).expanduser().resolve()
-    errors = validate_deck(project)
+    errors = validate_project(project) + validate_deck(project)
     if errors:
         print("Render blocked by deck validation:")
         for error in errors:
@@ -52,11 +53,25 @@ def main() -> int:
     tokens_path = project / "deck" / "design-tokens.json"
     comments_path = project / "reviews" / "review-comments.json"
     contracts_path = project / "deck" / "slide-contracts.json"
+    state_path = project / "project-state.json"
     deck = load_json(deck_path)
     tokens = load_json(tokens_path)
     comments = load_json(comments_path)
+    state = load_json(state_path)
 
-    tracked = [project / "AGENTS.md", project / "DESIGN.md", deck_path, tokens_path, contracts_path]
+    tracked = [
+        project / "AGENTS.md",
+        project / "DESIGN.md",
+        project / "content" / "proposal-brief.md",
+        deck_path,
+        tokens_path,
+        contracts_path,
+    ]
+    brand_visual = state.get("brand_visual") if isinstance(state.get("brand_visual"), dict) else {}
+    audit_path = str(brand_visual.get("audit_path") or "evidence/brand-visual-audit.md")
+    tracked.append(project / Path(*audit_path.replace("\\", "/").split("/")))
+    for source in brand_visual.get("source_files") or []:
+        tracked.append(project / Path(*str(source).replace("\\", "/").split("/")))
     for slide in deck.get("slides") or []:
         for _, src in media_sources(slide):
             tracked.append(project / Path(*src.split("/")))
@@ -65,6 +80,7 @@ def main() -> int:
         TEMPLATE_PATH,
         Path(__file__).resolve(),
         Path(__file__).with_name("validate_deck_spec.py"),
+        Path(__file__).with_name("validate_project.py"),
         Path(__file__).with_name("export_deck.mjs"),
     ]
     runtime_hashes: dict[str, str] = {}

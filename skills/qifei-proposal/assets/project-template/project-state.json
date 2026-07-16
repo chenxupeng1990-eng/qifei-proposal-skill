@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "project_id": "{{PROJECT_ID}}",
   "project_name": "{{PROJECT_NAME}}",
   "proposal_owner": "{{OWNER}}",
@@ -7,14 +7,25 @@
   "phase": "intake",
   "content_freeze_id": null,
   "design_version": null,
+  "brand_visual": {
+    "source_ids": [],
+    "source_files": [],
+    "audit_path": "evidence/brand-visual-audit.md",
+    "design_incorporation_record_id": null
+  },
   "approvals": {
     "materials_scope": {"approved": false, "by": null, "at": null, "record_id": null},
+    "brief_grill": {"approved": false, "by": null, "at": null, "record_id": null},
+    "proposal_brief": {"approved": false, "by": null, "at": null, "record_id": null},
     "requirements": {"approved": false, "by": null, "at": null, "record_id": null},
     "strategy": {"approved": false, "by": null, "at": null, "record_id": null},
     "outline": {"approved": false, "by": null, "at": null, "record_id": null},
     "project_agents": {"approved": false, "by": null, "at": null, "record_id": null},
     "full_redteam": {"approved": false, "by": null, "at": null, "record_id": null},
     "content_freeze": {"approved": false, "by": null, "at": null, "record_id": null},
+    "brand_visual_sources": {"approved": false, "by": null, "at": null, "record_id": null},
+    "brand_visual_audit": {"approved": false, "by": null, "at": null, "record_id": null},
+    "brand_visual_incorporation": {"approved": false, "by": null, "at": null, "record_id": null},
     "visual_direction": {"approved": false, "by": null, "at": null, "record_id": null},
     "visual_sample": {"approved": false, "by": null, "at": null, "record_id": null},
     "design": {"approved": false, "by": null, "at": null, "record_id": null},

@@ -63,6 +63,85 @@ class ContractTests(unittest.TestCase):
             self.assertTrue(any("content_qa" in error for error in errors))
             self.assertTrue(any("visual_qa" in error for error in errors))
 
+    def test_strategy_requires_completed_grill_and_proposal_brief(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = Path(temp)
+            state = {
+                "phase": "strategy",
+                "proposal_owner": "Owner",
+                "approvals": {
+                    "materials_scope": {"approved": True, "by": "Owner", "record_id": "materials"},
+                    "requirements": {"approved": True, "by": "Owner", "record_id": "requirements"},
+                },
+                "chapters": [],
+                "reopen_log": [],
+            }
+            (project / "project-state.json").write_text(json.dumps(state), encoding="utf-8")
+            errors = validate_project(project)
+            self.assertTrue(any("brief_grill" in error for error in errors))
+            self.assertTrue(any("proposal_brief" in error for error in errors))
+            self.assertTrue(any("content/proposal-brief.md" in error for error in errors))
+
+    def test_visual_direction_requires_uploaded_official_brand_reference(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = Path(temp)
+            state = {
+                "phase": "visual_direction",
+                "proposal_owner": "Owner",
+                "content_freeze_id": "freeze-v1",
+                "approvals": {},
+                "brand_visual": {"source_ids": [], "source_files": []},
+                "chapters": [],
+                "reopen_log": [],
+            }
+            (project / "project-state.json").write_text(json.dumps(state), encoding="utf-8")
+            errors = validate_project(project)
+            self.assertTrue(any("source_ids" in error for error in errors))
+            self.assertTrue(any("source_files" in error for error in errors))
+            self.assertTrue(any("brand_visual_sources" in error for error in errors))
+
+    def test_generation_requires_brand_source_ids_in_design(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = Path(temp)
+            source = project / "inputs" / "brand-official" / "guide.svg"
+            source.parent.mkdir(parents=True)
+            source.write_text("<svg xmlns='http://www.w3.org/2000/svg'/>", encoding="utf-8")
+            audit = project / "evidence" / "brand-visual-audit.md"
+            audit.parent.mkdir(parents=True)
+            audit.write_text("Source BRAND-001 is approved.", encoding="utf-8")
+            (project / "content").mkdir()
+            (project / "content" / "proposal-brief.md").write_text("Confirmed proposal brief.", encoding="utf-8")
+            (project / "AGENTS.md").write_text("Confirmed project authority.", encoding="utf-8")
+            (project / "DESIGN.md").write_text("Confirmed design without source citation.", encoding="utf-8")
+            state = {
+                "phase": "generation",
+                "proposal_owner": "Owner",
+                "content_freeze_id": "freeze-v1",
+                "design_version": "design-v1",
+                "approvals": {
+                    key: {"approved": True, "by": "Owner", "record_id": key}
+                    for key in (
+                        "brief_grill", "proposal_brief", "content_freeze", "brand_visual_sources",
+                        "brand_visual_audit", "brand_visual_incorporation", "visual_sample", "design",
+                        "generation_ready",
+                    )
+                },
+                "brand_visual": {
+                    "source_ids": ["BRAND-001"],
+                    "source_files": ["inputs/brand-official/guide.svg"],
+                    "audit_path": "evidence/brand-visual-audit.md",
+                    "design_incorporation_record_id": "brand_visual_incorporation",
+                },
+                "chapters": [{
+                    "chapter_id": "C1", "manuscript_confirmed": True, "redteam_passed": True,
+                    "confirmation_record_id": "confirmed", "redteam_report": "reviews/redteam/C1.json",
+                }],
+                "reopen_log": [],
+            }
+            (project / "project-state.json").write_text(json.dumps(state), encoding="utf-8")
+            errors = validate_project(project)
+            self.assertTrue(any("DESIGN.md does not cite brand visual source id: BRAND-001" in error for error in errors))
+
 
 if __name__ == "__main__":
     unittest.main()

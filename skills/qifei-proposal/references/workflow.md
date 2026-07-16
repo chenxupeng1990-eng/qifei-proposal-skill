@@ -5,14 +5,14 @@
 | 阶段 | 必需输入 | 核心产物 | 放行条件 |
 |---|---|---|---|
 | intake | 客户资料、标书、临时参考 | 资料清单、缺口、权限范围 | Owner 确认资料范围 |
-| requirements | 受众、比稿机制、范围、目标 | 需求确认稿 | Owner 确认 |
-| strategy | 行业/客户/产品/平台判断 | 策略因果链、核心主张、动态目录 | 用户确认策略与目录 |
+| requirements | 已提交背景资料、受众、比稿机制、范围、目标 | Grill Me 决策记录、`content/proposal-brief.md` | Owner 确认共同理解、需求与策划书 |
+| strategy | 已确认提案策划书、行业/客户/产品/平台判断 | 策略因果链、核心主张、动态目录 | 用户确认策略与目录 |
 | project_agents | 已确认目录 | 项目 `AGENTS.md` | 文件生成并被 Owner 确认 |
 | manuscript | 项目 `AGENTS.md` | 逐章逐页 PPT 讲稿 | 每页逐项确认 |
 | chapter_redteam | 该章确认稿、标书、策略、证据 | 对抗报告、修订记录 | 该章修订后再次确认 |
 | full_redteam | 全部确认章节 | 全案对抗报告 | 无阻断问题 |
 | content_frozen | 全案确认稿 | 内容冻结 ID、逐页哈希 | Owner 冻结 |
-| visual_direction | 冻结内容、客户品牌 | 2-3 个视觉方向 | 选定方向 |
+| visual_direction | 冻结内容、品牌官方视觉资料、品牌视觉审计 | 2-3 个视觉方向 | 选定方向 |
 | visual_sample | 选定方向 | 代表页样张 | 样张确认 |
 | design_system | 样张 | `DESIGN.md`、设计令牌 | Owner 确认 |
 | generation | 冻结内容与设计系统 | Image2 资产、HTML | 合同校验和浏览器预检通过 |
@@ -25,10 +25,34 @@
 `project-state.json` 必须记录：
 
 - 当前阶段、Proposal Owner、项目 ID。
-- 资料审计、需求、策略、目录、`AGENTS.md`、内容冻结、样张、`DESIGN.md`、内容 QA、视觉 QA 的批准人、时间和确认记录 ID。
+- 资料审计、Grill Me、提案策划书、需求、策略、目录、`AGENTS.md`、品牌官方视觉资料、品牌视觉审计、内容冻结、样张、`DESIGN.md`、内容 QA、视觉 QA 的批准人、时间和确认记录 ID。
 - 每章页面列表、逐页确认状态、章节对抗结果。
 - 页面重开记录；`reopened_by` 必须等于 Proposal Owner。
 - 当前内容冻结 ID 和设计版本。
+- 品牌官方视觉资料的来源 ID、项目内相对路径、审计文件和 `DESIGN.md` 融合记录。
+
+## 项目启动 Grill Me
+
+背景资料进入 `inputs/client/` 后，调用 `grilling` Skill：
+
+1. 先从资料中提取事实，不向用户重复询问可查事实。
+2. 一次只问一个决策问题，并给出推荐答案及理由。
+3. 至少覆盖提案目标、评审对象、评审机制、范围内外、核心任务、成功标准、承诺边界、研究缺口、交付形式、演讲场景、时间与角色。
+4. 每个答案写入 `content/proposal-brief.md` 的决定记录；存在冲突时继续追问，不静默替用户选择。
+5. 用户明确确认已经达成共同理解后，记录 `brief_grill`；策划书全文再次确认后记录 `proposal_brief`。
+6. 若 `Visualize:visualize` 可用，可将决策树、依赖关系、范围或评审路径做成确认视图。不得因为插件不可用而阻塞；Markdown 策划书始终是权威文件。
+
+提案策划书未确认时，不研究策略主张，不生成正式目录，不进入页面内容生产。
+
+## 品牌官方视觉资料门禁
+
+正式视觉方向前必须：
+
+1. 用户把品牌手册、官网视觉截图、官方 KV、Logo 文件、官方色卡或官方模板上传到 `inputs/brand-official/`。
+2. 在 `project-state.json.brand_visual` 登记非空 `source_ids` 与对应 `source_files`；文件必须是项目内相对路径。
+3. 将可核验的视觉符号、Logo 规则、字体、色卡、图形、材质、摄影语言、版式特征与禁忌写入 `evidence/brand-visual-audit.md`。
+4. 明确区分“官方明确”“从官方画面采样”“本案提议”。不得把采样色值或 Agent 推断冒充官方规范。
+5. Owner 分别批准资料范围和视觉审计。`DESIGN.md` 必须引用全部来源 ID；生成前再批准品牌视觉融合记录。
 
 ## 逐章对抗检测
 

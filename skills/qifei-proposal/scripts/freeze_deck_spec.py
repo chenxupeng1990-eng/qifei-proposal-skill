@@ -9,6 +9,8 @@ import hashlib
 import json
 from pathlib import Path
 
+from validate_project import validate_project
+
 
 HASH_FIELDS = (
     "chapter",
@@ -49,6 +51,9 @@ def main() -> int:
     args = parser.parse_args()
 
     project = Path(args.project).expanduser().resolve()
+    project_errors = validate_project(project)
+    if project_errors:
+        raise SystemExit("Project gates block content freeze:\n- " + "\n- ".join(project_errors))
     state_path = project / "project-state.json"
     deck_path = project / "deck" / "deck-spec.json"
     state = json.loads(state_path.read_text(encoding="utf-8"))
