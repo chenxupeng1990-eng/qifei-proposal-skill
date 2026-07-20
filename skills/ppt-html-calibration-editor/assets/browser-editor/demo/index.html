@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>PPT HTML Editor Demo</title>
+  <link rel="stylesheet" href="../src/editor.css">
+  <style>
+    *{box-sizing:border-box}html,body{margin:0;width:1920px;height:1080px;overflow:hidden;font-family:Arial,sans-serif}.slide{position:relative;width:1920px;height:1080px;background:#fbf7ee;color:#062957}.title{position:absolute;left:110px;top:130px;width:900px;margin:0;font-size:72px;line-height:1.12}.copy{position:absolute;left:115px;top:360px;width:700px;margin:0;font-size:28px;line-height:1.5}.visual{position:absolute;right:120px;top:280px;width:650px;height:520px;object-fit:cover}
+  </style>
+</head>
+<body data-document-id="editor-demo" data-editor-auto="true">
+  <section class="slide" data-page="demo-slide">
+    <h1 class="title" data-editable="text" data-edit-id="demo.title">Double-click to edit this title</h1>
+    <p class="copy" data-editable="text" data-edit-id="demo.copy">Select, drag, resize, adjust typography, replace the image, and export the calibration JSON.</p>
+    <img class="visual" data-editable="image" data-edit-id="demo.image" alt="Editable visual" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='650' height='520'%3E%3Crect width='650' height='520' rx='48' fill='%231769b3'/%3E%3Ccircle cx='325' cy='260' r='130' fill='%23c88f2f'/%3E%3C/svg%3E">
+  </section>
+  <script type="module" src="../src/loader.js"></script>
+</body>
+</html>

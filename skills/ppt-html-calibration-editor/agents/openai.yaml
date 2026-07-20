@@ -1,0 +1,4 @@
+interface:
+  display_name: "PPT HTML 校稿编辑器"
+  short_description: "为 16:9 PPT HTML 页面加入浏览器可视化校稿能力"
+  default_prompt: "Use $ppt-html-calibration-editor to add safe browser editing to this PPT HTML page."

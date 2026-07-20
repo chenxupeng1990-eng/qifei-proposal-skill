@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.2",
+  "schema_version": "1.4",
   "project_id": "{{PROJECT_ID}}",
   "project_name": "{{PROJECT_NAME}}",
   "proposal_owner": "{{OWNER}}",
@@ -29,6 +29,12 @@
     ],
     "approval_record_id": null
   },
+  "assembly": {
+    "manifest_path": "deck/assembly-ready/manifest.json",
+    "status": "collecting",
+    "ready_slide_ids": [],
+    "final_approval_record_id": null
+  },
   "approvals": {
     "materials_scope": {"approved": false, "by": null, "at": null, "record_id": null},
     "brief_grill": {"approved": false, "by": null, "at": null, "record_id": null},
@@ -47,8 +53,10 @@
     "design_calibration": {"approved": false, "by": null, "at": null, "record_id": null},
     "design": {"approved": false, "by": null, "at": null, "record_id": null},
     "generation_ready": {"approved": false, "by": null, "at": null, "record_id": null},
+    "design_loop": {"approved": false, "by": null, "at": null, "record_id": null},
     "content_qa": {"approved": false, "by": null, "at": null, "record_id": null},
-    "visual_qa": {"approved": false, "by": null, "at": null, "record_id": null}
+    "visual_qa": {"approved": false, "by": null, "at": null, "record_id": null},
+    "final_assembly": {"approved": false, "by": null, "at": null, "record_id": null}
   },
   "chapters": [],
   "reopen_log": []

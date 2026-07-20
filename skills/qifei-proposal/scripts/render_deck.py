@@ -102,6 +102,7 @@ def main() -> int:
         TEMPLATE_PATH,
         Path(__file__).resolve(),
         Path(__file__).with_name("validate_deck_spec.py"),
+        Path(__file__).with_name("slide_hash.py"),
         Path(__file__).with_name("validate_project.py"),
         Path(__file__).with_name("export_deck.mjs"),
     ]

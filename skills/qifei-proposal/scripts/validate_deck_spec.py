@@ -10,7 +10,7 @@ import unicodedata
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from freeze_deck_spec import content_hash
+from slide_hash import content_hash
 
 
 SLIDE_ID_PATTERN = re.compile(r"^[A-Z][A-Z0-9_-]{1,31}$")
@@ -44,6 +44,11 @@ def visual_length(value: object) -> float:
             continue
         width += 1.0 if unicodedata.east_asian_width(char) in {"W", "F"} else 0.5
     return round(width, 2)
+
+
+def title_has_terminal_period(value: object) -> bool:
+    """Main titles should end as a proposition, not a sentence."""
+    return str(value or "").strip().endswith(("。", "."))
 
 
 def walk_strings(value: object, path: str = ""):
@@ -200,6 +205,8 @@ def validate_deck(project: Path) -> list[str]:
         for key in ("chapter", "role", "layout", "title", "speaker_doc_anchor"):
             if not slide.get(key):
                 errors.append(f"{scope}: missing required field {key}")
+        if title_has_terminal_period(slide.get("title")):
+            errors.append(f"{scope}: title must not end with a Chinese or English period")
         if slide.get("status") != "content_frozen":
             errors.append(f"{scope}: status must be content_frozen before generation")
         approved_hash = slide.get("approved_content_hash")

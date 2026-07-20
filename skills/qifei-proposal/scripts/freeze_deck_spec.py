@@ -5,25 +5,11 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-import hashlib
 import json
 from pathlib import Path
 
+from slide_hash import content_hash
 from validate_project import validate_project
-
-
-HASH_FIELDS = (
-    "chapter",
-    "role",
-    "layout",
-    "kicker",
-    "title",
-    "subtitle",
-    "blocks",
-    "visual",
-    "evidence_ids",
-    "speaker_doc_anchor",
-)
 
 
 def atomic_json(path: Path, value: dict) -> None:
@@ -31,12 +17,6 @@ def atomic_json(path: Path, value: dict) -> None:
     temp = path.with_name(f".{path.name}.tmp")
     temp.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     temp.replace(path)
-
-
-def content_hash(slide: dict) -> str:
-    payload = {key: slide.get(key) for key in HASH_FIELDS}
-    raw = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
 def approved(item: object) -> bool:

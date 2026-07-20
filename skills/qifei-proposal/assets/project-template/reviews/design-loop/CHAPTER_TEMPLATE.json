@@ -1,0 +1,72 @@
+{
+  "schema_version": "1.0",
+  "chapter_id": "CHXX",
+  "design_version": "design-v0",
+  "loop_steps": ["template", "image2", "html", "validate"],
+  "chapter_html": "deck/chapters/CHXX.html",
+  "status": "in_progress",
+  "pages": [
+    {
+      "slide_id": "PXX",
+      "iterations": 1,
+      "template_id": "statement",
+      "core_expression": "用一句话定义本页要让评审看到并记住的核心表达。",
+      "presentation_route": {
+        "service_object": "谁在什么场景下使用这页信息。",
+        "use_situation": "现场演讲、异步阅读或工作会讨论等具体情境。",
+        "presentation_task": "本页要让观众理解、相信、比较、想象、决定或记住什么。",
+        "content_relation": "事实、对比、趋势、流程、因果、系统、场景、机制、工作件或主张。",
+        "expression_object": "data_evidence|comparison|trend|process|system|scene|mechanism|work_artifact|statement",
+        "best_carrier": "表格、图表、流程图、关系图、场景模拟、工作台、透明机制模块或完整主视觉。",
+        "dominant_type": "information_first|design_first",
+        "anchor_kind": "html|image2|hybrid",
+        "visual_argument": {
+          "first_glance": "第一眼必须看见的主关系或对象。",
+          "reading_path": "观众沿什么视觉路径得到结论。",
+          "end_focus": "最后视线应停在的结论、行动或证据。"
+        },
+        "visual_hammer": {
+          "primary_object": "本页唯一视觉锤：观众第一眼必须看到的对象或关系。",
+          "supporting_elements": "标题、时间线、注释、数据或辅助图形如何服务视觉锤。",
+          "orphan_element_check": "逐项说明独立数字、标签、白底卡或装饰为何保留；无法服务主对象时删除、并入或图形化。"
+        },
+        "image2_decision": {
+          "decision": "generate|not_generate",
+          "semantic_role": "scene|hero|mechanism|semantic_icon|transparent_module|none",
+          "reason": "为什么需要或不需要Image2；先说明其服务的表达任务。",
+          "semantic_nodes": ["仅语义图标填写：内容、商品、人群、场景或增长信号等无文字节点"],
+          "text_forbidden": true,
+          "html_protected_content": "必须由HTML承载的中文、数字、逻辑关系、可核验标签和注释。"
+        },
+        "image2_task": "Image2负责的无文字场景、概念图或透明模块；若没有，明确写不使用的原因。",
+        "html_task": "HTML负责的精确中文、数字、时间线、图表或标注。",
+        "visual_balance_plan": "主载体、辅助元素与文字如何分配视觉重量。"
+      },
+      "visual_mode": "none",
+      "visual_not_required_reason": "仅当 HTML 自身承担可见主载体时填写；流程、场景、系统、机制和工作件页不得用此项回避主视觉。",
+      "visual": {
+        "asset_id": null,
+        "asset_path": null,
+        "prompt_record": null,
+        "slot_id": null
+      },
+      "html_output": "deck/chapters/CHXX.html",
+      "validation": {
+        "manuscript_fidelity": false,
+        "brand_consistency": false,
+        "design_contract": false,
+        "no_overflow": false,
+        "image_html_cohesion": false,
+        "visual_argument_realized": false,
+        "visual_hammer_realized": false,
+        "remote_readability": false,
+        "visual_balance": false,
+        "browser_comments_resolved": false
+      },
+      "result": "iterate",
+      "next_action": "template|image2|html|content_reopen|design_recalibration|pass"
+    }
+  ],
+  "approved_by": null,
+  "approval_record_id": null
+}

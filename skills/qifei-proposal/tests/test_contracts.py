@@ -13,13 +13,85 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 from freeze_deck_spec import content_hash  # noqa: E402
-from validate_deck_spec import png_has_alpha, valid_local_media, visual_length  # noqa: E402
+from validate_deck_spec import png_has_alpha, title_has_terminal_period, valid_local_media, visual_length  # noqa: E402
+from validate_design_loop import validate_presentation_route  # noqa: E402
 from validate_project import validate_project  # noqa: E402
 
 
 class ContractTests(unittest.TestCase):
+    @staticmethod
+    def presentation_route(
+        *, expression_object: str, anchor_kind: str = "html"
+    ) -> dict:
+        return {
+            "service_object": "现场评审者",
+            "use_situation": "提案演讲",
+            "presentation_task": "理解经营动作",
+            "content_relation": "流程",
+            "expression_object": expression_object,
+            "best_carrier": "主载体",
+            "dominant_type": "information_first",
+            "anchor_kind": anchor_kind,
+            "visual_argument": {
+                "first_glance": "主对象",
+                "reading_path": "主路径",
+                "end_focus": "结论",
+            },
+            "visual_hammer": {
+                "primary_object": "视觉锤",
+                "supporting_elements": "标题和标签服务视觉锤",
+                "orphan_element_check": "无孤儿元素",
+            },
+            "image2_decision": {
+                "decision": "not_generate",
+                "semantic_role": "none",
+                "reason": "本页由HTML图表承担主载体。",
+                "html_protected_content": "精确数据与图表标签。",
+            },
+            "image2_task": "无文字辅助视觉",
+            "html_task": "精确标注",
+            "visual_balance_plan": "主载体优先",
+        }
+
+    def test_process_rejects_none_visual_mode(self) -> None:
+        page = {
+            "visual_mode": "none",
+            "visual_not_required_reason": "HTML 已能表达。",
+            "presentation_route": self.presentation_route(
+                expression_object="process", anchor_kind="html"
+            ),
+        }
+        errors = validate_presentation_route(page, "S01")
+        self.assertTrue(any("process pages require" in error for error in errors))
+
+    def test_data_evidence_allows_html_anchor_without_image2(self) -> None:
+        page = {
+            "visual_mode": "none",
+            "visual_not_required_reason": "HTML 图表是主视觉锚点。",
+            "presentation_route": self.presentation_route(expression_object="data_evidence"),
+        }
+        self.assertEqual(validate_presentation_route(page, "S01"), [])
+
+    def test_semantic_icon_allows_image2_when_it_has_a_real_role(self) -> None:
+        route = self.presentation_route(expression_object="system", anchor_kind="hybrid")
+        route["image2_decision"] = {
+            "decision": "generate",
+            "semantic_role": "semantic_icon",
+            "reason": "用无文字图标标识经营对象，服务系统的阅读路径。",
+            "semantic_nodes": ["内容", "商品", "人群", "增长信号"],
+            "text_forbidden": True,
+            "html_protected_content": "对象名称、指标与关系标注。",
+        }
+        page = {"visual_mode": "opaque-module", "presentation_route": route}
+        self.assertEqual(validate_presentation_route(page, "S01"), [])
+
     def test_visual_length_weights_cjk_more_than_ascii(self) -> None:
         self.assertEqual(visual_length("中文AB"), 3.0)
+
+    def test_main_title_rejects_terminal_period(self) -> None:
+        self.assertTrue(title_has_terminal_period("让好钙，留下来。"))
+        self.assertTrue(title_has_terminal_period("Let good calcium stay."))
+        self.assertFalse(title_has_terminal_period("让好钙，留下来"))
 
     def test_content_hash_changes_with_public_copy(self) -> None:
         slide = {

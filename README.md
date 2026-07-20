@@ -16,19 +16,21 @@
 ## 目录
 
 - `skills/qifei-proposal/`：可安装的 Skill 本体。
+- `skills/proposal-ppt-production/`：内容与设计冻结后的通用页面生产、视觉载体选择与最终组装子 Skill。
+- `skills/ppt-html-calibration-editor/`：评审阶段可选的本地 HTML 精细校准编辑器；JSON 仅用于回写源 HTML。
 - `skills/qifei-proposal/references/`：工作流、知识治理和公司 Base。
 - `skills/qifei-proposal/assets/`：项目模板和 HTML 运行时。
 - `skills/qifei-proposal/scripts/`：初始化、冻结、校验、渲染与导出工具。
-- `demo/visual-sample/`：不含伊利正式提案内容的隔离视觉样例。
+- `demo/visual-sample/`：不含任何真实客户资料的脱敏隔离视觉样例；状态停留在视觉生成阶段，不模拟Owner最终批准或对外交付。
 
 ## 本地使用
 
 在 `skills/qifei-proposal` 下运行：
 
-```powershell
+```bash
 npm install
-python scripts/init_project.py --project <项目目录> --name <项目名> --owner <Owner>
-python scripts/validate_project.py <项目目录>
+python3 scripts/init_project.py --project <项目目录> --name <项目名> --owner <Owner>
+python3 scripts/validate_project.py <项目目录>
 ```
 
 后续阶段与导出命令见 [`SKILL.md`](skills/qifei-proposal/SKILL.md)。首次使用时，应把整个 `skills/qifei-proposal` 目录安装到团队约定的 Codex Skills 目录，再以 `$qifei-proposal` 调用。
@@ -42,3 +44,10 @@ python scripts/validate_project.py <项目目录>
 - 16:9 PNG、PDF 与图片型 PPT 预览导出。
 
 生成物默认位于各项目的 `exports/`，不纳入本仓库版本控制。
+
+## 项目解耦
+
+- Skill 仓库只保存公司级通用规则、模板、脚本、测试和脱敏 Demo。
+- 真实客户资料、项目 `AGENTS.md`、品牌资产、评审 HTML/PNG 与最终交付物保存在各自项目仓库。
+- 已交付项目可以作为外部案例归档，但不得把客户名称、产品口径、页面 ID、飞书文档 ID 或本机绝对路径写回 Skill 本体。
+- `tmp/` 仅用于一次性本地测试，不作为 Skill 能力、示例或发布内容。

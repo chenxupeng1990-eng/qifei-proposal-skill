@@ -16,10 +16,10 @@
 | visual_sample | 选定方向 | 少量代表页样张 | 初始方向确认 |
 | design_calibration | 已确认方向、冻结内容 | `deck/design-calibration.html`：首页、目录页、3 种章节页、低/中/高密度内容页、结尾感谢页 | 全部样张逐页确认 |
 | design_system | 已确认设计语言校准集 | `DESIGN.md`、设计令牌、正文页弹性合同 | Owner 确认 |
-| generation | 冻结内容与设计系统 | 按章节 Image2 资产和 HTML、最终全案 HTML | 章节合同校验和浏览器预检通过 |
-| review | HTML | Codex 浏览器原生评论、修订记录 | 评论全部解决或明确接受 |
-| qa | 最终 HTML | 内容 QA、视觉 QA | 两轴分别通过 |
-| export | QA 通过的 HTML | HTML、PNG、PDF、PPT 预览 | 页数、顺序和版本一致 |
+| generation | 冻结内容与设计系统 | 按章节 Image2 资产、评审 HTML、逐页 PNG | 章节合同校验和浏览器预检通过 |
+| review | 章节 HTML、逐页 PNG | Codex 浏览器原生评论、修订记录、页面明确确认记录 | 评论处理完成；确认页进入拼装准备库 |
+| qa | 全部正式页面已确认、最终 HTML | 内容 QA、视觉 QA、拼装准备清单 | 两轴分别通过且版本一致 |
+| export | QA 通过的最终 HTML、完整拼装准备库、全案拼装批准 | 最终 PNG、PDF、PPT 预览 | 页数、顺序、哈希和版本一致 |
 
 ## 项目状态
 
@@ -32,6 +32,7 @@
 - 当前内容冻结 ID 和设计版本。
 - 品牌官方视觉资料的来源 ID、项目内相对路径、审计文件和 `DESIGN.md` 融合记录。
 - `design_calibration.path`、必需样张类型、逐页确认记录和当前 `design_version`。
+- `assembly.manifest_path`、每个正式页面的明确确认记录、批准 PNG、内容哈希、设计版本和最终拼装批准记录。
 
 ## 设计语言校准门禁
 
@@ -47,11 +48,21 @@
 
 ## 按章节生成
 
-- `DESIGN.md` 和设计令牌批准后，用 `python scripts/render_deck.py <项目目录> --chapter-id <章节ID>` 生成单章评审 HTML。
+- `DESIGN.md` 和设计令牌批准后，用 `python scripts/render_deck.py <项目目录> --chapter-id <章节ID>` 生成单章评审 HTML，再用 `node scripts/capture_review_pngs.mjs <项目目录> --chapter-id <章节ID>` 生成逐页评审 PNG。
 - 同一批次的所有章节必须使用同一个 `design_version`、页面合同和资产规则。
 - 正文页可在弹性合同内选择版式、密度和媒体比例；不得改写字体体系、色卡、品牌符号、网格、安全区或组件语法。
 - 内容修改只重建受影响章节；`DESIGN.md`、设计令牌或公共组件改变时，全部章节输出过期并必须重建。
-- 单章评审完成不等于最终导出完成；全案仍需重新编译并执行页序、跨章节奏和双轴 QA。
+- 单章评审循环只使用 HTML＋PNG，不生成 PDF/PPT。单章评审完成不等于页面确认，也不等于最终导出完成。
+
+## 页面确认与拼装准备库
+
+1. 评论解决、视觉 QA 通过或 Agent 判断可用，都不能自动确认页面。
+2. 只有 Proposal Owner 明确下达“确认本页”“确认这些页面”或同等含义命令，Agent 才运行 `manage_assembly_ready.py approve`。
+3. 批准记录写入 `deck/assembly-ready/manifest.json`，至少包含 `slide_id`、批准内容哈希、`content_freeze_id`、`design_version`、评审 HTML、批准 PNG、文件哈希、确认人、时间与确认记录 ID。
+4. 批准 PNG 复制到 `deck/assembly-ready/pages/`，作为最终拼装的页面快照；后续修改仍回到 HTML 源。
+5. 页面重开、内容哈希改变、`design_version` 改变或批准资产变化时，运行 `manage_assembly_ready.py reopen`，撤回该页拼装准备状态。
+6. 全部正式 `slide_id` 均已确认且版本一致后，Proposal Owner 仍需明确下达“全部内容确认，开始拼装”；Agent 才运行 `manage_assembly_ready.py finalize`。
+7. 最终 PPT/PDF 从拼装准备库按 `deck-spec.json` 页序一次性组装。评审期间不得为了查看修改效果重复拼装 PPT/PDF。
 
 ## 项目启动 Grill Me
 
@@ -121,4 +132,5 @@
 2. 将受影响页面及所有下游页面标为过期。
 3. 修改章节源稿，重新执行受影响章节的对抗检测。
 4. 重新冻结并生成新的冻结 ID。
-5. 重建 HTML；禁止直接补丁最终 PNG、PDF 或 PPT。
+5. 从拼装准备库撤回受影响页面，重建 HTML 和评审 PNG，重新取得明确页面确认。
+6. 禁止直接补丁批准 PNG、最终 PDF 或 PPT。

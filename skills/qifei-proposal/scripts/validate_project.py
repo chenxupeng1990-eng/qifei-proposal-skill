@@ -7,6 +7,9 @@ import argparse
 import json
 from pathlib import Path
 
+from validate_assembly_ready import validate_assembly_ready
+from validate_design_loop import validate_chapter_report
+
 
 PHASES = [
     "intake",
@@ -40,9 +43,9 @@ GATES = {
     "design_calibration": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "visual_direction", "visual_sample"],
     "design_system": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "visual_direction", "visual_sample", "design_calibration"],
     "generation": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "visual_sample", "design_calibration", "design", "generation_ready"],
-    "review": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "design_calibration", "design", "generation_ready"],
-    "qa": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "design_calibration", "design", "generation_ready"],
-    "export": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "design_calibration", "design", "generation_ready", "content_qa", "visual_qa"],
+    "review": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "design_calibration", "design", "generation_ready", "design_loop"],
+    "qa": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "design_calibration", "design", "generation_ready", "design_loop"],
+    "export": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "design_calibration", "design", "generation_ready", "design_loop", "content_qa", "visual_qa", "final_assembly"],
 }
 
 BRAND_SOURCE_SUFFIXES = {".ai", ".eps", ".jpg", ".jpeg", ".key", ".pdf", ".png", ".ppt", ".pptx", ".svg", ".webp"}
@@ -266,6 +269,18 @@ def validate_project(project: Path) -> list[str]:
             if not chapter.get("redteam_report"):
                 errors.append(f"{chapter_id}: missing redteam_report")
 
+    if phase_index >= PHASES.index("review"):
+        for index, chapter in enumerate(chapters, start=1):
+            chapter_id = chapter.get("chapter_id") or f"chapter-{index}"
+            if chapter.get("design_loop_passed") is not True:
+                errors.append(f"{chapter_id}: design loop has not passed")
+                continue
+            if not chapter.get("design_loop_report"):
+                errors.append(f"{chapter_id}: missing design_loop_report")
+                continue
+            for loop_error in validate_chapter_report(project, str(chapter_id)):
+                errors.append(loop_error)
+
     for index, event in enumerate(state.get("reopen_log") or [], start=1):
         if event.get("reopened_by") != owner:
             errors.append(f"reopen_log[{index}] was not authorized by Proposal Owner {owner!r}")
@@ -276,6 +291,10 @@ def validate_project(project: Path) -> list[str]:
         errors.append("content_freeze_id is required after content freeze")
     if phase_index >= PHASES.index("design_system") and not state.get("design_version"):
         errors.append("design_version is required after design approval")
+
+    if phase == "export":
+        for assembly_error in validate_assembly_ready(project, require_final=True):
+            errors.append(assembly_error)
 
     return errors
 

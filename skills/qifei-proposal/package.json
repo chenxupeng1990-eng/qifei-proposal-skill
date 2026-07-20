@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "review:png": "node scripts/capture_review_pngs.mjs",
     "export": "node scripts/export_deck.mjs"
   },
   "dependencies": {

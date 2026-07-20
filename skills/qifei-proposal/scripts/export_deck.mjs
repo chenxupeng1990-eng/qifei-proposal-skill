@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -18,6 +18,7 @@ const HTML = path.join(PROJECT, 'deck', 'proposal.html');
 const MANIFEST = path.join(PROJECT, 'deck', 'build-manifest.json');
 const PROJECT_STATE = path.join(PROJECT, 'project-state.json');
 const DECK_SPEC = path.join(PROJECT, 'deck', 'deck-spec.json');
+const ASSEMBLY_MANIFEST = path.join(PROJECT, 'deck', 'assembly-ready', 'manifest.json');
 const PNG_DIR = path.join(PROJECT, 'exports', 'png');
 const PDF_OUT = path.join(PROJECT, 'exports', 'proposal.pdf');
 const PPTX_OUT = path.join(PROJECT, 'exports', 'proposal-preview.pptx');
@@ -55,12 +56,13 @@ function safeTrackedPath(root, relative, label) {
 }
 
 function verifyBuildFreshness() {
-  for (const file of [HTML, MANIFEST, PROJECT_STATE, DECK_SPEC]) {
+  for (const file of [HTML, MANIFEST, PROJECT_STATE, DECK_SPEC, ASSEMBLY_MANIFEST]) {
     if (!existsSync(file)) throw new Error(`Build guard missing required file: ${file}`);
   }
   const manifest = readJson(MANIFEST);
   const state = readJson(PROJECT_STATE);
   const deck = readJson(DECK_SPEC);
+  const assembly = readJson(ASSEMBLY_MANIFEST);
   if (manifest.output !== 'deck/proposal.html') {
     throw new Error(`Build guard rejected unexpected output: ${manifest.output}`);
   }
@@ -99,16 +101,66 @@ function verifyBuildFreshness() {
   if (state.approvals?.content_qa?.approved !== true || state.approvals?.visual_qa?.approved !== true) {
     throw new Error('Build guard requires approved content QA and visual QA.');
   }
-  return manifest;
+  const owner = String(state.proposal_owner || '').trim();
+  const finalApproval = assembly.final_assembly || {};
+  const stateFinalApproval = state.approvals?.final_assembly || {};
+  if (assembly.status !== 'final_approved' || state.assembly?.status !== 'final_approved') {
+    throw new Error('Build guard requires every page to be confirmed before final assembly.');
+  }
+  if (finalApproval.approved !== true || stateFinalApproval.approved !== true || finalApproval.by !== owner || stateFinalApproval.by !== owner) {
+    throw new Error('Build guard requires explicit Proposal Owner approval for final assembly.');
+  }
+  if (!finalApproval.record_id || finalApproval.record_id !== stateFinalApproval.record_id || finalApproval.record_id !== state.assembly?.final_approval_record_id) {
+    throw new Error('Build guard detected mismatched final-assembly approval records.');
+  }
+  if (assembly.content_freeze_id !== state.content_freeze_id || assembly.design_version !== state.design_version) {
+    throw new Error('Build guard detected stale assembly-ready content or design version.');
+  }
+  const deckSlides = Array.isArray(deck.slides) ? deck.slides : [];
+  const readyPages = Array.isArray(assembly.pages) ? assembly.pages : [];
+  const readyMap = new Map();
+  for (const item of readyPages) {
+    const slideId = String(item?.slide_id || '').trim();
+    if (!slideId || readyMap.has(slideId)) throw new Error(`Build guard rejected missing or duplicate assembly slide id: ${slideId}`);
+    readyMap.set(slideId, item);
+  }
+  if (!deckSlides.length || readyMap.size !== deckSlides.length) {
+    throw new Error('Build guard requires every formal slide exactly once in the assembly-ready manifest.');
+  }
+  for (const slide of deckSlides) {
+    const slideId = String(slide?.slide_id || '').trim();
+    const ready = readyMap.get(slideId);
+    if (!ready || ready.status !== 'ready') throw new Error(`Build guard: page is not assembly-ready: ${slideId}`);
+    if (ready.approved_by !== owner || !ready.approval_record_id) throw new Error(`Build guard: page lacks explicit Owner approval: ${slideId}`);
+    if (ready.content_freeze_id !== state.content_freeze_id || ready.design_version !== state.design_version) {
+      throw new Error(`Build guard: page version is stale: ${slideId}`);
+    }
+    if (ready.approved_content_hash !== slide.approved_content_hash) {
+      throw new Error(`Build guard: page content hash is stale: ${slideId}`);
+    }
+    if (typeof ready.ready_png_path !== 'string' || !ready.ready_png_path.startsWith('deck/assembly-ready/pages/')) {
+      throw new Error(`Build guard: invalid approved PNG path for ${slideId}`);
+    }
+    const png = safeTrackedPath(PROJECT, ready.ready_png_path, `approved PNG ${slideId}`);
+    if (!existsSync(png) || sha256(png) !== ready.ready_png_sha256) {
+      throw new Error(`Build guard: approved PNG is missing or changed: ${slideId}`);
+    }
+  }
+  return {manifest, deck, assembly};
 }
 
-const manifest = verifyBuildFreshness();
+const {manifest, deck, assembly} = verifyBuildFreshness();
 console.log(`Build guard passed: ${manifest.build_id}`);
 
 function browserPath() {
   const candidates = [
     process.env.CHROME_PATH,
     process.env.EDGE_PATH,
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+    '/Applications/Chromium.app/Contents/MacOS/Chromium',
+    '/usr/bin/google-chrome',
+    '/usr/bin/chromium',
     'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
     'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
     'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
@@ -123,6 +175,9 @@ console.log(`Browser: ${executablePath}`);
 console.log(`HTML: ${HTML}`);
 mkdirSync(PNG_DIR, {recursive:true});
 mkdirSync(path.dirname(PDF_OUT), {recursive:true});
+for (const file of readdirSync(PNG_DIR)) {
+  if (file.toLowerCase().endsWith('.png')) unlinkSync(path.join(PNG_DIR, file));
+}
 
 console.log('Launching browser...');
 const browser = await chromium.launch({executablePath, headless:true});
@@ -139,16 +194,23 @@ try {
   if (qa.build_id !== manifest.build_id) {
     throw new Error(`Browser build id ${qa.build_id} does not match manifest ${manifest.build_id}.`);
   }
-  console.log('Browser QA passed. Capturing slides...');
+  console.log('Browser QA passed. Assembling explicitly approved pages...');
   const slides = page.locator('.slide-canvas');
   const count = await slides.count();
   if (!count) throw new Error('No .slide-canvas elements found.');
   const ids = await slides.evaluateAll(nodes => nodes.map((node, index) => node.dataset.slideId || `slide-${index + 1}`));
+  const deckIds = (deck.slides || []).map(item => String(item.slide_id || ''));
+  if (JSON.stringify(ids) !== JSON.stringify(deckIds)) {
+    throw new Error('Final HTML page order does not match deck-spec.json.');
+  }
+  const readyMap = new Map((assembly.pages || []).map(item => [String(item.slide_id), item]));
   const pngFiles = [];
-  for (let index = 0; index < count; index += 1) {
-    const safeId = ids[index].replace(/[^A-Za-z0-9_-]+/g, '-');
+  for (const slideId of ids) {
+    const safeId = slideId.replace(/[^A-Za-z0-9_-]+/g, '-');
     const out = path.join(PNG_DIR, `${safeId}.png`);
-    await slides.nth(index).screenshot({path:out, type:'png', animations:'disabled'});
+    const ready = readyMap.get(slideId);
+    const source = safeTrackedPath(PROJECT, ready.ready_png_path, `approved PNG ${slideId}`);
+    copyFileSync(source, out);
     pngFiles.push(out);
   }
 

@@ -20,6 +20,7 @@ REQUIRED_DIRS = (
     "content/strategy",
     "content/chapters",
     "reviews/redteam",
+    "reviews/design-loop",
     "assets/source",
     "assets/image2",
     "assets/image2/alpha",
@@ -27,6 +28,8 @@ REQUIRED_DIRS = (
     "assets/approved/alpha",
     "deck",
     "deck/chapters",
+    "deck/review",
+    "deck/assembly-ready/pages",
     "exports/png",
 )
 

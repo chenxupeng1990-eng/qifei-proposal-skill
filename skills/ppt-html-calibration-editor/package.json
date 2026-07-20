@@ -1,0 +1,8 @@
+{
+  "name": "ppt-html-calibration-editor",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/editor-browser.test.mjs"
+  }
+}

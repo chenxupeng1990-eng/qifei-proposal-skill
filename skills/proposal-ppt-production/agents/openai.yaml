@@ -1,0 +1,4 @@
+interface:
+  display_name: "提案 PPT 生产"
+  short_description: "将提案原文稳定转化为高设计感、可验证的整套 PPT"
+  default_prompt: "Use $proposal-ppt-production to turn this proposal into a narrative-complete, production-ready presentation."

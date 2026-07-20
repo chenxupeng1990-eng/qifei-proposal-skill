@@ -4,7 +4,7 @@
   "project_name": "祈飞提案生成层视觉Demo",
   "proposal_owner": "总悟",
   "created_at": "2026-07-16T00:00:00+08:00",
-  "phase": "export",
+  "phase": "generation",
   "content_freeze_id": "demo-freeze-v1",
   "design_version": "design-v1",
   "brand_visual": {
