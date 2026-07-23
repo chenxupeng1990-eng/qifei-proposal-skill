@@ -20,6 +20,34 @@ from validate_project import validate_project  # noqa: E402
 
 class ContractTests(unittest.TestCase):
     @staticmethod
+    def approved(record_id: str) -> dict:
+        return {"approved": True, "by": "Owner", "record_id": record_id}
+
+    def write_redteam_project(self, project: Path, chapters: list[dict], active: str | None) -> dict:
+        (project / "content" / "chapters").mkdir(parents=True)
+        (project / "content" / "proposal-brief.md").write_text("Confirmed brief.", encoding="utf-8")
+        (project / "AGENTS.md").write_text("Confirmed project authority.", encoding="utf-8")
+        state = {
+            "phase": "chapter_redteam",
+            "proposal_owner": "Owner",
+            "active_chapter_id": active,
+            "approvals": {
+                key: self.approved(key)
+                for key in (
+                    "materials_scope", "brief_grill", "proposal_brief", "requirements",
+                    "strategy", "outline", "project_agents",
+                )
+            },
+            "chapters": chapters,
+            "reopen_log": [],
+        }
+        (project / "project-state.json").write_text(
+            json.dumps(state, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        return state
+
+    @staticmethod
     def presentation_route(
         *, expression_object: str, anchor_kind: str = "html"
     ) -> dict:
@@ -153,6 +181,84 @@ class ContractTests(unittest.TestCase):
             errors = validate_project(project)
             self.assertTrue(any("content_qa" in error for error in errors))
             self.assertTrue(any("visual_qa" in error for error in errors))
+
+    def test_chapter_redteam_rejects_empty_chapters(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = Path(temp)
+            self.write_redteam_project(project, [], None)
+            errors = validate_project(project)
+            self.assertTrue(any("At least one chapter" in error for error in errors))
+            self.assertTrue(any("active_chapter_id" in error for error in errors))
+
+    def test_chapter_redteam_requires_confirmed_target_with_source_and_slides(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = Path(temp)
+            self.write_redteam_project(
+                project,
+                [{
+                    "chapter_id": "C1",
+                    "slides": [],
+                    "manuscript_confirmed": False,
+                    "confirmation_record_id": None,
+                    "source_path": "content/chapters/missing.md",
+                }],
+                "C1",
+            )
+            errors = validate_project(project)
+            self.assertTrue(any("slides must be non-empty" in error for error in errors))
+            self.assertTrue(any("manuscript is not fully confirmed" in error for error in errors))
+            self.assertTrue(any("missing confirmation_record_id" in error for error in errors))
+            self.assertTrue(any("registered file does not exist" in error for error in errors))
+
+    def test_chapter_redteam_allows_confirmed_target_without_blocking_other_chapters(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = Path(temp)
+            self.write_redteam_project(
+                project,
+                [
+                    {
+                        "chapter_id": "C1",
+                        "slides": ["S01"],
+                        "manuscript_confirmed": True,
+                        "confirmation_record_id": "confirm-C1",
+                        "source_path": "content/chapters/C1.md",
+                    },
+                    {
+                        "chapter_id": "C2",
+                        "slides": [],
+                        "manuscript_confirmed": False,
+                        "confirmation_record_id": None,
+                        "source_path": "content/chapters/missing.md",
+                    },
+                ],
+                "C1",
+            )
+            (project / "content" / "chapters" / "C1.md").write_text(
+                "# Confirmed C1\n",
+                encoding="utf-8",
+            )
+            errors = validate_project(project)
+            self.assertEqual(errors, [])
+
+    def test_design_loop_is_completed_during_review_and_required_by_qa(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = Path(temp)
+            state = {
+                "phase": "review",
+                "proposal_owner": "Owner",
+                "approvals": {},
+                "chapters": [{"chapter_id": "C1", "design_loop_passed": False}],
+                "reopen_log": [],
+            }
+            (project / "project-state.json").write_text(json.dumps(state), encoding="utf-8")
+            review_errors = validate_project(project)
+            self.assertFalse(any("design loop" in error.lower() for error in review_errors))
+            self.assertFalse(any("approved gate: design_loop" in error for error in review_errors))
+            state["phase"] = "qa"
+            (project / "project-state.json").write_text(json.dumps(state), encoding="utf-8")
+            qa_errors = validate_project(project)
+            self.assertTrue(any("design loop" in error.lower() for error in qa_errors))
+            self.assertTrue(any("approved gate: design_loop" in error for error in qa_errors))
 
     def test_strategy_requires_completed_grill_and_proposal_brief(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

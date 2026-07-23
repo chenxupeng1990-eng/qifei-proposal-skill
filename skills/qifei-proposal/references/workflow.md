@@ -9,7 +9,7 @@
 | strategy | 已确认提案策划书、行业/客户/产品/平台判断 | 策略因果链、核心主张、动态目录 | 逻辑与表达复核通过；用户确认策略与目录 |
 | project_agents | 已确认目录 | 项目 `AGENTS.md` | 文件生成并被 Owner 确认 |
 | manuscript | 项目 `AGENTS.md` | 逐章逐页 PPT 讲稿 | 文字自然化与讲稿朗读通过；每页逐项确认 |
-| chapter_redteam | 该章确认稿、标书、策略、证据 | 对抗报告、修订记录 | 该章修订后再次确认 |
+| chapter_redteam | `active_chapter_id` 指向的确认稿、非空页面列表、章节源稿、标书、策略、证据 | 对抗报告、修订记录 | 只检查当前目标章节；该章修订后再次确认 |
 | full_redteam | 全部确认章节 | 全案对抗报告、跨页语义复核 | 无阻断问题 |
 | content_frozen | 全案确认稿 | 内容冻结 ID、逐页哈希 | Owner 冻结 |
 | visual_direction | 冻结内容、品牌官方视觉资料、品牌视觉审计 | 2-3 个视觉方向 | 选定方向 |
@@ -17,7 +17,7 @@
 | design_calibration | 已确认方向、冻结内容 | `deck/design-calibration.html`：首页、目录页、3 种章节页、低/中/高密度内容页、结尾感谢页 | 全部样张逐页确认 |
 | design_system | 已确认设计语言校准集 | `DESIGN.md`、设计令牌、正文页弹性合同 | Owner 确认 |
 | generation | 冻结内容与设计系统 | HTML＋PNG，或 Image2直出PNG | 页面合同校验与对应路线预检通过 |
-| review | HTML＋PNG，或直出PNG＋Cowart | 原生评论、修订记录、页面明确确认记录 | 评论处理完成；确认页进入拼装准备库 |
+| review | HTML＋PNG，或直出PNG＋Cowart | 设计循环、原生评论、修订记录、页面明确确认记录 | 在本阶段完成 design loop；确认页进入拼装准备库 |
 | qa | 全部正式页面已确认、批准源文件 | 内容 QA、视觉 QA、拼装准备清单 | 两轴分别通过且版本一致 |
 | export | QA 通过的批准PNG、完整拼装准备库、全案拼装批准 | 最终 PNG、PDF、图片型 PPT 预览；按需增加原生可编辑文字层 PPTX | 页数、顺序、哈希和版本一致；可编辑模式额外通过字段、坐标、备注和渲染对照 |
 

@@ -5,11 +5,11 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-import hashlib
 import json
 import re
 from pathlib import Path
 
+from build_identity import build_id
 from validate_deck_spec import load_json, media_sources, validate_deck
 from validate_project import validate_project
 
@@ -19,6 +19,8 @@ TEMPLATE_PATH = SKILL_ROOT / "assets" / "html-runtime" / "deck-template.html"
 
 
 def sha256(path: Path) -> str:
+    import hashlib
+
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
@@ -105,24 +107,21 @@ def main() -> int:
         Path(__file__).with_name("slide_hash.py"),
         Path(__file__).with_name("validate_project.py"),
         Path(__file__).with_name("export_deck.mjs"),
+        Path(__file__).with_name("build_identity.py"),
+        Path(__file__).with_name("build_identity.mjs"),
     ]
     runtime_hashes: dict[str, str] = {}
     for runtime_path in runtime_paths:
         if runtime_path.is_file():
             relative = str(runtime_path.relative_to(SKILL_ROOT)).replace("\\", "/")
             runtime_hashes[f"skill:{relative}"] = sha256(runtime_path)
-    build_material = json.dumps(
-        {"inputs": hashes, "runtime": runtime_hashes, "chapter_id": chapter_id or None},
-        sort_keys=True,
-        separators=(",", ":"),
-    )
-    build_id = hashlib.sha256(build_material.encode("utf-8")).hexdigest()[:16]
+    current_build_id = build_id(hashes, runtime_hashes, chapter_id)
 
     template = TEMPLATE_PATH.read_text(encoding="utf-8")
     html = (
         template.replace("__DECK_JSON__", safe_script_json(render_payload))
         .replace("__DESIGN_JSON__", safe_script_json(tokens))
-        .replace("__BUILD_ID__", build_id)
+        .replace("__BUILD_ID__", current_build_id)
     )
     out_path = project / "deck" / "proposal.html"
     manifest_path = project / "deck" / "build-manifest.json"
@@ -134,7 +133,7 @@ def main() -> int:
 
     manifest = {
         "schema_version": "1.0",
-        "build_id": build_id,
+        "build_id": current_build_id,
         "rendered_at": dt.datetime.now(dt.timezone.utc).astimezone().isoformat(timespec="seconds"),
         "content_freeze_id": deck.get("content_freeze_id"),
         "design_version": deck.get("design_version"),
@@ -146,7 +145,7 @@ def main() -> int:
     }
     atomic_text(manifest_path, json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
     print(f"Rendered {'chapter preview' if chapter_id else 'HTML master'}: {out_path}")
-    print(f"Build id: {build_id}")
+    print(f"Build id: {current_build_id}")
     return 0
 
 

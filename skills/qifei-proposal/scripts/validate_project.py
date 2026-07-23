@@ -35,7 +35,7 @@ GATES = {
     "strategy": ["materials_scope", "brief_grill", "proposal_brief", "requirements"],
     "project_agents": ["materials_scope", "brief_grill", "proposal_brief", "requirements", "strategy", "outline"],
     "manuscript": ["materials_scope", "brief_grill", "proposal_brief", "requirements", "strategy", "outline", "project_agents"],
-    "chapter_redteam": ["project_agents"],
+    "chapter_redteam": ["strategy", "outline", "project_agents"],
     "full_redteam": ["project_agents"],
     "content_frozen": ["full_redteam", "content_freeze"],
     "visual_direction": ["content_freeze", "brand_visual_sources", "brand_visual_audit"],
@@ -43,7 +43,7 @@ GATES = {
     "design_calibration": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "visual_direction", "visual_sample"],
     "design_system": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "visual_direction", "visual_sample", "design_calibration"],
     "generation": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "visual_sample", "design_calibration", "design", "generation_ready"],
-    "review": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "design_calibration", "design", "generation_ready", "design_loop"],
+    "review": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "design_calibration", "design", "generation_ready"],
     "qa": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "design_calibration", "design", "generation_ready", "design_loop"],
     "export": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "design_calibration", "design", "generation_ready", "design_loop", "content_qa", "visual_qa", "final_assembly"],
 }
@@ -255,6 +255,36 @@ def validate_project(project: Path) -> list[str]:
                         errors.append("design-tokens.json transparent_png must enable real alpha-channel modules")
 
     chapters = state.get("chapters") if isinstance(state.get("chapters"), list) else []
+    if phase == "chapter_redteam":
+        if not chapters:
+            errors.append("At least one chapter is required before chapter_redteam")
+        active_chapter_id = str(state.get("active_chapter_id") or "").strip()
+        if not active_chapter_id:
+            errors.append("active_chapter_id is required for chapter_redteam")
+        target = next(
+            (
+                chapter
+                for chapter in chapters
+                if isinstance(chapter, dict)
+                and str(chapter.get("chapter_id") or "").strip() == active_chapter_id
+            ),
+            None,
+        )
+        if active_chapter_id and target is None:
+            errors.append(f"active_chapter_id does not match a registered chapter: {active_chapter_id}")
+        elif target is not None:
+            slides = target.get("slides") if isinstance(target.get("slides"), list) else []
+            if not slides:
+                errors.append(f"{active_chapter_id}: slides must be non-empty before chapter red-team")
+            if target.get("manuscript_confirmed") is not True:
+                errors.append(f"{active_chapter_id}: manuscript is not fully confirmed")
+            if not target.get("confirmation_record_id"):
+                errors.append(f"{active_chapter_id}: missing confirmation_record_id")
+            source_value = target.get("source_path")
+            _, source_error = registered_project_file(project, source_value, "content/chapters")
+            if source_error:
+                errors.append(f"{active_chapter_id}.source_path: {source_error}")
+
     if phase_index >= PHASES.index("full_redteam"):
         if not chapters:
             errors.append("At least one chapter is required before full_redteam")
@@ -269,7 +299,7 @@ def validate_project(project: Path) -> list[str]:
             if not chapter.get("redteam_report"):
                 errors.append(f"{chapter_id}: missing redteam_report")
 
-    if phase_index >= PHASES.index("review"):
+    if phase_index >= PHASES.index("qa"):
         for index, chapter in enumerate(chapters, start=1):
             chapter_id = chapter.get("chapter_id") or f"chapter-{index}"
             if chapter.get("design_loop_passed") is not True:

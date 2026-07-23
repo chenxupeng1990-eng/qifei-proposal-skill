@@ -180,6 +180,19 @@ def main() -> int:
             "test_*.py",
         ],
     )
+    run(
+        "Installer tests",
+        [
+            sys.executable,
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            str(ROOT / "tests"),
+            "-p",
+            "test_*.py",
+        ],
+    )
     run("HTML editor contract", [npm, "test"], cwd=editor)
     run(
         "Page-contract validator",

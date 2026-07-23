@@ -9,14 +9,15 @@ description: Govern and produce company-specific competitive proposals for Douyi
 
 ## 启动规则
 
-1. 先完整读取顶层 [agent.md](agent.md)，以其使命、权责、上下文治理和质量定义约束整个项目。
-2. 再读取项目根目录 `AGENTS.md`；若只有旧式 `agent.md`，将其作为项目输入，不静默改名。
-3. 读取 `project-state.json`，只执行当前阶段允许的动作。
-4. 读取客户资料、临时参考资料和标书。处理 PDF、文档、表格或飞书内容时，调用对应 Skill。
-5. 读取公司 Base 时先看 [references/company-base.md](references/company-base.md)；需要数字、履历、案例成绩或来源页时再读 [references/company-facts.json](references/company-facts.json)。
-6. 需要判断资料权威、版本、证据和保密边界时，读取 [references/knowledge-policy.md](references/knowledge-policy.md)。
-7. 不把任何单一历史方案的视觉或客户策略当作通用模板。参考案例只用于提取可复用的分析、叙事或生产规则，不能进入默认公司事实库。
-8. 背景资料提交后，调用同套件的 `grill-me-lite` Skill 逐题确认项目决策；视觉阶段开始前，确认 `inputs/brand-official/` 已上传客户品牌官方视觉参考。
+1. 先运行 `scripts/check_suite_dependencies.py`。缺少 `grill-me-lite` 时立即停止，并原样输出脚本给出的完整套件安装命令；不得静默模拟 Grill Me。
+2. 再完整读取顶层 [agent.md](agent.md)，以其使命、权责、上下文治理和质量定义约束整个项目。
+3. 读取项目根目录 `AGENTS.md`；若只有旧式 `agent.md`，将其作为项目输入，不静默改名。
+4. 读取 `project-state.json`，只执行当前阶段允许的动作。
+5. 读取客户资料、临时参考资料和标书。处理 PDF、文档、表格或飞书内容时，调用对应 Skill。
+6. 读取公司 Base 时先看 [references/company-base.md](references/company-base.md)；需要数字、履历、案例成绩或来源页时再读 [references/company-facts.json](references/company-facts.json)。
+7. 需要判断资料权威、版本、证据和保密边界时，读取 [references/knowledge-policy.md](references/knowledge-policy.md)。
+8. 不把任何单一历史方案的视觉或客户策略当作通用模板。参考案例只用于提取可复用的分析、叙事或生产规则，不能进入默认公司事实库。
+9. 背景资料提交后，调用同套件的 `grill-me-lite` Skill 逐题确认项目决策；视觉阶段开始前，确认 `inputs/brand-official/` 已上传客户品牌官方视觉参考。
 
 ## 权威层级
 
@@ -49,6 +50,12 @@ description: Govern and produce company-specific competitive proposals for Douyi
 12. **按页面合同选择生产路线**：把冻结内容编译为 `deck-spec.json` 和 `slide-contracts.json`。精确文字、数据、来源与严密关系需要可编辑时，生成评审 HTML 与逐页 PNG；图像原生且无需精确文字时，可由 Image2 直出 16:9 PNG，并在 Cowart 中批注迭代。所有页面共用同一 `design_version`，评论循环不拼装 PPT/PDF。
 13. **Codex 浏览器评论、修订与逐页确认**：使用 Codex 浏览器原生评论功能定位页面与问题。Agent 根据评论回到章节源稿、`deck-spec.json` 或 `DESIGN.md` 修改并重建受影响章节。评论解决不等于页面确认；只有 Proposal Owner 明确说“确认本页/确认这些页面”时，才把对应页面和版本信息写入 `deck/assembly-ready/manifest.json`。设计语言变更会使全部页面的拼装准备状态过期。
 14. **全案 QA 与一次性拼装**：全部正式页面进入拼装准备库后，以批准 PNG 为视觉基准，完成内容忠实度、视觉质量、页序和版本 QA。只有 Proposal Owner 明确确认“全部内容确认，开始拼装”，才一次性导出。默认输出最终 PNG、PDF 和图片型 PPT 预览；若用户明确要求可编辑文字层，可在相同批准基准上运行“视觉背景＋HTML 实测文字框”编译桥，并额外完成字段、坐标和渲染对照 QA。
+
+交付级别必须在导出前说清：
+
+- **基础交付**：PNG、PDF、图片型 PPTX。
+- **增强交付**：在基础交付上增加原生文字层的半可编辑 PPTX。
+- **不承诺**：图表、复杂 SVG、场景主视觉及生成图像完全转为 PowerPoint 原生可编辑对象。
 
 ## 可选生产子 Skill
 

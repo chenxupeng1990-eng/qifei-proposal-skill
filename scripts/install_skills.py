@@ -4,18 +4,17 @@
 from __future__ import annotations
 
 import argparse
+import json
+import os
+import re
 import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent.parent
-SKILLS = (
-    "qifei-proposal",
-    "grill-me-lite",
-    "proposal-ppt-production",
-    "ppt-html-calibration-editor",
-)
+SUITE_MANIFEST = ROOT / "skills" / "qifei-proposal" / "suite.json"
 
 
 def ignore(_directory: str, names: list[str]) -> set[str]:
@@ -42,6 +41,24 @@ def install_dependencies(skill: Path) -> None:
         raise SystemExit(completed.returncode)
 
 
+def load_suite() -> list[str]:
+    data = json.loads(SUITE_MANIFEST.read_text(encoding="utf-8"))
+    skills = [str(item["name"]) for item in data.get("skills") or []]
+    if not skills:
+        raise SystemExit(f"Suite manifest contains no Skills: {SUITE_MANIFEST}")
+    return skills
+
+
+def validate_skill(skill: Path, expected_name: str) -> None:
+    entrypoint = skill / "SKILL.md"
+    if not entrypoint.is_file():
+        raise SystemExit(f"Invalid Skill source: {skill}")
+    text = entrypoint.read_text(encoding="utf-8")
+    match = re.search(r"^name:\s*(\S+)\s*$", text, re.MULTILINE)
+    if not match or match.group(1) != expected_name:
+        raise SystemExit(f"Invalid Skill metadata for {expected_name}: {entrypoint}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -63,22 +80,51 @@ def main() -> int:
 
     target = Path(args.target).expanduser().resolve()
     target.mkdir(parents=True, exist_ok=True)
+    skills = load_suite()
+    sources = {name: ROOT / "skills" / name for name in skills}
+    destinations = {name: target / name for name in skills}
+    for name, source in sources.items():
+        validate_skill(source, name)
+    existing = [path for path in destinations.values() if path.exists()]
+    if existing and not args.force:
+        joined = "\n- ".join(str(path) for path in existing)
+        raise SystemExit(
+            f"Refusing to replace existing Skill directories:\n- {joined}\n"
+            "Rerun with --force after reviewing them. No files were installed."
+        )
 
-    for name in SKILLS:
-        source = ROOT / "skills" / name
-        destination = target / name
-        if not (source / "SKILL.md").is_file():
-            raise SystemExit(f"Invalid Skill source: {source}")
-        if destination.exists():
-            if not args.force:
-                raise SystemExit(
-                    f"Refusing to replace {destination}; rerun with --force after reviewing it"
-                )
-            shutil.rmtree(destination)
-        shutil.copytree(source, destination, ignore=ignore)
-        print(f"Installed {name} -> {destination}")
-        if not args.skip_deps:
-            install_dependencies(destination)
+    transaction = Path(tempfile.mkdtemp(prefix=".proposal-suite-install-", dir=target))
+    staged = transaction / "staged"
+    backup = transaction / "backup"
+    installed: list[str] = []
+    moved_backups: list[str] = []
+    try:
+        for name, source in sources.items():
+            stage = staged / name
+            shutil.copytree(source, stage, ignore=ignore)
+            validate_skill(stage, name)
+            if not args.skip_deps:
+                install_dependencies(stage)
+        for name, destination in destinations.items():
+            if destination.exists():
+                backup.mkdir(parents=True, exist_ok=True)
+                os.replace(destination, backup / name)
+                moved_backups.append(name)
+            os.replace(staged / name, destination)
+            installed.append(name)
+            print(f"Installed {name} -> {destination}")
+    except BaseException:
+        for name in reversed(installed):
+            destination = destinations[name]
+            if destination.exists():
+                shutil.rmtree(destination)
+        for name in moved_backups:
+            saved = backup / name
+            if saved.exists():
+                os.replace(saved, destinations[name])
+        raise
+    finally:
+        shutil.rmtree(transaction, ignore_errors=True)
 
     print("\nInstallation complete. Restart Codex, then invoke $qifei-proposal.")
     return 0

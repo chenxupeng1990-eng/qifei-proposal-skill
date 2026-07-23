@@ -7,6 +7,7 @@
   "phase": "intake",
   "content_freeze_id": null,
   "design_version": null,
+  "active_chapter_id": null,
   "brand_visual": {
     "source_ids": [],
     "source_files": [],

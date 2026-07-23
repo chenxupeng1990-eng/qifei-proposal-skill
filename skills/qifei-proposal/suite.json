@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "suite_id": "proposal-skill-suite",
+  "repository": "https://github.com/chenxupeng1990-eng/qifei-proposal-skill.git",
+  "skills": [
+    {
+      "name": "qifei-proposal",
+      "requirement": "required"
+    },
+    {
+      "name": "grill-me-lite",
+      "requirement": "required"
+    },
+    {
+      "name": "proposal-ppt-production",
+      "requirement": "recommended"
+    },
+    {
+      "name": "ppt-html-calibration-editor",
+      "requirement": "optional"
+    }
+  ]
+}

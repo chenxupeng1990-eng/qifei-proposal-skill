@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { chromium } from 'playwright-core';
 import { PDFDocument } from 'pdf-lib';
 import pptxgen from 'pptxgenjs';
+import { buildId } from './build_identity.mjs';
 
 const projectArg = process.argv[2];
 if (!projectArg) {
@@ -33,14 +34,6 @@ function readJson(file) {
   } catch (error) {
     throw new Error(`Invalid JSON ${file}: ${error.message}`);
   }
-}
-
-function canonicalJson(value) {
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
-  if (value && typeof value === 'object') {
-    return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(',')}}`;
-  }
-  return JSON.stringify(value);
 }
 
 function safeTrackedPath(root, relative, label) {
@@ -83,8 +76,11 @@ function verifyBuildFreshness() {
       throw new Error(`Build guard detected changed or missing runtime: ${relative}; rerun render_deck.py.`);
     }
   }
-  const buildMaterial = canonicalJson({inputs:manifest.inputs || {}, runtime:manifest.runtime || {}});
-  const expectedBuildId = createHash('sha256').update(buildMaterial, 'utf8').digest('hex').slice(0, 16);
+  const expectedBuildId = buildId(
+    manifest.inputs || {},
+    manifest.runtime || {},
+    manifest.chapter_id ?? null,
+  );
   if (manifest.build_id !== expectedBuildId) {
     throw new Error('Build guard detected an invalid build id; rerun render_deck.py.');
   }
