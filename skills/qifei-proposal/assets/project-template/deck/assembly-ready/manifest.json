@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "project_id": "{{PROJECT_ID}}",
   "content_freeze_id": null,
   "design_version": null,

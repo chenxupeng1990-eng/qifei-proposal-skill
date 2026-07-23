@@ -1,9 +1,15 @@
 import { mountPptEditor } from './editor.js';
+import { mountPptMultiEditor } from './multi-editor.js';
 
 const params = new URLSearchParams(location.search);
 const isEditMode = params.get('edit') === '1';
+const isMultiEditMode = params.get('edit') === 'all';
 const isCaptureMode = params.has('capture') && !isEditMode;
-if (!isCaptureMode && (isEditMode || document.body.dataset.editorAuto === 'true')) {
+if (isMultiEditMode) {
+  window.__PPT_MULTI_EDITOR__ = mountPptMultiEditor({
+    documentId: document.body.dataset.documentId || document.title || 'ppt-document',
+  });
+} else if (!isCaptureMode && (isEditMode || document.body.dataset.editorAuto === 'true')) {
   const requested = params.get('capture');
   const slides = [...document.querySelectorAll('.slide')];
   const canvas = requested

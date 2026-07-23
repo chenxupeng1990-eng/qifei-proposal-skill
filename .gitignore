@@ -4,4 +4,6 @@ node_modules/
 **/.DS_Store
 **/exports/
 **/tmp/
+**/deck/editable-layout/
 **/.preview-server.json
+dist/

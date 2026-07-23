@@ -3,11 +3,19 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
+    "check:env": "node scripts/check_environment.mjs",
     "review:png": "node scripts/capture_review_pngs.mjs",
-    "export": "node scripts/export_deck.mjs"
+    "export": "node scripts/export_deck.mjs",
+    "editable:capture": "node scripts/capture_editable_layout.mjs",
+    "editable:compile": "node scripts/compile_editable_pptx.mjs",
+    "editable:validate": "node scripts/validate_editable_pptx.mjs"
   },
   "dependencies": {
+    "jszip": "^3.10.1",
     "pdf-lib": "^1.17.1",
     "playwright-core": "^1.60.0",
     "pptxgenjs": "^4.0.1"

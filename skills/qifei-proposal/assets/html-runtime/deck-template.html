@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>QIFEI Proposal</title>
+  <title>Company Proposal</title>
   <style>
     :root {
       --preview-scale: .6666667;
@@ -108,7 +108,7 @@
 </head>
 <body>
   <header class="chrome">
-    <strong id="deck-title">QIFEI Proposal</strong>
+    <strong id="deck-title">Company Proposal</strong>
     <span class="build">build __BUILD_ID__</span>
   </header>
   <main id="deck" class="deck-root"></main>
@@ -138,8 +138,8 @@
       "--panel-radius": radii.panel ? `${radii.panel}px` : null,
     };
     Object.entries(variables).forEach(([key, value]) => { if (value) root.style.setProperty(key, value); });
-    document.title = deckData.project_name || "QIFEI Proposal";
-    document.getElementById("deck-title").textContent = deckData.project_name || "QIFEI Proposal";
+    document.title = deckData.project_name || "Company Proposal";
+    document.getElementById("deck-title").textContent = deckData.project_name || "Company Proposal";
 
     const escapeText = value => String(value ?? "");
     const make = (tag, className, text) => {

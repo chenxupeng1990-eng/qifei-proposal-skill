@@ -161,6 +161,12 @@ function browserPath() {
     '/Applications/Chromium.app/Contents/MacOS/Chromium',
     '/usr/bin/google-chrome',
     '/usr/bin/chromium',
+    process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+    process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+    process.env.PROGRAMFILES && path.join(process.env.PROGRAMFILES, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+    process.env.PROGRAMFILES && path.join(process.env.PROGRAMFILES, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+    process.env['PROGRAMFILES(X86)'] && path.join(process.env['PROGRAMFILES(X86)'], 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+    process.env['PROGRAMFILES(X86)'] && path.join(process.env['PROGRAMFILES(X86)'], 'Google', 'Chrome', 'Application', 'chrome.exe'),
     'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
     'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
     'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
@@ -224,14 +230,14 @@ try {
 
   const pptx = new pptxgen();
   pptx.layout = 'LAYOUT_WIDE';
-  pptx.author = 'QIFEI';
-  pptx.subject = 'Image-based proposal preview generated from the HTML visual master';
+  pptx.author = 'Company';
+  pptx.subject = 'Image-based proposal preview assembled from explicitly approved page PNGs';
   pptx.title = path.basename(PROJECT);
-  pptx.company = 'QIFEI';
+  pptx.company = 'Company';
   pptx.lang = 'zh-CN';
-  pptx.defineSlideMaster({title:'QIFEI_MASTER', background:{color:'000000'}, objects:[]});
+  pptx.defineSlideMaster({title:'COMPANY_MASTER', background:{color:'000000'}, objects:[]});
   for (const file of pngFiles) {
-    const slide = pptx.addSlide('QIFEI_MASTER');
+    const slide = pptx.addSlide('COMPANY_MASTER');
     slide.addImage({path:file, x:0, y:0, w:13.333333, h:7.5});
   }
   await pptx.writeFile({fileName:PPTX_OUT});

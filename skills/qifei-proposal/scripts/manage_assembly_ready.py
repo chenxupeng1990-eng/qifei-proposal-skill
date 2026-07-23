@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Approve, reopen, or finalize explicitly confirmed QIFEI proposal pages."""
+"""Approve, reopen, or finalize explicitly confirmed company proposal pages."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ import hashlib
 import json
 import re
 import shutil
+import struct
 from pathlib import Path
 
 from validate_assembly_ready import load_json, validate_assembly_ready
@@ -47,6 +48,13 @@ def now_iso() -> str:
 
 def safe_name(slide_id: str) -> str:
     return re.sub(r"[^A-Za-z0-9_-]+", "-", slide_id).strip("-") or "slide"
+
+
+def png_size(path: Path) -> tuple[int, int]:
+    data = path.read_bytes()[:24]
+    if len(data) < 24 or data[:8] != b"\x89PNG\r\n\x1a\n" or data[12:16] != b"IHDR":
+        raise SystemExit(f"Direct review asset must be a valid PNG: {path}")
+    return struct.unpack(">II", data[16:24])
 
 
 def require_owner(state: dict, approved_by: str) -> None:
@@ -92,30 +100,47 @@ def approve(args: argparse.Namespace, project: Path) -> int:
     if state.get("phase") not in {"review", "qa"}:
         raise SystemExit("Pages may be confirmed only during review or qa")
 
-    review_path = safe_project_file(project, args.review_manifest, "deck/review")
-    review = load_json(review_path)
     freeze_id = state.get("content_freeze_id")
     design_version = state.get("design_version")
-    if review.get("content_freeze_id") != freeze_id or deck.get("content_freeze_id") != freeze_id:
-        raise SystemExit("Review manifest content_freeze_id is stale")
-    if review.get("design_version") != design_version or deck.get("design_version") != design_version:
-        raise SystemExit("Review manifest design_version is stale")
-    review_html = safe_project_file(project, review.get("html_path"), "deck")
-    if sha256(review_html) != review.get("html_sha256"):
-        raise SystemExit("Review HTML changed after PNG capture; recapture the review PNGs")
-    review_build = safe_project_file(project, review.get("build_manifest_path"), "deck")
-    if sha256(review_build) != review.get("build_manifest_sha256"):
-        raise SystemExit("Review build manifest changed after PNG capture; recapture the review PNGs")
+    if deck.get("content_freeze_id") != freeze_id:
+        raise SystemExit("Deck spec content_freeze_id is stale")
+    if deck.get("design_version") != design_version:
+        raise SystemExit("Deck spec design_version is stale")
     if manifest.get("pages") and (
         manifest.get("content_freeze_id") != freeze_id or manifest.get("design_version") != design_version
     ):
         raise SystemExit("Existing assembly-ready pages use another freeze/design version; reopen them first")
 
-    review_pages = {
-        str(page.get("slide_id") or "").strip(): page
-        for page in review.get("pages") or []
-        if isinstance(page, dict)
-    }
+    review = None
+    review_path = None
+    review_pages = {}
+    direct_png = None
+    if args.review_manifest:
+        review_path = safe_project_file(project, args.review_manifest, "deck/review")
+        review = load_json(review_path)
+        if review.get("content_freeze_id") != freeze_id:
+            raise SystemExit("Review manifest content_freeze_id is stale")
+        if review.get("design_version") != design_version:
+            raise SystemExit("Review manifest design_version is stale")
+        review_html = safe_project_file(project, review.get("html_path"), "deck")
+        if sha256(review_html) != review.get("html_sha256"):
+            raise SystemExit("Review HTML changed after PNG capture; recapture the review PNGs")
+        review_build = safe_project_file(project, review.get("build_manifest_path"), "deck")
+        if sha256(review_build) != review.get("build_manifest_sha256"):
+            raise SystemExit("Review build manifest changed after PNG capture; recapture the review PNGs")
+        review_pages = {
+            str(page.get("slide_id") or "").strip(): page
+            for page in review.get("pages") or []
+            if isinstance(page, dict)
+        }
+    else:
+        if len(args.slide_id) != 1:
+            raise SystemExit("--direct-png approves exactly one --slide-id per command")
+        direct_png = safe_project_file(project, args.direct_png, "deck/review")
+        width, height = png_size(direct_png)
+        if width * 9 != height * 16:
+            raise SystemExit(f"Direct review PNG must be 16:9, got {width}x{height}")
+
     deck_slides = {
         str(slide.get("slide_id") or "").strip(): slide
         for slide in deck.get("slides") or []
@@ -130,12 +155,19 @@ def approve(args: argparse.Namespace, project: Path) -> int:
     for slide_id in args.slide_id:
         if slide_id not in deck_slides:
             raise SystemExit(f"Unknown slide_id: {slide_id}")
-        review_page = review_pages.get(slide_id)
-        if not review_page:
-            raise SystemExit(f"Review manifest does not contain slide_id: {slide_id}")
-        source_png = safe_project_file(project, review_page.get("png_path"), "deck/review")
-        if sha256(source_png) != review_page.get("png_sha256"):
-            raise SystemExit(f"Review PNG hash is stale: {slide_id}")
+        if review:
+            review_page = review_pages.get(slide_id)
+            if not review_page:
+                raise SystemExit(f"Review manifest does not contain slide_id: {slide_id}")
+            source_png = safe_project_file(project, review_page.get("png_path"), "deck/review")
+            if sha256(source_png) != review_page.get("png_sha256"):
+                raise SystemExit(f"Review PNG hash is stale: {slide_id}")
+            source_type = "html"
+            source_path = review.get("html_path")
+        else:
+            source_png = direct_png
+            source_type = "direct_png"
+            source_path = str(source_png.relative_to(project)).replace("\\", "/")
         destination = ready_dir / f"{safe_name(slide_id)}.png"
         temp = destination.with_name(f".{destination.name}.tmp")
         shutil.copy2(source_png, temp)
@@ -148,10 +180,13 @@ def approve(args: argparse.Namespace, project: Path) -> int:
             "content_freeze_id": freeze_id,
             "design_version": design_version,
             "approved_content_hash": slide.get("approved_content_hash"),
-            "review_manifest_path": str(review_path.relative_to(project)).replace("\\", "/"),
-            "review_build_id": review.get("build_id"),
-            "review_html_path": review.get("html_path"),
-            "review_html_sha256": review.get("html_sha256"),
+            "source_type": source_type,
+            "source_path": source_path,
+            "source_sha256": sha256(source_png if source_type == "direct_png" else review_html),
+            "review_manifest_path": str(review_path.relative_to(project)).replace("\\", "/") if review_path else None,
+            "review_build_id": review.get("build_id") if review else None,
+            "review_html_path": review.get("html_path") if review else None,
+            "review_html_sha256": review.get("html_sha256") if review else None,
             "ready_png_path": relative_destination,
             "ready_png_sha256": sha256(destination),
             "approved_by": args.approved_by,
@@ -245,7 +280,9 @@ def parse_args() -> argparse.Namespace:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     approve_parser = subparsers.add_parser("approve", help="Mark explicitly confirmed page(s) ready")
-    approve_parser.add_argument("--review-manifest", required=True)
+    source_group = approve_parser.add_mutually_exclusive_group(required=True)
+    source_group.add_argument("--review-manifest")
+    source_group.add_argument("--direct-png", help="Approved 16:9 PNG under deck/review for an image-native page")
     approve_parser.add_argument("--slide-id", action="append", required=True)
     approve_parser.add_argument("--approved-by", required=True)
     approve_parser.add_argument("--approval-id", required=True)

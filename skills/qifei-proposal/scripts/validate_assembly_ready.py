@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate explicitly approved pages before final QIFEI deck assembly."""
+"""Validate explicitly approved pages before final company deck assembly."""
 
 from __future__ import annotations
 
@@ -113,6 +113,19 @@ def validate_assembly_ready(project: Path, require_final: bool = False) -> list[
             errors.append(f"{slide_id}: approved content hash is stale")
         if page.get("approved_by") != owner or not page.get("approval_record_id"):
             errors.append(f"{slide_id}: missing explicit Proposal Owner approval")
+        # Schema 1.0 pages predate route-aware sources. Treat their recorded
+        # review HTML as the source so existing confirmed projects remain valid.
+        source_type = page.get("source_type") or ("html" if page.get("review_html_path") else None)
+        if source_type not in {"html", "direct_png"}:
+            errors.append(f"{slide_id}: source_type must be html or direct_png")
+        source_root = "deck/review" if source_type == "direct_png" else "deck"
+        source_value = page.get("source_path") or page.get("review_html_path")
+        source_hash = page.get("source_sha256") or page.get("review_html_sha256")
+        source_path, source_error = project_file(project, source_value, source_root)
+        if source_error:
+            errors.append(f"{slide_id}.source_path: {source_error}")
+        elif source_path and sha256(source_path) != source_hash:
+            errors.append(f"{slide_id}: approved source hash does not match")
         png_path, png_error = project_file(project, page.get("ready_png_path"), "deck/assembly-ready/pages")
         if png_error:
             errors.append(f"{slide_id}.ready_png_path: {png_error}")

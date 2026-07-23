@@ -2,7 +2,13 @@
   "name": "ppt-html-calibration-editor",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "test": "node tests/editor-browser.test.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.60.0"
   }
 }

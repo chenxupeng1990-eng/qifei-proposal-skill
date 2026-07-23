@@ -1,0 +1,51 @@
+{
+  "communicationJob": {
+    "audience": "品牌决策团队",
+    "outcome": "批准继续讨论这一进入方式",
+    "centralTakeaway": "市场机会仍在，但进入方式必须升级",
+    "statement": "提案结束时，品牌决策团队应因为市场机会仍在但进入方式必须升级，而批准继续讨论这一进入方式"
+  },
+  "pages": [
+    {
+      "id": "example-page",
+      "audienceDecision": "相信这一进入方式值得继续讨论",
+      "audienceFacingCopyConfirmed": true,
+      "priorPageQuestion": "市场仍值得进入吗",
+      "conclusion": "市场仍有机会，但普通答案已经拥挤",
+      "causalStatement": "因为市场仍有规模但普通答案拥挤，所以品牌应通过更专业的解决方案进入",
+      "communicationObject": "decision",
+      "primaryCarrier": "从宽到窄的光学选择路径",
+      "carrierMakesVisible": "市场空间、拥挤竞争和聚焦答案",
+      "visualHammer": "光束穿过拥挤滤镜后聚焦于产品",
+      "productRole": "choice",
+      "image2ProductReferenceRequired": true,
+      "image2ExactSparseLabels": [],
+      "htmlExactContent": ["标题", "三段决策文字"],
+      "productionRoute": "Image2 + HTML",
+      "htmlSkipReason": "标题和决策文字必须保持精确，因此不可跳过HTML",
+      "visualFrame": {
+        "aspectRatio": "16:9",
+        "subjectPosition": "产品与聚焦装置位于右侧",
+        "gazeOrDirection": "光束由左向右聚焦",
+        "protectedTextZone": "左侧40%",
+        "cropTolerance": "右侧装置可裁切不超过8%",
+        "reuseAllowed": false
+      },
+      "typography": {
+        "templateControlled": false,
+        "titlePt": 42,
+        "titleLineIntent": "multi",
+        "midLevelPt": 26,
+        "bodyMinPt": 18
+      },
+      "failureMode": "泛防晒KV或可替换的产品摆拍",
+      "nextPageQuestion": "专业光损伤管理如何被解释",
+      "qa": {
+        "removal": "pass",
+        "swap": "pass",
+        "thumbnail": "pass",
+        "narrative": "pass"
+      }
+    }
+  ]
+}

@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import subprocess
+import struct
 import sys
 import tempfile
 import unittest
@@ -175,6 +176,30 @@ class AssemblyReadyTests(unittest.TestCase):
             self.assertEqual(state["assembly"]["status"], "collecting")
             self.assertEqual(manifest["pages"], [])
             self.assertFalse(state["approvals"]["final_assembly"]["approved"])
+
+    def test_direct_png_page_can_enter_the_same_assembly_library(self) -> None:
+        direct = self.project / "deck" / "review" / "direct" / "S01.png"
+        direct.parent.mkdir(parents=True, exist_ok=True)
+        direct.write_bytes(
+            b"\x89PNG\r\n\x1a\n"
+            + struct.pack(">I", 13)
+            + b"IHDR"
+            + struct.pack(">II", 1920, 1080)
+            + b"\x08\x06\x00\x00\x00"
+        )
+        direct_rel = str(direct.relative_to(self.project)).replace("\\", "/")
+        self.run_manager(
+            "approve", "--direct-png", direct_rel, "--slide-id", "S01",
+            "--approved-by", "Owner", "--approval-id", "direct-page-approval",
+        )
+        manifest = json.loads(
+            (self.project / "deck" / "assembly-ready" / "manifest.json").read_text(encoding="utf-8")
+        )
+        page = manifest["pages"][0]
+        self.assertEqual(page["source_type"], "direct_png")
+        self.assertEqual(page["source_path"], direct_rel)
+        self.assertIsNone(page["review_html_path"])
+        self.assertTrue(any("S02" in error for error in validate_assembly_ready(self.project)))
 
 
 if __name__ == "__main__":

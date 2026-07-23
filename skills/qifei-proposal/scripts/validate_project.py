@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate QIFEI proposal phase gates and required project artifacts."""
+"""Validate company proposal phase gates and required project artifacts."""
 
 from __future__ import annotations
 

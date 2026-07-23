@@ -1,9 +1,9 @@
-# 祈飞提案生成层视觉 Demo｜项目基线
+# 通用提案生成层视觉 Demo｜项目基线
 
 ## 项目信息
 
 - 项目 ID：`qfp-visual-demo`
-- Proposal Owner：总悟
+- Proposal Owner：Demo Owner
 - 类型：隔离视觉与生成链路测试
 - 客户：虚构熟龄营养项目
 - 范围：只验证内容冻结、Image2/HTML 统一、Codex 浏览器原生评论、PNG/PDF/PPT 导出

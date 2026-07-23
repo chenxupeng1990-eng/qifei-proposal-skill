@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "deck_id": "qfp-visual-demo-deck",
-  "project_name": "祈飞提案生成层视觉 Demo",
+  "project_name": "通用提案生成层视觉 Demo",
   "content_freeze_id": "demo-freeze-v1",
   "design_version": "design-v1",
   "source_hashes": {},
@@ -11,7 +11,7 @@
       "chapter": "视觉 Demo",
       "role": "cover",
       "layout": "hero",
-      "kicker": "QIFEI PROPOSAL SYSTEM",
+      "kicker": "PROPOSAL PRODUCTION SYSTEM",
       "title": "把复杂营养价值，变成每天都能理解的选择",
       "subtitle": "Image2 负责高表现力主视觉，HTML 负责清晰、稳定、可校验的提案表达。",
       "blocks": [],
@@ -23,7 +23,7 @@
       "evidence_ids": [],
       "speaker_doc_anchor": "demo://speaker/D01",
       "status": "content_frozen",
-      "approved_content_hash": "d7ad40b7f94d8cf89f84f9baecb523d98d9e9be81c4908f4fdd4c1647c7e58c4"
+      "approved_content_hash": "322c877a9479f1b5a71cca8131fd578896ff3976c0c49e51851e4ca839c1b3cc"
     },
     {
       "slide_id": "D02",
@@ -129,7 +129,7 @@
       "chapter": "视觉 Demo",
       "role": "closing",
       "layout": "closing",
-      "kicker": "QIFEI / END",
+      "kicker": "PROPOSAL / END",
       "title": "内容确认之后，视觉才开始",
       "subtitle": "从逐页讲稿到 HTML 母版，每一步都可追溯、可批注、可重新生成。",
       "blocks": [],
@@ -141,7 +141,7 @@
       "evidence_ids": [],
       "speaker_doc_anchor": "demo://speaker/D05",
       "status": "content_frozen",
-      "approved_content_hash": "1ede6004c7703101799745620d93a509f92f3153068377fa6bdf3d23bca7b0e3"
+      "approved_content_hash": "7d715d5150c91d3967050443031c84887231c1529c1860ae0d6bf565cb134f35"
     }
   ]
 }

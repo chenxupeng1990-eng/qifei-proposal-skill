@@ -26,4 +26,4 @@
 
 - 品牌资料范围：`demo-brand-sources`
 - 视觉审计：`demo-brand-audit`
-- Proposal Owner：总悟
+- Proposal Owner：Demo Owner

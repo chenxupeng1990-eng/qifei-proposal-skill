@@ -9,3 +9,12 @@
 .ppt-editor-active,.ppt-editor-active body{width:100%!important;min-height:100%!important;overflow:auto!important}.ppt-editor-active body{padding-top:58px}.ppt-editor-stage{position:relative;margin:22px 270px 30px 24px;overflow:visible;box-shadow:0 14px 48px rgba(18,36,56,.25)}.ppt-editor-safe-area{left:0;top:0;width:0;height:0}
 .ppt-editor-root{font-family:PptEditorSC,"PingFang SC","Microsoft YaHei",sans-serif}
 .ppt-editor-root button,.ppt-editor-root input,.ppt-editor-root select{font:inherit}
+.ppt-editor-multi-active body{padding-top:64px}
+.ppt-editor-multi-active .deck{display:flex!important;flex-direction:column!important;align-items:center!important;gap:48px!important;padding:40px 24px 96px!important}
+.ppt-editor-multi-active .ppt-multi-shell{position:relative;width:min(1600px,calc(100vw - 48px));flex:none;overflow:visible}
+.ppt-editor-multi-active .ppt-multi-slide{display:block!important;position:absolute!important;left:0;top:0;margin:0!important;flex:none;box-shadow:0 24px 70px rgba(0,0,0,.35)}
+.ppt-multi-toolbar{position:fixed;z-index:100000;left:0;right:0;top:0;height:64px;padding:0 28px;display:flex;align-items:center;gap:20px;background:#111827;color:#fff;box-shadow:0 8px 24px rgba(0,0,0,.28);font:14px/1.2 system-ui,sans-serif}
+.ppt-multi-toolbar strong{font-size:17px}.ppt-multi-toolbar span{color:#cbd5e1}.ppt-multi-toolbar button{margin-left:auto;border:1px solid #64748b;border-radius:6px;background:#fff;color:#111827;padding:8px 14px;cursor:pointer}
+.ppt-editor-multi-active [data-editable="text"]{cursor:text;outline:1px dashed transparent;outline-offset:5px}
+.ppt-editor-multi-active [data-editable="text"]:hover{outline-color:#38bdf8}
+.ppt-editor-multi-active .ppt-multi-editing{outline:3px solid #0ea5e9!important;background:rgba(224,242,254,.2)}

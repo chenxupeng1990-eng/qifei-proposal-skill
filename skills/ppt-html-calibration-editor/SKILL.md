@@ -34,6 +34,7 @@ Read `references/editor-contract.md` before modifying an existing renderer. Copy
 
 - Preview: open normally; editor does not mount.
 - Edit: `?edit=1&capture=<slide-id>`.
+- Full-deck copy edit: `?edit=all`; all slides remain visible and opted-in text can be edited in one scrolling document.
 - Screenshot: `?capture=<slide-id>`; editor DOM must not exist.
 - Dedicated clickable review entry: create a thin HTML wrapper or set `data-editor-auto="true"` only on a demo/review page. Never auto-enable editing on a production capture page.
 
@@ -42,6 +43,14 @@ Serve through HTTP rather than `file://`:
 ```bash
 python3 -m http.server 4173
 ```
+
+Windows PowerShell 使用：
+
+```powershell
+py -3 -m http.server 4173
+```
+
+如果没有 Python Launcher，可使用 `python -m http.server 4173`。
 
 ChatGPT/GPT Work web previews may render HTML without executing local modules or interactive file APIs. For real editing, use Codex desktop/local preview or a normal browser connected to the local server.
 

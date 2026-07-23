@@ -1,6 +1,6 @@
 # {{PROJECT_NAME}}｜提案策划书
 
-> 背景资料提交后，通过 `grilling` 一次一题确认。本文件经 Proposal Owner 确认后，才允许进入策略与目录。
+> 背景资料提交后，通过 `grill-me-lite` 一次一题确认。本文件经 Proposal Owner 确认后，才允许进入策略与目录。
 
 ## 1. 背景资料与已知事实
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render a frozen QIFEI deck spec into the single HTML visual master."""
+"""Render HTML-routed pages from a frozen company deck spec."""
 
 from __future__ import annotations
 

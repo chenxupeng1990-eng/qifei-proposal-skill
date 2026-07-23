@@ -1,29 +1,30 @@
 {
   "schema_version": "1.0",
-  "build_id": "822f1c95778af5be",
-  "rendered_at": "2026-07-16T20:40:35+08:00",
+  "build_id": "7fa30cc9add37d3e",
+  "rendered_at": "2026-07-23T13:24:37+08:00",
   "content_freeze_id": "demo-freeze-v1",
   "design_version": "design-v1",
   "chapter_id": "DEMO",
   "inputs": {
-    "AGENTS.md": "b9713297087d1e8907af578fefe89566032d71a4285f2638925161df8e7482aa",
-    "DESIGN.md": "e44d29b0e64800a513a7c48a5f07615a9257b2cbb06b673aca4b0bb26801bf67",
-    "content/proposal-brief.md": "8bb035104962b1c84c208169d7f0268f7ed18df819cf2246674227aabf61edec",
-    "deck/deck-spec.json": "21a04a6da06dd4cb825cec3b58670d434b83f57b6184026061fc1d1c68cda017",
+    "AGENTS.md": "5c50f9d712db5321a7400e903ce0bde7fa737ec7ae22812fec2ac5568e0378a8",
+    "DESIGN.md": "e8535435b76843a0293b01e29ce49955302fa6d6f8722f7ca8ecde4dd2750f28",
+    "content/proposal-brief.md": "ad26ea0f5981a834c1f02c15958faa9bc6dd4db63026dee6f914354f9c3b67d6",
+    "deck/deck-spec.json": "397e3fef0f02495a3c28941c4fabfcadfd47e39eb9f3e5bd5db54c6852e98b9f",
     "deck/design-tokens.json": "2dbc3d7bb7e59dc1ac927ce57bc20c9cb5209d04367bead4c81b945e293096c5",
     "deck/slide-contracts.json": "897dbe653a42db7d4a66fe318b69de4ed0aa6e356c1cf2aec355587204184941",
-    "deck/design-calibration.html": "184060fc53edacb51d8c660bd9289044dfc6ead7feccc02deb2247ff090abc68",
-    "evidence/brand-visual-audit.md": "b748f47dd4c331cc70e976de50593920d85d9175192622178f5fed74caf37df0",
+    "deck/design-calibration.html": "514cc5159d5be1493b172425d183da5b110e7c2fb42ed3e159f90c5d2474d97d",
+    "evidence/brand-visual-audit.md": "7cfe0031b62162301b0734bf5b6bd5c0cd4ca2fe8f513a8a8c6a9a85ea8cd2a3",
     "inputs/brand-official/demo-brand-reference.svg": "7c979c3ea97fb2dbaf1bb18a6a8fa1eb8af769bef476e4257955bae852fd85eb",
     "assets/image2/demo-hero.png": "a96bbd484578b9bc03ac1f81d246ad8e5389ce30350ee18393373d41505e994c"
   },
   "runtime": {
-    "skill:assets/html-runtime/deck-template.html": "81228c9947e4dc981ed68a7c9d53044da2df18173336c7bbeb8ef69c537a761e",
-    "skill:scripts/render_deck.py": "30c9c18362b504a5416f0ebb4019756cbf0e7e021d492d80c2b74a72cedc78ba",
-    "skill:scripts/validate_deck_spec.py": "8047867a58eb79bcf4fa7e24a364c5e50e973e1a1ec268300feb697497c70b27",
-    "skill:scripts/validate_project.py": "1f4fd436ff59651301e9af02d0075762398e59e7bbf4751b0ad3d30ae15354ff",
-    "skill:scripts/export_deck.mjs": "1ef172ad86b932f260fed8bc45f7c68c195f737a14f75be57cb06a335fc6dc2c"
+    "skill:assets/html-runtime/deck-template.html": "13a0514d22f82f431fbde5b2a22ef4a73000b8f875bb744aac160e7ac50c62d5",
+    "skill:scripts/render_deck.py": "b7c6299f2a389e08c711ae7067058738a6691380dc86977ae3ff4c7d5eb3c34b",
+    "skill:scripts/validate_deck_spec.py": "48fb9efaf41a3f6402595b761174e6c61654d0883bfbe4a0b69cc81a29c386f5",
+    "skill:scripts/slide_hash.py": "22d122a90fae386038460fa277537648b7462d66acdf0c19da2ab3253972f503",
+    "skill:scripts/validate_project.py": "d3232d00531c312743f7facbd4a20a02d0e9ce7ed185394bd7a63b525e21154b",
+    "skill:scripts/export_deck.mjs": "d01478afa5909bdfeb1b864ebd5405b4f2fbceb51b2a23d56a92a96cd901c71b"
   },
   "output": "deck/chapters/DEMO.html",
-  "output_sha256": "ac157bb094a3365d06d5c8ed81c1d3bccab06a5ae870b30a395f62b79c43d7f9"
+  "output_sha256": "03db63828561b69b902d30272ffb11a4e2d61ec98700cb183cd48bbe34408fa4"
 }

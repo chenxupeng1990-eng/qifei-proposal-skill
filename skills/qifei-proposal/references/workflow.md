@@ -6,20 +6,20 @@
 |---|---|---|---|
 | intake | 客户资料、标书、临时参考 | 资料清单、缺口、权限范围 | Owner 确认资料范围 |
 | requirements | 已提交背景资料、受众、比稿机制、范围、目标 | Grill Me 决策记录、`content/proposal-brief.md` | Owner 确认共同理解、需求与策划书 |
-| strategy | 已确认提案策划书、行业/客户/产品/平台判断 | 策略因果链、核心主张、动态目录 | 用户确认策略与目录 |
+| strategy | 已确认提案策划书、行业/客户/产品/平台判断 | 策略因果链、核心主张、动态目录 | 逻辑与表达复核通过；用户确认策略与目录 |
 | project_agents | 已确认目录 | 项目 `AGENTS.md` | 文件生成并被 Owner 确认 |
-| manuscript | 项目 `AGENTS.md` | 逐章逐页 PPT 讲稿 | 每页逐项确认 |
+| manuscript | 项目 `AGENTS.md` | 逐章逐页 PPT 讲稿 | 文字自然化与讲稿朗读通过；每页逐项确认 |
 | chapter_redteam | 该章确认稿、标书、策略、证据 | 对抗报告、修订记录 | 该章修订后再次确认 |
-| full_redteam | 全部确认章节 | 全案对抗报告 | 无阻断问题 |
+| full_redteam | 全部确认章节 | 全案对抗报告、跨页语义复核 | 无阻断问题 |
 | content_frozen | 全案确认稿 | 内容冻结 ID、逐页哈希 | Owner 冻结 |
 | visual_direction | 冻结内容、品牌官方视觉资料、品牌视觉审计 | 2-3 个视觉方向 | 选定方向 |
 | visual_sample | 选定方向 | 少量代表页样张 | 初始方向确认 |
 | design_calibration | 已确认方向、冻结内容 | `deck/design-calibration.html`：首页、目录页、3 种章节页、低/中/高密度内容页、结尾感谢页 | 全部样张逐页确认 |
 | design_system | 已确认设计语言校准集 | `DESIGN.md`、设计令牌、正文页弹性合同 | Owner 确认 |
-| generation | 冻结内容与设计系统 | 按章节 Image2 资产、评审 HTML、逐页 PNG | 章节合同校验和浏览器预检通过 |
-| review | 章节 HTML、逐页 PNG | Codex 浏览器原生评论、修订记录、页面明确确认记录 | 评论处理完成；确认页进入拼装准备库 |
-| qa | 全部正式页面已确认、最终 HTML | 内容 QA、视觉 QA、拼装准备清单 | 两轴分别通过且版本一致 |
-| export | QA 通过的最终 HTML、完整拼装准备库、全案拼装批准 | 最终 PNG、PDF、PPT 预览 | 页数、顺序、哈希和版本一致 |
+| generation | 冻结内容与设计系统 | HTML＋PNG，或 Image2直出PNG | 页面合同校验与对应路线预检通过 |
+| review | HTML＋PNG，或直出PNG＋Cowart | 原生评论、修订记录、页面明确确认记录 | 评论处理完成；确认页进入拼装准备库 |
+| qa | 全部正式页面已确认、批准源文件 | 内容 QA、视觉 QA、拼装准备清单 | 两轴分别通过且版本一致 |
+| export | QA 通过的批准PNG、完整拼装准备库、全案拼装批准 | 最终 PNG、PDF、图片型 PPT 预览；按需增加原生可编辑文字层 PPTX | 页数、顺序、哈希和版本一致；可编辑模式额外通过字段、坐标、备注和渲染对照 |
 
 ## 项目状态
 
@@ -48,29 +48,30 @@
 
 ## 按章节生成
 
-- `DESIGN.md` 和设计令牌批准后，用 `python scripts/render_deck.py <项目目录> --chapter-id <章节ID>` 生成单章评审 HTML，再用 `node scripts/capture_review_pngs.mjs <项目目录> --chapter-id <章节ID>` 生成逐页评审 PNG。
+- `DESIGN.md` 和设计令牌批准后，先按页面合同确定路线。HTML页使用 `python scripts/render_deck.py <项目目录> --chapter-id <章节ID>` 与 `node scripts/capture_review_pngs.mjs <项目目录> --chapter-id <章节ID>`；图像原生页由 Image2 直接生成 16:9 PNG，并放入 `deck/review/` 供 Cowart 批注。
 - 同一批次的所有章节必须使用同一个 `design_version`、页面合同和资产规则。
 - 正文页可在弹性合同内选择版式、密度和媒体比例；不得改写字体体系、色卡、品牌符号、网格、安全区或组件语法。
 - 内容修改只重建受影响章节；`DESIGN.md`、设计令牌或公共组件改变时，全部章节输出过期并必须重建。
-- 单章评审循环只使用 HTML＋PNG，不生成 PDF/PPT。单章评审完成不等于页面确认，也不等于最终导出完成。
+- 单章评审循环只使用 HTML＋PNG或直出PNG＋Cowart，不生成 PDF/PPT。单章评审完成不等于页面确认，也不等于最终导出完成。
 
 ## 页面确认与拼装准备库
 
 1. 评论解决、视觉 QA 通过或 Agent 判断可用，都不能自动确认页面。
 2. 只有 Proposal Owner 明确下达“确认本页”“确认这些页面”或同等含义命令，Agent 才运行 `manage_assembly_ready.py approve`。
-3. 批准记录写入 `deck/assembly-ready/manifest.json`，至少包含 `slide_id`、批准内容哈希、`content_freeze_id`、`design_version`、评审 HTML、批准 PNG、文件哈希、确认人、时间与确认记录 ID。
-4. 批准 PNG 复制到 `deck/assembly-ready/pages/`，作为最终拼装的页面快照；后续修改仍回到 HTML 源。
+3. 批准记录写入 `deck/assembly-ready/manifest.json`，至少包含 `slide_id`、批准内容哈希、`content_freeze_id`、`design_version`、`source_type`、源文件、批准 PNG、文件哈希、确认人、时间与确认记录 ID。
+4. 批准 PNG 复制到 `deck/assembly-ready/pages/`，作为最终拼装的页面快照；后续修改回到该页记录的 HTML 或 direct PNG 源。
 5. 页面重开、内容哈希改变、`design_version` 改变或批准资产变化时，运行 `manage_assembly_ready.py reopen`，撤回该页拼装准备状态。
 6. 全部正式 `slide_id` 均已确认且版本一致后，Proposal Owner 仍需明确下达“全部内容确认，开始拼装”；Agent 才运行 `manage_assembly_ready.py finalize`。
 7. 最终 PPT/PDF 从拼装准备库按 `deck-spec.json` 页序一次性组装。评审期间不得为了查看修改效果重复拼装 PPT/PDF。
+8. 需要可编辑文字层时，仍以同一批准 PNG 为视觉基准；从对应 HTML 捕获实测文字框、字体与颜色，编译为 PowerPoint 原生文字。字段 QA 、坐标 QA 和备注回查只证明编译忠实；必须另外渲染全案，对照批准 PNG 检查字体替代、换行、遮挡与视觉节奏。
 
 ## 项目启动 Grill Me
 
-背景资料进入 `inputs/client/` 后，调用 `grilling` Skill：
+背景资料进入 `inputs/client/` 后，调用 `grill-me-lite` Skill：
 
 1. 先从资料中提取事实，不向用户重复询问可查事实。
 2. 一次只问一个决策问题，并给出推荐答案及理由。
-3. 至少覆盖提案目标、评审对象、评审机制、范围内外、核心任务、成功标准、承诺边界、研究缺口、交付形式、演讲场景、时间与角色。
+3. 只追问会改变策略、范围、承诺或交付的事项；通常为 3—8 个关键问题，不为覆盖固定题库而延长访谈。
 4. 每个答案写入 `content/proposal-brief.md` 的决定记录；存在冲突时继续追问，不静默替用户选择。
 5. 用户明确确认已经达成共同理解后，记录 `brief_grill`；策划书全文再次确认后记录 `proposal_brief`。
 6. 若 `Visualize:visualize` 可用，可将决策树、依赖关系、范围或评审路径做成确认视图。不得因为插件不可用而阻塞；Markdown 策划书始终是权威文件。
@@ -106,6 +107,8 @@
 
 至少检查：标书漏项、策略漂移、页间断链、无证据承诺、执行失真、公司内容越位、案例错配、对外备注泄漏、讲稿与上屏内容冲突。
 
+同时按 [writing-style-and-humanization.md](writing-style-and-humanization.md) 检查同章标题句式、空泛策略词、宣传腔、三段式惯性和讲稿朗读感。单个词语出现不构成问题；连续模式和不自然表达才需要修改。
+
 ## 全案对抗检测
 
 使用新的子 Agent，不能复用章节检查者上下文。增加检查：
@@ -117,6 +120,15 @@
 - 不同章节没有重复争夺同一演讲任务。
 - 标书响应可被评审快速定位。
 - 讲稿、证据、页面和附录的 `slide_id` 一致。
+
+同时按 [cross-page-semantic-qa.md](cross-page-semantic-qa.md) 检查：
+
+- 每页是否回答前页形成的问题，并为下一页创造真实需要。
+- 每页是否提供新问题、新证据、新判断、新选择、新动作或新验证。
+- 标题句式、视觉母题、人物、骨架和固定组件的重复是否承担新的语义角色。
+- 连续播放与全案 montage 是否暴露断链、重复、疲劳、跳跃或章节任务冲突。
+
+跨页统计只作为线索；经人工复核确认的语义断链和无增量重复属于内容问题，必须在冻结前修复。
 
 ## 缺失信息处理
 

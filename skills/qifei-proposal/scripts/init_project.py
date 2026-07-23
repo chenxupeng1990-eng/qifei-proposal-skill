@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Initialize a gated QIFEI proposal project without overwriting existing work."""
+"""Initialize a gated company proposal project without overwriting existing work."""
 
 from __future__ import annotations
 
