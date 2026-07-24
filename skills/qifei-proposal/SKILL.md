@@ -5,7 +5,7 @@ description: Govern and produce company-specific competitive proposals for Douyi
 
 # 公司提案总控
 
-把提案视为受控的内容、证据与视觉生产流程。先确认信息，再生成成品；任何视觉质量都不能替代内容确认。
+把提案视为受控的说服、内容、证据与视觉生产流程。先确认信息与策略立场，再生成成品；任何视觉质量都不能替代内容确认，任何“绝对正确、绝对中立”的表达也不能替代提案应有的观点和决策推动。
 
 ## 启动规则
 
@@ -38,10 +38,10 @@ description: Govern and produce company-specific competitive proposals for Douyi
 
 1. **立项与资料审计**：初始化目录，登记客户资料、标书、临时参考和缺口。
 2. **Grill Me 与提案策划书**：背景资料提交后立即调用 `grill-me-lite`，只追问会改变方向、范围、承诺或交付的关键决定；一次只问一个问题并提供推荐答案。达成共同理解后生成 `content/proposal-brief.md`，由 Owner 确认。若会话已安装并提供 `Visualize:visualize`，可生成决策树、范围地图或策划书确认视图；可视化只辅助确认，不替代书面策划书。
-3. **策略与动态目录**：仅在 Grill Me 和提案策划书确认后，形成策略因果链、提案主张和目录；按 [references/writing-style-and-humanization.md](references/writing-style-and-humanization.md) 清理公式化和空泛表达后，让用户确认。
+3. **策略立场、连续性与动态目录**：仅在 Grill Me 和提案策划书确认后，先按 [references/proposal-persuasion-gate.md](references/proposal-persuasion-gate.md) 明确机会、矛盾、观点、主动选择、客户目标决策和全案情绪曲线；再按 [references/strategy-continuity-contract.md](references/strategy-continuity-contract.md) 建立总策略因果句、章节策略接口和只读标题链，最后形成动态目录。按 [references/writing-style-and-humanization.md](references/writing-style-and-humanization.md) 清理公式化和空泛表达后，让用户确认。立场、章节接口或标题链未通过时不得用中立目录占位。
 4. **生成项目 `AGENTS.md`**：目录确认后立即生成，记录项目事实、策划书、策略、角色、页级规则和门禁。
-5. **逐章逐页 PPT 讲稿**：逐页确认标题、上屏文案、证据、页面角色、视觉意图和演讲任务。讲稿规则见 [references/content-and-speaker.md](references/content-and-speaker.md)；策略与讲稿分别按 [references/writing-style-and-humanization.md](references/writing-style-and-humanization.md) 复核，讲稿必须通过朗读。
-6. **逐章对抗检测**：每章全部页面确认后，启动新的子 Agent，对照标书、策划书、策略、证据和项目 `AGENTS.md` 做对抗检查；修复后由用户再次确认。
+5. **整章批量生成 PPT 提案成稿、飞书逐页确认**：先为当前章节生成页面论证链和只读标题链，确认其继承上一章输出并产生下一章所需输入；骨架确认后，按 [references/feishu-proposal-draft-format.md](references/feishu-proposal-draft-format.md) 一次性生成本章全部页面的核心内容、逻辑展开、上屏内容、讲解方向、策略过桥、视觉生成建议和证据，不得再逐页串行调用生成，也不得提前撰写完整演讲稿。整章初稿写入同一份飞书提案文档，以稳定 `slide_id` 作为评论锚点；团队可在飞书修改页序、拆页、合页、正文和标题，Agent 按评论局部修改并回读。每页仍需记录认知变化、目标情绪、鲜明判断、可见证明和下一页张力。整章必须通过连续阅读、说服力门禁和标题链验收。
+6. **逐章对抗检测**：每章全部页面确认后，启动新的子 Agent，对照标书、策划书、策略、证据、项目 `AGENTS.md` 和 [references/proposal-persuasion-gate.md](references/proposal-persuasion-gate.md) 做对抗检查；既检查错误，也检查观点是否被审慎措辞稀释、章节是否推动客户决策。修复后由用户再次确认。
 7. **全案对抗检测与内容冻结**：所有章节通过后再做一次全案检测，并按 [references/cross-page-semantic-qa.md](references/cross-page-semantic-qa.md) 复核页间推导、语义增量和跨页统计特征。只有 Proposal Owner 可冻结或重新打开页面。
 8. **品牌官方视觉审计**：要求用户上传品牌官方视觉参考至 `inputs/brand-official/`，登记来源 ID，提取品牌视觉符号、Logo 规则、字体、色卡、图形、材质、摄影和禁忌，写入 `evidence/brand-visual-audit.md` 并确认。审计必须区分“企业品牌识别层”与“产品/品类气质层”，并定义最低充分的品牌锚点与品牌介入强度；品牌校准不得把品牌色或某一种品牌特征机械放大，覆盖已确认的品类气质、内容任务和提案视觉命题。没有官方资料不得进入视觉方向。
 9. **视觉方向与初始样张**：依据冻结内容和品牌视觉审计提出 2-3 个客户定制方向；先用少量代表页选定方向。
@@ -49,7 +49,8 @@ description: Govern and produce company-specific competitive proposals for Douyi
 11. **生成 `DESIGN.md`**：把官方品牌视觉审计和已确认校准集编译为可执行视觉规范；冻结设计语言、固定页面和正文页弹性合同，并记录来源 ID。设计与生成规则见 [references/design-and-generation.md](references/design-and-generation.md)。
 12. **按页面合同选择生产路线**：把冻结内容编译为 `deck-spec.json` 和 `slide-contracts.json`。精确文字、数据、来源与严密关系需要可编辑时，生成评审 HTML 与逐页 PNG；图像原生且无需精确文字时，可由 Image2 直出 16:9 PNG，并在 Cowart 中批注迭代。所有页面共用同一 `design_version`，评论循环不拼装 PPT/PDF。
 13. **Codex 浏览器评论、修订与逐页确认**：使用 Codex 浏览器原生评论功能定位页面与问题。Agent 根据评论回到章节源稿、`deck-spec.json` 或 `DESIGN.md` 修改并重建受影响章节。评论解决不等于页面确认；只有 Proposal Owner 明确说“确认本页/确认这些页面”时，才把对应页面和版本信息写入 `deck/assembly-ready/manifest.json`。设计语言变更会使全部页面的拼装准备状态过期。
-14. **全案 QA 与一次性拼装**：全部正式页面进入拼装准备库后，以批准 PNG 为视觉基准，完成内容忠实度、视觉质量、页序和版本 QA。只有 Proposal Owner 明确确认“全部内容确认，开始拼装”，才一次性导出。默认输出最终 PNG、PDF 和图片型 PPT 预览；若用户明确要求可编辑文字层，可在相同批准基准上运行“视觉背景＋HTML 实测文字框”编译桥，并额外完成字段、坐标和渲染对照 QA。
+14. **最终页序锁定与全案讲稿生成**：全部正式 PPT 页面完成内容、视觉、拆页与页序确认后，锁定最终页面清单。只以最终批准页面为输入，按最终顺序一次性生成全案演讲稿并写入飞书；讲稿必须与最终页码、`slide_id`、标题和画面内容逐页对应。规则见 [references/content-and-speaker.md](references/content-and-speaker.md)。
+15. **全案 QA 与一次性拼装**：全部正式页面进入拼装准备库且全案讲稿确认后，以批准 PNG 为视觉基准，完成内容忠实度、视觉质量、页序、讲稿映射和版本 QA。只有 Proposal Owner 明确确认“全部内容确认，开始拼装”，才一次性导出。默认输出最终 PNG、PDF 和图片型 PPT 预览；若用户明确要求可编辑文字层，可在相同批准基准上运行“视觉背景＋HTML 实测文字框”编译桥，并额外完成字段、坐标和渲染对照 QA。
 
 交付级别必须在导出前说清：
 
@@ -66,8 +67,10 @@ description: Govern and produce company-specific competitive proposals for Douyi
 ## 不可跨越的门禁
 
 - Grill Me 未完成或提案策划书未确认：不得进入策略与目录。
+- 策略立场未明确、客户目标决策未定义或全案情绪曲线未建立：不得生成正式目录和PPT提案成稿。
+- 总策略未编译为章节策略接口、章节可以任意换序或只读标题链无法复述策略推导：不得确认目录或进入PPT提案成稿。
 - 目录未确认：不得生成项目 `AGENTS.md` 之后的内容。
-- 逐章逐页讲稿未确认：不得生成视觉成品。
+- PPT提案成稿未完成、飞书逐页内容未确认：不得生成视觉成品。
 - 逐章与全案对抗检测未通过：不得内容冻结。
 - 内容未冻结：不得调用 Image2 生产正式素材。
 - 未上传并核准品牌官方视觉参考，或未完成品牌视觉审计：不得提出正式视觉方向或生成样张。
@@ -76,6 +79,8 @@ description: Govern and produce company-specific competitive proposals for Douyi
 - `DESIGN.md` 未记录品牌视觉来源 ID、企业品牌层与产品/品类层的色彩职责、最低品牌锚点和品牌介入强度：不得批准设计系统。
 - `DESIGN.md` 未定义固定设计语言、内容页弹性合同和章节批量生成规则，或未确认：不得按章节渲染。
 - 评论已解决或 Agent 自检通过：不得据此自动确认页面；缺少 Proposal Owner 的明确页面确认命令，不得写入拼装准备库。
+- 全部正式PPT页面尚未确认、最终页序未锁定：不得生成完整演讲稿。
+- 最终PPT页面发生换序、拆分、合并、标题或核心内容修改：受影响页及其转场讲稿立即过期，必须按最新页序重建。
 - 任一正式页面未进入拼装准备库，或内容冻结 ID、设计版本、批准 PNG 与确认记录不一致：不得拼装 PPT/PDF。
 - 未收到 Proposal Owner 的“全部内容确认，开始拼装”或同等明确命令：不得执行最终导出。
 - 内容 QA 或视觉 QA 未通过：不得导出最终文件。
@@ -85,7 +90,7 @@ description: Govern and produce company-specific competitive proposals for Douyi
 
 - **Proposal Owner**：唯一的门禁批准者、内容冻结者和页面重开批准者。
 - **客户/项目负责人**：客户沟通、资料确认、范围与承诺管理。
-- **策划**：策略、目录、章节逻辑、逐页内容与演讲任务。
+- **策划**：策略、目录、章节论证链、整章批量成稿、逐页内容与演讲任务。
 - **数据分析师**：数据口径、证据账本、指标与经营模型。
 - **运营专家**：直播、短视频、投放、货盘、达人和执行真实性。
 - **设计/视觉 Agent**：样张、`DESIGN.md`、Image2 资产、HTML 视觉实现。
@@ -99,14 +104,17 @@ description: Govern and produce company-specific competitive proposals for Douyi
 - GMV、投放金额、服务品牌数、奖项、资质、人员履历和案例成绩只能使用当前使用方已经写入公司 Base 的核准表述；默认空模板不得被当作事实来源，对外不展示内部版本规则。
 - 不生成 Logo 墙代替案例，不编造缺失成绩。
 
-## 内容与讲稿
+## PPT内容与最终讲稿
 
 - 一页只承担一个可复述结论和一个演讲任务。
 - 内容必须完成“事实/问题 -> 判断 -> 策略或动作 -> 结果/验证”的逻辑。
 - 每页必须说明它回答前页的什么问题、创造了什么新理解、为什么需要下一页；全案语义规范见 [references/cross-page-semantic-qa.md](references/cross-page-semantic-qa.md)。
+- 每章必须声明 `strategy_input`、`chapter_claim`、`reasoning_step`、`strategy_output` 和 `next_chapter_necessity`；上一章输出必须等于下一章输入。章节独立成立但不推进总策略，同样不得确认。
 - 每页使用稳定 `slide_id`；HTML、章节稿、证据账本和飞书演讲稿都用它关联。
-- 飞书文稿保存逐页演讲稿，HTML 保存上屏内容。飞书不可用时先生成结构化 Markdown，待恢复后同步。
+- 前期飞书主文档保存PPT提案成稿与页面协作信息，不保存完整演讲稿。完整讲稿在全部PPT页面和最终页序确认后另行生成，可写入同一文档的“最终演讲稿”区域或独立飞书讲稿文档。
+- 飞书不可用时，提案成稿先写入结构化 Markdown；最终讲稿先写入 `content/speaker-notes.md`，恢复后按最终 `slide_id` 和页码同步。
 - 对外页面不出现 `待确认`、内部权威等级、版本状态、风险备注或 Agent 工作痕迹。
+- 对外提案必须作出有证据的方向选择。正确但没有观点、观点有证据但不能推动客户决策、或删除品牌名后可原样放入任意行业报告的页面，不得确认。
 
 ## 生成与验证命令
 
@@ -169,5 +177,5 @@ Windows PowerShell 使用同一组命令时，将 `python3` 替换为 `py -3`；
 - Grill Me 完成记录、提案策划书、品牌官方视觉来源和品牌视觉审计均可追溯。
 - 内容 QA 和视觉 QA 均通过。
 - 全部正式页面进入同一内容冻结 ID 与设计版本的拼装准备库，并有全案拼装批准记录。
-- HTML、批准 PNG、PDF、图片型 PPT 预览和飞书演讲稿页序一致；PPT/PDF 只在全案确认后拼装。
+- HTML、批准 PNG、PDF、图片型 PPT 预览和飞书演讲稿的最终页码、页序与 `slide_id` 一致；PPT/PDF 只在全案确认后拼装。
 - 最终文件不含策略推理、风险、Agent 过程等内部备注，不含本机路径、未确认占位符或客户敏感信息泄漏。可编辑交付允许仅在备注中保留 `slide_id`、内容冻结 ID、批准哈希和讲稿锚点等回查元数据。

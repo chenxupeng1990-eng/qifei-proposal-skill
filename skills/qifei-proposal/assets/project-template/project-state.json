@@ -8,6 +8,13 @@
   "content_freeze_id": null,
   "design_version": null,
   "active_chapter_id": null,
+  "speaker_notes": {
+    "status": "not_started",
+    "final_slide_count": null,
+    "final_order_hash": null,
+    "feishu_doc_url": null,
+    "local_backup_path": "content/speaker-notes.md"
+  },
   "brand_visual": {
     "source_ids": [],
     "source_files": [],
@@ -55,6 +62,8 @@
     "design": {"approved": false, "by": null, "at": null, "record_id": null},
     "generation_ready": {"approved": false, "by": null, "at": null, "record_id": null},
     "design_loop": {"approved": false, "by": null, "at": null, "record_id": null},
+    "final_page_order": {"approved": false, "by": null, "at": null, "record_id": null},
+    "speaker_notes": {"approved": false, "by": null, "at": null, "record_id": null},
     "content_qa": {"approved": false, "by": null, "at": null, "record_id": null},
     "visual_qa": {"approved": false, "by": null, "at": null, "record_id": null},
     "final_assembly": {"approved": false, "by": null, "at": null, "record_id": null}
