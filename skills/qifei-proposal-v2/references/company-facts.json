@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "base_built_at": null,
+  "company_profile_status": "empty_template",
+  "owner": null,
+  "source_registry": [],
+  "facts": [],
+  "case_registry": [],
+  "usage_notes": [
+    "该文件是通用空模板，不包含任何真实公司的定位、数字、履历或案例。",
+    "使用前必须登记来源、核准表述、版本、时间范围和对外使用状态。",
+    "空事实库不得用于生成公司介绍或案例证明。"
+  ]
+}

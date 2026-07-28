@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0",
+  "deck_id": "{{PROJECT_ID}}-deck",
+  "project_name": "{{PROJECT_NAME}}",
+  "content_freeze_id": null,
+  "design_version": null,
+  "source_hashes": {},
+  "slides": []
+}

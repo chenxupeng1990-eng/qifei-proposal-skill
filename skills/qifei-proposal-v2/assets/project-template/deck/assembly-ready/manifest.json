@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.1",
+  "project_id": "{{PROJECT_ID}}",
+  "content_freeze_id": null,
+  "design_version": null,
+  "status": "collecting",
+  "pages": [],
+  "final_assembly": {
+    "approved": false,
+    "by": null,
+    "at": null,
+    "record_id": null
+  }
+}

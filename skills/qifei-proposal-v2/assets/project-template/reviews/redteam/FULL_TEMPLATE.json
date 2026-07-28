@@ -1,0 +1,18 @@
+{
+  "status": "draft",
+  "review_agent_id": null,
+  "independent_agent": false,
+  "scope": "one_time_full_draft_integrity_review",
+  "dimensions": {
+    "strategy_logic": [],
+    "titles_and_expression": [],
+    "flow_and_emotion": [],
+    "pagination_and_density": [],
+    "visual_carrier_feasibility": []
+  },
+  "blockers": [],
+  "majors": [],
+  "minors": [],
+  "passed_dimensions": [],
+  "owner_reconfirmation_record_id": null
+}
