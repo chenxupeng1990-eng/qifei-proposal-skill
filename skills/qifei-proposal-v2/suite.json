@@ -9,15 +9,18 @@
     },
     {
       "name": "grill-me-lite",
-      "requirement": "required"
+      "requirement": "required",
+      "interface_contract": "grill-me-lite.v1"
     },
     {
       "name": "proposal-ppt-production",
-      "requirement": "recommended"
+      "requirement": "recommended",
+      "interface_contract": "proposal-ppt-production.v1"
     },
     {
       "name": "ppt-html-calibration-editor",
-      "requirement": "optional"
+      "requirement": "optional",
+      "interface_contract": "ppt-html-calibration-editor.v1"
     }
   ]
 }

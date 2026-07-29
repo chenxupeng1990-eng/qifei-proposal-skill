@@ -9,6 +9,7 @@
 - [../references/proposal-persuasion-gate.md](../references/proposal-persuasion-gate.md)
 - [../references/strategy-continuity-contract.md](../references/strategy-continuity-contract.md)
 - [../references/writing-style-and-humanization.md](../references/writing-style-and-humanization.md)
+- [../references/placeholder-contract.md](../references/placeholder-contract.md)
 - 需要行业、市场、人群、竞品、货品或平台数据支持策略时，读取 [../references/data-to-strategy-evidence-engine.md](../references/data-to-strategy-evidence-engine.md)。已有策略时定向找证据；策略未形成时从数据不对称中推导对品牌有利的策略。
 
 ## 必须产出

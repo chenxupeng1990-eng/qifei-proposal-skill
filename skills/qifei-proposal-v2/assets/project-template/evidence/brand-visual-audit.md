@@ -1,4 +1,4 @@
-# {{PROJECT_NAME}}｜品牌官方视觉审计
+# {{INIT:PROJECT_NAME}}｜品牌官方视觉审计
 
 > 只分析 `inputs/brand-official/` 中由用户上传并登记的官方资料。区分官方明确、官方画面采样与本案提议。
 
@@ -32,4 +32,4 @@
 
 - 品牌资料范围确认记录：待填写
 - 品牌视觉审计确认记录：待填写
-- Proposal Owner：{{OWNER}}
+- Proposal Owner：{{INIT:OWNER}}

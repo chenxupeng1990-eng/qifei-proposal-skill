@@ -1,9 +1,9 @@
 {
   "schema_version": "1.5",
-  "project_id": "{{PROJECT_ID}}",
-  "project_name": "{{PROJECT_NAME}}",
-  "proposal_owner": "{{OWNER}}",
-  "created_at": "{{CREATED_AT}}",
+  "project_id": "{{INIT:PROJECT_ID}}",
+  "project_name": "{{INIT:PROJECT_NAME}}",
+  "proposal_owner": "{{INIT:OWNER}}",
+  "created_at": "{{INIT:CREATED_AT}}",
   "phase": "intake",
   "content_freeze_id": null,
   "design_version": null,

@@ -1,4 +1,4 @@
-# {{PROJECT_NAME}}｜提案策划书
+# {{INIT:PROJECT_NAME}}｜提案策划书
 
 > 背景资料提交后，通过 `grill-me-lite` 一次一题确认。本文件经 Proposal Owner 确认后，才允许进入策略与目录。
 
@@ -41,7 +41,7 @@
 ## 6. 时间、角色与风险
 
 - 里程碑：待确认
-- Proposal Owner：{{OWNER}}
+- Proposal Owner：{{INIT:OWNER}}
 - 策划、数据分析师、运营专家、设计/视觉：待确认
 - 当前阻断与风险：待确认
 

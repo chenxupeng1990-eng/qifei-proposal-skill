@@ -12,6 +12,7 @@ from pathlib import Path
 from validate_assembly_ready import validate_assembly_ready
 from validate_deck_spec import png_has_alpha
 from validate_design_loop import validate_chapter_report
+from validate_json_schema import validate_json_schema
 
 
 PHASES = [
@@ -28,6 +29,7 @@ PHASES = [
     "design_system",
     "generation",
     "review",
+    "speaker_notes",
     "qa",
     "export",
 ]
@@ -45,6 +47,7 @@ GATES = {
     "design_system": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "visual_direction", "visual_sample", "design_calibration"],
     "generation": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "visual_sample", "design_calibration", "design", "generation_ready"],
     "review": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "design_calibration", "design", "generation_ready"],
+    "speaker_notes": ["content_freeze", "design", "final_page_order"],
     "qa": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "design_calibration", "design", "generation_ready", "design_loop"],
     "export": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "design_calibration", "design", "generation_ready", "design_loop", "content_qa", "visual_qa", "final_assembly"],
 }
@@ -108,6 +111,12 @@ FEISHU_PAGE_SECTIONS = (
     "视觉生成建议",
     "证据与来源",
 )
+PROJECT_STATE_SCHEMA = Path(__file__).resolve().parent.parent / "schemas" / "project-state.schema.json"
+PLACEHOLDER_PHASES = {
+    "PROJECT_AGENTS": "project_agents",
+    "MANUSCRIPT": "manuscript",
+    "SPEAKER_NOTES": "speaker_notes",
+}
 
 
 def load_json(path: Path) -> dict:
@@ -122,6 +131,16 @@ def load_json(path: Path) -> dict:
 def is_approved(approvals: dict, key: str) -> bool:
     item = approvals.get(key)
     return isinstance(item, dict) and item.get("approved") is True and bool(item.get("by")) and bool(item.get("record_id"))
+
+
+def unresolved_required_placeholders(text: str, phase: str) -> list[str]:
+    current_index = PHASES.index(phase)
+    unresolved: list[str] = []
+    for required_phase, field in re.findall(r"\{\{REQUIRED_AT_([A-Z_]+):([A-Z0-9_]+)\}\}", text):
+        target = PLACEHOLDER_PHASES.get(required_phase)
+        if target and current_index >= PHASES.index(target):
+            unresolved.append(f"{required_phase}:{field}")
+    return unresolved
 
 
 def registered_project_file(project: Path, value: object, required_root: str) -> tuple[Path | None, str | None]:
@@ -294,6 +313,12 @@ def validate_project(project: Path) -> list[str]:
     except ValueError as exc:
         return [str(exc)]
 
+    if state.get("schema_version") is not None:
+        schema = load_json(PROJECT_STATE_SCHEMA)
+        schema_errors = validate_json_schema(state, schema)
+        if schema_errors:
+            return [f"project-state schema: {error}" for error in schema_errors]
+
     phase = state.get("phase")
     if phase not in PHASES:
         errors.append(f"Unknown phase: {phase!r}")
@@ -322,8 +347,14 @@ def validate_project(project: Path) -> list[str]:
                 message = f"Phase {phase} requires approved gate: {gate}"
                 if message not in errors:
                     errors.append(message)
-    if phase_index >= PHASES.index("project_agents") and not (project / "AGENTS.md").is_file():
-        errors.append("AGENTS.md is required after outline confirmation")
+    if phase_index >= PHASES.index("project_agents"):
+        agents_path = project / "AGENTS.md"
+        if not agents_path.is_file():
+            errors.append("AGENTS.md is required after outline confirmation")
+        else:
+            placeholders = unresolved_required_placeholders(agents_path.read_text(encoding="utf-8"), phase)
+            for placeholder in placeholders:
+                errors.append(f"AGENTS.md has unresolved phase placeholder: {placeholder}")
     if phase_index >= PHASES.index("design_system") and not (project / "DESIGN.md").is_file():
         errors.append("DESIGN.md is required after design calibration confirmation")
     if phase_index >= PHASES.index("design_calibration"):

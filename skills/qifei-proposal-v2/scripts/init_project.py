@@ -50,7 +50,7 @@ def parse_args() -> argparse.Namespace:
 
 def render_template(text: str, values: dict[str, str]) -> str:
     for key, value in values.items():
-        text = text.replace("{{" + key + "}}", value)
+        text = text.replace("{{INIT:" + key + "}}", value)
     return text
 
 

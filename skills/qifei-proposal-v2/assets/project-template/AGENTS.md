@@ -1,16 +1,16 @@
-# {{PROJECT_NAME}}｜提案项目基线
+# {{INIT:PROJECT_NAME}}｜提案项目基线
 
 > 本文件是本项目内容、策略和治理的最高优先级项目文件。目录确认后生成；发生新确认时先更新本文件，再修改下游产物。
 
 ## 1. 项目信息
 
-- 项目 ID：`{{PROJECT_ID}}`
-- Proposal Owner：{{OWNER}}
-- 创建时间：{{CREATED_AT}}
+- 项目 ID：`{{INIT:PROJECT_ID}}`
+- Proposal Owner：{{INIT:OWNER}}
+- 创建时间：{{INIT:CREATED_AT}}
 - 提案类型：比稿型/现场演讲
-- 当前客户：待填写
-- 评审对象：待填写
-- 项目范围：待填写
+- 当前客户：{{REQUIRED_AT_PROJECT_AGENTS:CLIENT_NAME}}
+- 评审对象：{{REQUIRED_AT_PROJECT_AGENTS:REVIEW_AUDIENCE}}
+- 项目范围：{{REQUIRED_AT_PROJECT_AGENTS:PROJECT_SCOPE}}
 
 ## 2. 资料与事实边界
 
@@ -28,52 +28,52 @@
 
 ### 3.1 客户问题
 
-待用户确认后填写。
+{{REQUIRED_AT_PROJECT_AGENTS:CLIENT_PROBLEM}}
 
 ### 3.2 核心策略
 
-待用户确认后填写。
+{{REQUIRED_AT_PROJECT_AGENTS:CORE_STRATEGY}}
 
 ### 3.3 核心主张
 
-待用户确认后填写。
+{{REQUIRED_AT_PROJECT_AGENTS:CORE_CLAIM}}
 
 ### 3.4 因果链
 
-待用户确认后填写。
+{{REQUIRED_AT_PROJECT_AGENTS:CAUSAL_CHAIN}}
 
 ### 3.5 策略立场卡
 
-- 确定性机会：待填写
-- 核心矛盾：待填写
-- 鲜明判断：待填写
-- 品牌当前选择为什么正确：待填写
-- 主动选择的策略路径：待填写
-- 明确放弃的平庸路径：待填写
-- 希望客户最终作出的决策：待填写
+- 确定性机会：{{REQUIRED_AT_PROJECT_AGENTS:CERTAINTY_OPPORTUNITY}}
+- 核心矛盾：{{REQUIRED_AT_PROJECT_AGENTS:CORE_TENSION}}
+- 鲜明判断：{{REQUIRED_AT_PROJECT_AGENTS:DECISIVE_JUDGMENT}}
+- 品牌当前选择为什么正确：{{REQUIRED_AT_PROJECT_AGENTS:WHY_BRAND_IS_RIGHT}}
+- 主动选择的策略路径：{{REQUIRED_AT_PROJECT_AGENTS:CHOSEN_PATH}}
+- 明确放弃的平庸路径：{{REQUIRED_AT_PROJECT_AGENTS:REJECTED_GENERIC_PATH}}
+- 希望客户最终作出的决策：{{REQUIRED_AT_PROJECT_AGENTS:TARGET_DECISION}}
 
 ### 3.6 全案情绪曲线
 
-待用户确认后填写。至少说明共识建立、矛盾或机会显现、压力与期待上升、策略释放、执行证明和最终行动分别由哪些章节承担。
+{{REQUIRED_AT_PROJECT_AGENTS:EMOTIONAL_CURVE}}。至少说明共识建立、矛盾或机会显现、压力与期待上升、策略释放、执行证明和最终行动分别由哪些章节承担。
 
 ### 3.7 章节策略接口
 
 | 章节 | strategy_input | chapter_claim | reasoning_step | strategy_output | next_chapter_necessity |
 |---|---|---|---|---|---|
-| CH01 | 待填写 | 待填写 | 待填写 | 待填写 | 待填写 |
+| CH01 | {{REQUIRED_AT_PROJECT_AGENTS:CH01_INPUT}} | {{REQUIRED_AT_PROJECT_AGENTS:CH01_CLAIM}} | {{REQUIRED_AT_PROJECT_AGENTS:CH01_REASONING}} | {{REQUIRED_AT_PROJECT_AGENTS:CH01_OUTPUT}} | {{REQUIRED_AT_PROJECT_AGENTS:CH01_NEXT_NECESSITY}} |
 
 上一章 `strategy_output` 必须成为下一章 `strategy_input`。章节独立成立但不推进总策略，不得确认。
 
 ### 3.8 标题链
 
-- 章节标题链：待确认
-- 全案页面标题链：逐章完成后填写
-- 只读标题能否复述完整策略推导：待确认
+- 章节标题链：{{REQUIRED_AT_PROJECT_AGENTS:CHAPTER_TITLE_CHAIN}}
+- 全案页面标题链：{{OPTIONAL:SLIDE_TITLE_CHAIN_UNTIL_MANUSCRIPT}}
+- 只读标题能否复述完整策略推导：{{REQUIRED_AT_PROJECT_AGENTS:READ_ONLY_TITLE_TEST}}
 - 章节或页面是否可任意换序：必须为否
 
 ## 4. 已确认目录
 
-待用户确认后填写。每章说明演讲任务、关键结论和预计页面。
+{{REQUIRED_AT_PROJECT_AGENTS:APPROVED_OUTLINE}}。每章说明演讲任务、关键结论和预计页面。
 
 ## 5. 页面规则
 
@@ -91,18 +91,18 @@
 - 每页使用稳定 `slide_id`。
 - 内容与视觉阶段只记录页面演讲任务，不生成完整讲稿。
 - 全部PPT页面、拆页与最终页序确认后，完整讲稿保存到飞书文稿；本项目只存 `speaker_doc_anchor` 或同步 Markdown。
-- 本项目讲者身份、专业程度和现场语气：待填写。最终讲稿按真实讲者口吻生成，并按最终页码连续朗读确认。
+- 本项目讲者身份、专业程度和现场语气：{{REQUIRED_AT_SPEAKER_NOTES:SPEAKER_PROFILE}}。最终讲稿按真实讲者口吻生成，并按最终页码连续朗读确认。
 - 方法论、完整样例、工作件和高表现力 Demo 不强行压在同一页。
 - 公司介绍和公司案例放在提案前部，不穿插进入正式客户策略。
 
 ## 6. 角色
 
-- Proposal Owner：{{OWNER}}
-- 客户/项目负责人：待填写
-- 策划：待填写
-- 数据分析师：待填写
-- 运营专家：待填写
-- 设计/视觉：待填写
+- Proposal Owner：{{INIT:OWNER}}
+- 客户/项目负责人：{{OPTIONAL:CLIENT_PROJECT_LEAD}}
+- 策划：{{OPTIONAL:PLANNER}}
+- 数据分析师：{{OPTIONAL:DATA_ANALYST}}
+- 运营专家：{{OPTIONAL:OPERATIONS_EXPERT}}
+- 设计/视觉：{{OPTIONAL:DESIGNER}}
 
 ## 7. 门禁
 

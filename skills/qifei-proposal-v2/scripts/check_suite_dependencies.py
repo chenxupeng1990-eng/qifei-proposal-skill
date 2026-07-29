@@ -11,6 +11,7 @@ from pathlib import Path
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = SKILL_ROOT / "suite.json"
+CONTRACTS = SKILL_ROOT / "references" / "integration-contracts.json"
 
 
 def skill_name(path: Path) -> str | None:
@@ -21,6 +22,8 @@ def skill_name(path: Path) -> str | None:
 
 def check(skills_root: Path) -> tuple[list[str], list[str]]:
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    contract_manifest = json.loads(CONTRACTS.read_text(encoding="utf-8"))
+    contracts = contract_manifest.get("contracts") if isinstance(contract_manifest.get("contracts"), dict) else {}
     errors: list[str] = []
     warnings: list[str] = []
     for item in manifest.get("skills") or []:
@@ -28,6 +31,13 @@ def check(skills_root: Path) -> tuple[list[str], list[str]]:
         if requirement == "optional":
             continue
         name = str(item.get("name") or "")
+        contract_id = str(item.get("interface_contract") or "")
+        if name != "qifei-proposal-v2":
+            contract = contracts.get(contract_id)
+            if not contract_id or not isinstance(contract, dict):
+                errors.append(f"missing interface contract for Skill: {name}")
+            elif contract.get("provider_skill") != name or not contract.get("fallback"):
+                errors.append(f"invalid interface contract {contract_id}: {name}")
         entrypoint = skills_root / name / "SKILL.md"
         if not entrypoint.is_file():
             message = f"missing {requirement} Skill: {name}"

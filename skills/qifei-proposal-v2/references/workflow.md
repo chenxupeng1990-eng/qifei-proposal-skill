@@ -47,7 +47,7 @@
 
 方向说明、Moodboard、纯 HTML/CSS 版式草图、无实际生成资产的提示词包都不能批准 `visual_direction`，也不能进入 `visual_sample`。Image2 不可用时可以准备方向和提示词，但阶段必须保持未通过。
 
-初始视觉方向确认后，先创建独立 `deck/design-calibration.html`，不得直接生成正式章节。校准档位、最低样张数、风险覆盖与透明 PNG 校准规则统一见 [design-and-generation.md](design-and-generation.md) 的“设计语言校准集”，本文件不重复数字。
+初始视觉方向确认后，先创建独立 `deck/design-calibration.html`，不得直接生成正式章节。校准档位、最低样张数、风险覆盖与透明 PNG 校准规则统一见 [design-calibration-contract.md](design-calibration-contract.md)，本文件不重复数字。
 
 在 Codex 浏览器中逐页批注。全部样张确认后记录 `approvals.design_calibration`，再把其规则编译进 `DESIGN.md` 和 `design-tokens.json`。校准集固定设计语言，不固定每一张正文页的具体构图。校准目标是用最少页面覆盖主要设计风险，不按固定十页清单机械出图。
 

@@ -6,12 +6,13 @@
 
 ## 必须读取
 
-- [../references/design-and-generation.md](../references/design-and-generation.md) 的“设计语言校准集”“DESIGN.md”“固定与弹性”相关部分。
+- [../references/design-calibration-contract.md](../references/design-calibration-contract.md)
+- [../references/design-system-contract.md](../references/design-system-contract.md)
 - 所需视觉能力不可用时读取 [../references/environment-degradation.md](../references/environment-degradation.md)。
 
 ## 自适应档位
 
-`compact`、`standard`、`extended` 的页数边界、最低样张数与风险覆盖要求，以 `design-and-generation.md` 的“设计语言校准集”为唯一权威定义。本阶段包不重复数字。
+`compact`、`standard`、`extended` 的页数边界、最低样张数与风险覆盖要求，以 `design-calibration-contract.md` 为唯一权威定义。本阶段包不重复数字。
 
 ## 必须产出
 

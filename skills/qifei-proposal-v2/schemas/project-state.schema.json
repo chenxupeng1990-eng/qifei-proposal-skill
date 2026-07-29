@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qifei.local/schemas/project-state.schema.json",
+  "title": "Qifei Proposal V2 Project State",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "project_id",
+    "project_name",
+    "proposal_owner",
+    "created_at",
+    "phase",
+    "approvals",
+    "chapters",
+    "reopen_log"
+  ],
+  "properties": {
+    "schema_version": {"enum": ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5"]},
+    "project_id": {"type": "string", "minLength": 1},
+    "project_name": {"type": "string", "minLength": 1},
+    "proposal_owner": {"type": "string", "minLength": 1},
+    "created_at": {"type": "string", "minLength": 1},
+    "phase": {
+      "enum": [
+        "intake",
+        "requirements",
+        "strategy",
+        "project_agents",
+        "manuscript",
+        "full_redteam",
+        "content_frozen",
+        "visual_direction",
+        "visual_sample",
+        "design_calibration",
+        "design_system",
+        "generation",
+        "review",
+        "speaker_notes",
+        "qa",
+        "export"
+      ]
+    },
+    "content_freeze_id": {"type": ["string", "null"]},
+    "design_version": {"type": ["string", "null"]},
+    "active_chapter_id": {"type": ["string", "null"]},
+    "proposal_draft": {"$ref": "#/$defs/proposalDraft"},
+    "speaker_notes": {"$ref": "#/$defs/speakerNotes"},
+    "brand_visual": {"$ref": "#/$defs/brandVisual"},
+    "visual_direction": {"$ref": "#/$defs/visualDirection"},
+    "design_calibration": {"$ref": "#/$defs/designCalibration"},
+    "full_redteam": {"$ref": "#/$defs/fullRedteam"},
+    "assembly": {"$ref": "#/$defs/assembly"},
+    "approvals": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/approval"}
+    },
+    "chapters": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/chapter"}
+    },
+    "reopen_log": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/reopenEvent"}
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "approval": {
+      "type": "object",
+      "required": ["approved", "by", "at", "record_id"],
+      "properties": {
+        "approved": {"type": "boolean"},
+        "by": {"type": ["string", "null"]},
+        "at": {"type": ["string", "null"]},
+        "record_id": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "proposalDraft": {
+      "type": "object",
+      "required": ["authority", "status", "format_version", "verified_slide_ids"],
+      "properties": {
+        "authority": {"const": "feishu"},
+        "status": {
+          "enum": ["not_started", "local_fallback_pending_sync", "pending_feishu_sync", "verified"]
+        },
+        "format_version": {"type": "string"},
+        "feishu_doc_url": {"type": ["string", "null"]},
+        "document_id": {"type": ["string", "null"]},
+        "revision_id": {"type": ["integer", "null"]},
+        "last_verified_at": {"type": ["string", "null"]},
+        "verified_snapshot_path": {"type": "string"},
+        "verified_snapshot_sha256": {"type": ["string", "null"]},
+        "verified_slide_ids": {"type": "array", "items": {"type": "string"}},
+        "fallback_reason": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "speakerNotes": {
+      "type": "object",
+      "required": ["status", "local_backup_path"],
+      "properties": {
+        "status": {"enum": ["not_started", "draft", "verified"]},
+        "final_slide_count": {"type": ["integer", "null"]},
+        "final_order_hash": {"type": ["string", "null"]},
+        "feishu_doc_url": {"type": ["string", "null"]},
+        "local_backup_path": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "brandVisual": {
+      "type": "object",
+      "required": ["source_ids", "source_files", "audit_path"],
+      "properties": {
+        "scope_decision": {"type": ["string", "null"]},
+        "project_brand_name": {"type": ["string", "null"]},
+        "reference_brand_name": {"type": ["string", "null"]},
+        "source_ids": {"type": "array", "items": {"type": "string"}},
+        "source_files": {"type": "array", "items": {"type": "string"}},
+        "audit_path": {"type": "string"},
+        "design_incorporation_record_id": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "visualDirection": {
+      "type": "object",
+      "required": ["directions"],
+      "properties": {
+        "directions": {"type": "array", "items": {"type": "object"}},
+        "selected_direction_id": {"type": ["string", "null"]},
+        "approval_record_id": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "designCalibration": {
+      "type": "object",
+      "required": ["path", "profile", "required_sample_types"],
+      "properties": {
+        "path": {"type": "string"},
+        "profile": {"enum": ["auto", "compact", "standard", "extended"]},
+        "planned_slide_count": {"type": ["integer", "null"]},
+        "alpha_sample_path": {"type": ["string", "null"]},
+        "required_sample_types": {"type": "array", "items": {"type": "string"}},
+        "approval_record_id": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "fullRedteam": {
+      "type": "object",
+      "required": ["report_path", "review_agent_id", "independent_agent"],
+      "properties": {
+        "report_path": {"type": "string"},
+        "review_agent_id": {"type": ["string", "null"]},
+        "independent_agent": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "assembly": {
+      "type": "object",
+      "required": ["manifest_path", "status", "ready_slide_ids"],
+      "properties": {
+        "manifest_path": {"type": "string"},
+        "status": {"enum": ["collecting", "all_pages_confirmed", "finalized"]},
+        "ready_slide_ids": {"type": "array", "items": {"type": "string"}},
+        "final_approval_record_id": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "chapter": {
+      "type": "object",
+      "properties": {
+        "chapter_id": {"type": "string"},
+        "source_path": {"type": "string"},
+        "manuscript_confirmed": {"type": "boolean"},
+        "confirmation_record_id": {"type": ["string", "null"]},
+        "slides": {"type": "array", "items": {"type": "string"}},
+        "design_loop_passed": {"type": "boolean"},
+        "design_loop_report": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "reopenEvent": {
+      "type": "object",
+      "required": ["slide_id", "reason", "reopened_by"],
+      "properties": {
+        "slide_id": {"type": "string"},
+        "reason": {"type": "string"},
+        "reopened_by": {"type": "string"},
+        "at": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    }
+  }
+}

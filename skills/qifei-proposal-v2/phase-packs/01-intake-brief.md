@@ -10,6 +10,7 @@
 - [../references/company-base.md](../references/company-base.md)：需要公司能力与案例时。
 - `references/company-facts.json`：需要数字、履历、案例成绩时。
 - 同套件 `$grill-me-lite`。
+- 交互结果按 [../references/integration-contracts.json](../references/integration-contracts.json) 的 `grill-me-lite.v1` 归一化；不依赖外部 Skill 的固定文案或文件格式。
 - 若当前会话已安装并提供 `Visualize:visualize`，可在 Grill Me 和策划书确认过程中生成决策树、范围地图、选项对比或策划书确认视图，帮助用户快速判断；Visualize只承担展示与交互，不替代逐题确认和书面 `proposal-brief.md`。
 
 ## 必须产出

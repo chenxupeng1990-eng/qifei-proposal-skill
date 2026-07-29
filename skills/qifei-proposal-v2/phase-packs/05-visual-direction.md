@@ -6,7 +6,7 @@
 
 ## 必须读取
 
-- [../references/design-and-generation.md](../references/design-and-generation.md) 的“品牌官方视觉审计”“品牌层与产品层”“设计语言校准集”相关部分。
+- [../references/visual-direction.md](../references/visual-direction.md)
 - Image2不可用时读取 [../references/environment-degradation.md](../references/environment-degradation.md)。
 
 ## 必须产出

@@ -77,11 +77,29 @@ class ProgressiveDisclosureTests(unittest.TestCase):
     def test_calibration_numbers_have_one_document_authority(self) -> None:
         calibration = (SKILL_ROOT / "phase-packs" / "06-design-calibration.md").read_text(encoding="utf-8")
         workflow = (SKILL_ROOT / "references" / "workflow.md").read_text(encoding="utf-8")
-        design = (SKILL_ROOT / "references" / "design-and-generation.md").read_text(encoding="utf-8")
+        design = (SKILL_ROOT / "references" / "design-calibration-contract.md").read_text(encoding="utf-8")
         marker = "24页及以下"
         self.assertNotIn(marker, calibration)
         self.assertNotIn(marker, workflow)
         self.assertIn(marker, design)
+
+    def test_visual_reference_is_split_by_phase_responsibility(self) -> None:
+        navigation = (SKILL_ROOT / "references" / "design-and-generation.md").read_text(encoding="utf-8")
+        self.assertLess(len(navigation.splitlines()), 40)
+        for reference in (
+            "visual-direction.md",
+            "design-calibration-contract.md",
+            "design-system-contract.md",
+            "page-production-loop.md",
+        ):
+            self.assertIn(reference, navigation)
+            self.assertTrue((SKILL_ROOT / "references" / reference).is_file())
+
+    def test_agents_template_uses_typed_placeholders(self) -> None:
+        agents = (SKILL_ROOT / "assets" / "project-template" / "AGENTS.md").read_text(encoding="utf-8")
+        self.assertNotIn("待填写", agents)
+        self.assertNotIn("待确认", agents)
+        self.assertNotRegex(agents, r"\{\{(?!INIT:|REQUIRED_AT_[A-Z_]+:|OPTIONAL:)")
 
     def test_cowart_is_not_a_workflow_dependency(self) -> None:
         for folder in ("phase-packs", "references"):
