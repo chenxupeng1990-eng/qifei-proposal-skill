@@ -26,18 +26,26 @@ def check(skills_root: Path) -> tuple[list[str], list[str]]:
     contracts = contract_manifest.get("contracts") if isinstance(contract_manifest.get("contracts"), dict) else {}
     errors: list[str] = []
     warnings: list[str] = []
+    installed_self = skills_root / "qifei-proposal-v2"
+    for relative in (manifest.get("self_integrity") or {}).get("required_files") or []:
+        if not (installed_self / str(relative)).is_file():
+            errors.append(f"incomplete qifei-proposal-v2 installation: missing {relative}")
     for item in manifest.get("skills") or []:
         requirement = str(item.get("requirement") or "")
-        if requirement == "optional":
-            continue
         name = str(item.get("name") or "")
         contract_id = str(item.get("interface_contract") or "")
         if name != "qifei-proposal-v2":
             contract = contracts.get(contract_id)
             if not contract_id or not isinstance(contract, dict):
                 errors.append(f"missing interface contract for Skill: {name}")
-            elif contract.get("provider_skill") != name or not contract.get("fallback"):
+            elif (
+                contract.get("provider_skill") != name
+                or not contract.get("fallback")
+                or contract.get("contract_version") != item.get("contract_version")
+            ):
                 errors.append(f"invalid interface contract {contract_id}: {name}")
+        if requirement == "optional":
+            continue
         entrypoint = skills_root / name / "SKILL.md"
         if not entrypoint.is_file():
             message = f"missing {requirement} Skill: {name}"

@@ -67,6 +67,31 @@ class ProjectStateSchemaTests(unittest.TestCase):
             errors = validate_project(project)
             self.assertTrue(any("$.assembly.ready_slide_ids: expected type array" in error for error in errors))
 
+    def test_schema_rejects_empty_chapter_object(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / "project"
+            state = self.initialize(project)
+            state["chapters"] = [{}]
+            (project / "project-state.json").write_text(
+                json.dumps(state, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            errors = validate_project(project)
+            self.assertTrue(any("missing required property 'chapter_id'" in error for error in errors))
+            self.assertTrue(any("missing required property 'slides'" in error for error in errors))
+
+    def test_schema_rejects_non_iso_created_at(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / "project"
+            state = self.initialize(project)
+            state["created_at"] = "today"
+            (project / "project-state.json").write_text(
+                json.dumps(state, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            errors = validate_project(project)
+            self.assertTrue(any("$.created_at: string does not match pattern" in error for error in errors))
+
     def test_project_agents_phase_blocks_required_placeholders(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = Path(tmp) / "project"
