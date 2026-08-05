@@ -1,0 +1,62 @@
+{
+  "schema_version": "1.0",
+  "contracts": {
+    "grill-me-lite.v1": {
+      "contract_version": "1.0.0",
+      "provider_skill": "grill-me-lite",
+      "consumer": "qifei-proposal-v2",
+      "input": [
+        "extracted_project_facts",
+        "one_decision_question",
+        "recommended_answer_with_reason"
+      ],
+      "provider_output_is_advisory": true,
+      "normalized_output": {
+        "path": "content/proposal-brief.md",
+        "required_fields": [
+          "decision",
+          "reason",
+          "scope_impact",
+          "owner_confirmation"
+        ]
+      },
+      "fallback": "text_interview_with_the_same_normalized_decision_record"
+    },
+    "proposal-ppt-production.v1": {
+      "contract_version": "1.0.0",
+      "provider_skill": "proposal-ppt-production",
+      "consumer": "qifei-proposal-v2",
+      "input": [
+        "frozen_slide_content",
+        "presentation_route",
+        "design_version"
+      ],
+      "provider_output_is_advisory": false,
+      "normalized_output": {
+        "required_fields": [
+          "review_html_or_direct_png",
+          "review_png",
+          "build_manifest"
+        ]
+      },
+      "fallback": "use_qifei_v2_builtin_render_and_review_scripts"
+    },
+    "ppt-html-calibration-editor.v1": {
+      "contract_version": "1.0.0",
+      "provider_skill": "ppt-html-calibration-editor",
+      "consumer": "qifei-proposal-v2",
+      "input": [
+        "fixed_16_9_html",
+        "owner_comments"
+      ],
+      "provider_output_is_advisory": true,
+      "normalized_output": {
+        "required_fields": [
+          "updated_html",
+          "comment_mapping"
+        ]
+      },
+      "fallback": "use_codex_browser_comments_and_local_html_edits"
+    }
+  }
+}

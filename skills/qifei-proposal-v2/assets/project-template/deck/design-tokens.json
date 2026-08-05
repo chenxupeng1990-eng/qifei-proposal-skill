@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "design_version": "design-v0",
+  "visual_family_id": "replace-with-approved-visual-family",
+  "canvas": {"width": 1920, "height": 1080},
+  "brand_visual": {
+    "source_ids": [],
+    "symbols": [],
+    "palette": []
+  },
+  "colors": {
+    "background": "#07111F",
+    "surface": "#10243B",
+    "text": "#F4F7FB",
+    "muted": "#9CB0C7",
+    "accent": "#53D4FF",
+    "accent_2": "#FFB45B"
+  },
+  "fonts": {
+    "display": "Microsoft YaHei, PingFang SC, sans-serif",
+    "body": "Microsoft YaHei, PingFang SC, sans-serif"
+  },
+  "spacing": {"safe_x": 96, "safe_y": 72},
+  "radii": {"panel": 28, "pill": 999},
+  "page_system": {
+    "chapter_variants": ["chapter-type-led", "chapter-image-led", "chapter-data-led"],
+    "density_levels": ["low", "medium", "high"]
+  },
+  "transparent_png": {
+    "enabled": true,
+    "approved_dir": "assets/approved/alpha",
+    "alpha_required": true,
+    "slots": []
+  }
+}

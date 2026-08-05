@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "layouts": {
+    "hero": {"title_max": 32, "subtitle_max": 60, "body_max": 80, "max_items": 3, "media_slots": 1, "transparent_png_slots": 1},
+    "toc": {"title_max": 24, "subtitle_max": 40, "body_max": 120, "max_items": 8, "media_slots": 1, "transparent_png_slots": 1},
+    "chapter-type-led": {"title_max": 30, "subtitle_max": 60, "body_max": 60, "max_items": 2, "media_slots": 1, "transparent_png_slots": 1},
+    "chapter-image-led": {"title_max": 30, "subtitle_max": 60, "body_max": 60, "max_items": 2, "media_slots": 1, "transparent_png_slots": 1},
+    "chapter-data-led": {"title_max": 30, "subtitle_max": 60, "body_max": 80, "max_items": 3, "media_slots": 1, "transparent_png_slots": 1},
+    "statement": {"title_max": 34, "subtitle_max": 70, "body_max": 150, "max_items": 4, "media_slots": 1, "transparent_png_slots": 1},
+    "split": {"title_max": 34, "subtitle_max": 70, "body_max": 190, "max_items": 5, "media_slots": 1, "transparent_png_slots": 1},
+    "cards": {"title_max": 34, "subtitle_max": 70, "body_max": 220, "max_items": 5, "media_slots": 1, "transparent_png_slots": 1},
+    "metrics": {"title_max": 34, "subtitle_max": 70, "body_max": 120, "max_items": 5, "media_slots": 1, "transparent_png_slots": 1},
+    "process": {"title_max": 34, "subtitle_max": 70, "body_max": 180, "max_items": 6, "media_slots": 1, "transparent_png_slots": 1},
+    "case": {"title_max": 34, "subtitle_max": 70, "body_max": 200, "max_items": 4, "media_slots": 1, "transparent_png_slots": 1},
+    "closing": {"title_max": 28, "subtitle_max": 60, "body_max": 60, "max_items": 2, "media_slots": 1, "transparent_png_slots": 1}
+  }
+}

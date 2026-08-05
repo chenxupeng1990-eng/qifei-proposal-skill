@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Company Proposal</title>
+  <style>
+    :root {
+      --preview-scale: .6666667;
+      --bg: #07111f;
+      --surface: #10243b;
+      --text: #f4f7fb;
+      --muted: #9cb0c7;
+      --accent: #53d4ff;
+      --accent-2: #ffb45b;
+      --font-display: "Microsoft YaHei", "PingFang SC", sans-serif;
+      --font-body: "Microsoft YaHei", "PingFang SC", sans-serif;
+      --safe-x: 96px;
+      --safe-y: 72px;
+      --panel-radius: 28px;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #02060c; color: var(--text); font-family: var(--font-body); }
+    body { overflow-x: hidden; }
+    .chrome {
+      position: fixed; inset: 0 0 auto 0; height: 58px; z-index: 100;
+      display: flex; align-items: center; gap: 14px; padding: 0 20px;
+      color: #dce7f5; background: rgba(4, 10, 18, .94); border-bottom: 1px solid rgba(255,255,255,.12);
+      backdrop-filter: blur(14px);
+    }
+    .chrome strong { letter-spacing: .04em; }
+    .chrome .build { margin-left: auto; color: #7890a9; font-size: 13px; }
+    .deck-root { display: flex; flex-direction: column; align-items: center; gap: 42px; padding: 100px 24px 80px; }
+    .slide-frame {
+      position: relative; width: calc(1920px * var(--preview-scale)); height: calc(1080px * var(--preview-scale));
+      flex: 0 0 auto;
+    }
+    .slide-canvas {
+      position: absolute; inset: 0 auto auto 0; width: 1920px; height: 1080px; overflow: hidden;
+      transform: scale(var(--preview-scale)); transform-origin: top left;
+      color: var(--text); background: var(--bg); box-shadow: 0 22px 70px rgba(0,0,0,.5);
+      isolation: isolate;
+    }
+    .slide-canvas::before {
+      content: ""; position: absolute; inset: 0; z-index: -3;
+      background:
+        radial-gradient(circle at 78% 18%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 38%),
+        radial-gradient(circle at 12% 88%, color-mix(in srgb, var(--accent-2) 22%, transparent), transparent 34%),
+        linear-gradient(135deg, color-mix(in srgb, var(--surface) 60%, var(--bg)), var(--bg) 62%);
+    }
+    .slide-canvas::after {
+      content: ""; position: absolute; inset: 0; z-index: 8; pointer-events: none;
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .visual-bg { position: absolute; inset: 0; z-index: -2; background-position: center; background-size: cover; }
+    .visual-bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(3,8,16,.88), rgba(3,8,16,.48) 58%, rgba(3,8,16,.16)); }
+    .slide-inner { position: relative; height: 100%; padding: var(--safe-y) var(--safe-x); display: flex; flex-direction: column; }
+    .topline { display: flex; align-items: center; gap: 18px; min-height: 32px; color: var(--accent); font-size: 19px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
+    .topline::before { content: ""; width: 44px; height: 3px; background: var(--accent); border-radius: 3px; }
+    h1 { margin: 22px 0 0; max-width: 1460px; font-family: var(--font-display); font-size: 64px; line-height: 1.12; letter-spacing: -.025em; }
+    .subtitle { max-width: 1320px; margin-top: 20px; color: var(--muted); font-size: 30px; line-height: 1.48; }
+    .content { flex: 1; min-height: 0; margin-top: 42px; display: flex; flex-direction: column; justify-content: center; }
+    .body-text { max-width: 1440px; margin: 0; font-size: 30px; line-height: 1.62; color: #dce7f3; }
+    .bullet-list { display: grid; gap: 22px; margin: 0; padding: 0; list-style: none; }
+    .bullet-list li { position: relative; padding-left: 36px; color: #e4edf6; font-size: 29px; line-height: 1.48; }
+    .bullet-list li::before { content: ""; position: absolute; left: 0; top: .64em; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 60%, transparent); }
+    .cards, .metrics, .process { display: grid; gap: 24px; width: 100%; }
+    .cards { grid-template-columns: repeat(var(--count, 3), minmax(0, 1fr)); }
+    .card, .metric, .step {
+      min-height: 230px; padding: 32px; border-radius: var(--panel-radius);
+      border: 1px solid rgba(255,255,255,.14); background: color-mix(in srgb, var(--surface) 78%, transparent);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.06); backdrop-filter: blur(15px);
+    }
+    .card .index, .step .index { color: var(--accent); font-size: 18px; font-weight: 800; letter-spacing: .14em; }
+    .card h2, .step h2 { margin: 20px 0 10px; font-size: 31px; line-height: 1.22; }
+    .card p, .step p { margin: 0; color: var(--muted); font-size: 23px; line-height: 1.5; }
+    .metrics { grid-template-columns: repeat(var(--count, 3), minmax(0, 1fr)); align-items: stretch; }
+    .metric { display: flex; flex-direction: column; justify-content: space-between; min-height: 260px; }
+    .metric .value { color: var(--text); font: 800 76px/1 var(--font-display); letter-spacing: -.04em; }
+    .metric .label { margin-top: 22px; color: var(--muted); font-size: 23px; line-height: 1.38; }
+    .process { grid-template-columns: repeat(var(--count, 4), minmax(0, 1fr)); align-items: stretch; }
+    .step { position: relative; min-height: 250px; }
+    .step:not(:last-child)::after { content: "→"; position: absolute; right: -26px; top: 50%; z-index: 3; color: var(--accent); font-size: 30px; transform: translate(50%,-50%); }
+    .quote { max-width: 1440px; color: #f7fbff; font: 700 48px/1.38 var(--font-display); letter-spacing: -.015em; }
+    .quote::before { content: "“"; display: block; height: 58px; color: var(--accent); font-size: 110px; line-height: .8; }
+    .media-panel { position: relative; min-height: 0; overflow: hidden; border-radius: 34px; border: 1px solid rgba(255,255,255,.18); background: #0b1727; }
+    .media-panel img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .media-panel::after { content: ""; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
+    .page-footer { display: flex; align-items: flex-end; gap: 24px; min-height: 34px; margin-top: 24px; color: #70859c; font-size: 17px; }
+    .page-footer .source { max-width: 1450px; }
+    .page-footer .slide-id { margin-left: auto; color: var(--accent); font-weight: 800; letter-spacing: .12em; }
+
+    .layout-hero h1, .layout-closing h1 { max-width: 1260px; margin-top: auto; font-size: 94px; line-height: 1.04; }
+    .layout-hero .subtitle, .layout-closing .subtitle { max-width: 1000px; font-size: 32px; color: #d6e3ef; }
+    .layout-hero .content, .layout-closing .content { flex: 0 0 auto; margin: 0 0 64px; }
+    .layout-statement h1 { max-width: 1580px; font-size: 72px; }
+    .layout-statement .content { justify-content: center; }
+    .layout-split .content, .layout-case .content { display: grid; grid-template-columns: 1.04fr .96fr; gap: 58px; align-items: stretch; }
+    .layout-split .copy-stack, .layout-case .copy-stack { min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 28px; }
+    .layout-cards .content, .layout-metrics .content, .layout-process .content { justify-content: center; }
+
+    body.export-mode { background: transparent; }
+    body.export-mode .chrome { display: none !important; }
+    body.export-mode .deck-root { gap: 0; padding: 0; align-items: flex-start; }
+    body.export-mode .slide-frame { width: 1920px; height: 1080px; }
+    body.export-mode .slide-canvas { transform: none; box-shadow: none; }
+  </style>
+</head>
+<body>
+  <header class="chrome">
+    <strong id="deck-title">Company Proposal</strong>
+    <span class="build">build __BUILD_ID__</span>
+  </header>
+  <main id="deck" class="deck-root"></main>
+  <script>
+    const deckData = __DECK_JSON__;
+    const design = __DESIGN_JSON__;
+    const buildId = "__BUILD_ID__";
+    const exportMode = new URLSearchParams(location.search).get("export") === "1";
+    if (exportMode) document.body.classList.add("export-mode");
+
+    function updatePreviewScale() {
+      if (exportMode) return;
+      const availableWidth = Math.max(0, window.innerWidth - 48);
+      const scale = Math.min(1, availableWidth / 1920);
+      document.documentElement.style.setProperty("--preview-scale", String(scale));
+    }
+    updatePreviewScale();
+    window.addEventListener("resize", updatePreviewScale);
+
+    const root = document.documentElement;
+    const color = design.colors || {};
+    const fonts = design.fonts || {};
+    const spacing = design.spacing || {};
+    const radii = design.radii || {};
+    const variables = {
+      "--bg": color.background,
+      "--surface": color.surface,
+      "--text": color.text,
+      "--muted": color.muted,
+      "--accent": color.accent,
+      "--accent-2": color.accent_2,
+      "--font-display": fonts.display,
+      "--font-body": fonts.body,
+      "--safe-x": spacing.safe_x ? `${spacing.safe_x}px` : null,
+      "--safe-y": spacing.safe_y ? `${spacing.safe_y}px` : null,
+      "--panel-radius": radii.panel ? `${radii.panel}px` : null,
+    };
+    Object.entries(variables).forEach(([key, value]) => { if (value) root.style.setProperty(key, value); });
+    document.title = deckData.project_name || "Company Proposal";
+    document.getElementById("deck-title").textContent = deckData.project_name || "Company Proposal";
+
+    const escapeText = value => String(value ?? "");
+    const make = (tag, className, text) => {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined && text !== null) node.textContent = escapeText(text);
+      return node;
+    };
+    const assetUrl = src => new URL(`../${src}`, location.href).href;
+
+    function renderBlock(block, index) {
+      if (!block || typeof block !== "object") return document.createDocumentFragment();
+      const type = block.type || "text";
+      if (type === "text") return make("p", "body-text", block.text || "");
+      if (type === "quote") return make("div", "quote", block.text || "");
+      if (type === "list") {
+        const list = make("ul", "bullet-list");
+        (block.items || []).forEach(item => list.append(make("li", "", typeof item === "string" ? item : item.text || item.title || "")));
+        return list;
+      }
+      if (type === "cards") {
+        const items = block.items || [];
+        const grid = make("div", "cards");
+        grid.style.setProperty("--count", Math.min(4, Math.max(1, items.length)));
+        items.forEach((item, itemIndex) => {
+          const card = make("article", "card");
+          card.append(make("div", "index", item.index || String(itemIndex + 1).padStart(2, "0")));
+          card.append(make("h2", "", item.title || ""));
+          if (item.text) card.append(make("p", "", item.text));
+          grid.append(card);
+        });
+        return grid;
+      }
+      if (type === "metrics") {
+        const items = block.items || [];
+        const grid = make("div", "metrics");
+        grid.style.setProperty("--count", Math.min(5, Math.max(1, items.length)));
+        items.forEach(item => {
+          const metric = make("article", "metric");
+          metric.append(make("div", "value", item.value || ""));
+          metric.append(make("div", "label", item.label || item.text || ""));
+          grid.append(metric);
+        });
+        return grid;
+      }
+      if (type === "process") {
+        const items = block.items || [];
+        const grid = make("div", "process");
+        grid.style.setProperty("--count", Math.min(6, Math.max(1, items.length)));
+        items.forEach((item, itemIndex) => {
+          const step = make("article", "step");
+          step.append(make("div", "index", item.index || String(itemIndex + 1).padStart(2, "0")));
+          step.append(make("h2", "", item.title || item.label || ""));
+          if (item.text) step.append(make("p", "", item.text));
+          grid.append(step);
+        });
+        return grid;
+      }
+      if (type === "image" && block.src) {
+        const panel = make("div", "media-panel");
+        const image = make("img");
+        image.src = assetUrl(block.src);
+        image.alt = block.alt || "";
+        panel.append(image);
+        return panel;
+      }
+      return make("p", "body-text", block.text || "");
+    }
+
+    function renderSlide(slide) {
+      const frame = make("div", "slide-frame");
+      const canvas = make("section", `slide-canvas layout-${slide.layout || "statement"}`);
+      canvas.dataset.slideId = slide.slide_id;
+      canvas.dataset.layout = slide.layout || "statement";
+      const visual = slide.visual || {};
+      if (visual.src && ["hero", "closing"].includes(slide.layout)) {
+        const background = make("div", "visual-bg");
+        background.style.backgroundImage = `url(${JSON.stringify(assetUrl(visual.src))})`;
+        background.style.backgroundPosition = visual.position || "center";
+        canvas.append(background);
+      }
+      const inner = make("div", "slide-inner");
+      inner.append(make("div", "topline", slide.kicker || slide.chapter || ""));
+      const title = make("h1", "", slide.title || "");
+      title.dataset.fit = "title";
+      inner.append(title);
+      if (slide.subtitle) {
+        const subtitle = make("div", "subtitle", slide.subtitle);
+        subtitle.dataset.fit = "subtitle";
+        inner.append(subtitle);
+      }
+      const content = make("div", "content");
+      content.dataset.fit = "content";
+      const splitLayout = ["split", "case"].includes(slide.layout);
+      if (splitLayout) {
+        const stack = make("div", "copy-stack");
+        (slide.blocks || []).filter(block => block.type !== "image").forEach((block, index) => stack.append(renderBlock(block, index)));
+        content.append(stack);
+        const media = make("div", "media-panel");
+        const source = visual.src || (slide.blocks || []).find(block => block.type === "image")?.src;
+        if (source) {
+          const image = make("img");
+          image.src = assetUrl(source);
+          image.alt = visual.alt || "";
+          image.style.objectPosition = visual.position || "center";
+          media.append(image);
+        }
+        content.append(media);
+      } else {
+        (slide.blocks || []).forEach((block, index) => content.append(renderBlock(block, index)));
+      }
+      inner.append(content);
+      const footer = make("footer", "page-footer");
+      footer.append(make("div", "source", slide.source_note || ""));
+      footer.append(make("div", "slide-id", slide.slide_id));
+      inner.append(footer);
+      canvas.append(inner);
+      frame.append(canvas);
+      return frame;
+    }
+
+    const deck = document.getElementById("deck");
+    (deckData.slides || []).forEach(slide => deck.append(renderSlide(slide)));
+    updatePreviewScale();
+
+    function runQa() {
+      const errors = [];
+      document.querySelectorAll("[data-fit='content']").forEach(node => {
+        if (node.scrollWidth > node.clientWidth + 2 || node.scrollHeight > node.clientHeight + 2) {
+          errors.push({
+            slide_id:node.closest(".slide-canvas")?.dataset.slideId,
+            type:"overflow",
+            target:node.dataset.fit,
+            scroll:[node.scrollWidth,node.scrollHeight],
+            client:[node.clientWidth,node.clientHeight]
+          });
+        }
+      });
+      document.querySelectorAll(".slide-canvas").forEach(slide => {
+        const slideRect = slide.getBoundingClientRect();
+        slide.querySelectorAll("img").forEach(image => {
+          if (image.complete && image.naturalWidth === 0) errors.push({slide_id:slide.dataset.slideId, type:"broken-image", src:image.src});
+        });
+        slide.querySelectorAll(".slide-inner > *").forEach(node => {
+          const rect = node.getBoundingClientRect();
+          if (rect.left < slideRect.left - 2 || rect.right > slideRect.right + 2 || rect.top < slideRect.top - 2 || rect.bottom > slideRect.bottom + 2) {
+            errors.push({slide_id:slide.dataset.slideId, type:"out-of-bounds", target:node.className || node.tagName});
+          }
+        });
+      });
+      window.__qifeiQa = {ok:errors.length === 0, errors, build_id:buildId};
+      return window.__qifeiQa;
+    }
+    Promise.all([document.fonts?.ready || Promise.resolve(), ...[...document.images].map(image => image.decode?.().catch(() => {}) || Promise.resolve())]).then(() => {
+      requestAnimationFrame(() => { runQa(); window.__qifeiReady = true; });
+    });
+  </script>
+</body>
+</html>

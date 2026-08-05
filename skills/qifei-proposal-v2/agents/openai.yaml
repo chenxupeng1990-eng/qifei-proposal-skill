@@ -1,0 +1,4 @@
+interface:
+  display_name: "公司提案总控 V2"
+  short_description: "按阶段渐进加载的公司提案总控"
+  default_prompt: "Use $qifei-proposal-v2 to continue the proposal from project-state.json, load only the current phase pack, and enforce its objective gates."

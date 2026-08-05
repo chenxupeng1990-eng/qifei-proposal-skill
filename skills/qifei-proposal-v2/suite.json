@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "suite_id": "proposal-skill-suite-v2",
+  "repository": "https://github.com/chenxupeng1990-eng/qifei-proposal-skill.git",
+  "self_integrity": {
+    "required_files": [
+      "SKILL.md",
+      "phase-packs/05-visual-direction.md",
+      "phase-packs/07-page-production-review.md",
+      "references/visual-direction.md",
+      "references/page-production-loop.md",
+      "schemas/project-state.schema.json"
+    ]
+  },
+  "skills": [
+    {
+      "name": "qifei-proposal-v2",
+      "requirement": "required"
+    },
+    {
+      "name": "grill-me-lite",
+      "requirement": "required",
+      "interface_contract": "grill-me-lite.v1",
+      "contract_version": "1.0.0"
+    },
+    {
+      "name": "proposal-ppt-production",
+      "requirement": "recommended",
+      "interface_contract": "proposal-ppt-production.v1",
+      "contract_version": "1.0.0"
+    },
+    {
+      "name": "ppt-html-calibration-editor",
+      "requirement": "optional",
+      "interface_contract": "ppt-html-calibration-editor.v1",
+      "contract_version": "1.0.0"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+# 阶段包 04｜一次性全稿审查与内容冻结
+
+## 当前目标
+
+只执行一次全稿完整性审查，修复结构和表达问题后冻结内容。
+
+## 必须读取
+
+- [../references/full-draft-integrity-redteam.md](../references/full-draft-integrity-redteam.md)
+- [../references/cross-page-semantic-qa.md](../references/cross-page-semantic-qa.md)
+
+## 审查范围
+
+- 总策略与章节接口。
+- 标题链、表达力度与情绪流。
+- 页间、章间推导。
+- 拆页、合页、信息密度。
+- 视觉锤与载体可生成性。
+
+## 禁止动作
+
+- 不重新审判Owner确认的事实、策略和场外决定。
+- 不外搜资料。
+- 不引入安全、合规、风险或证据审计。
+- 不逐章重复红队。
+
+## 放行
+
+使用新的独立审查Agent，报告通过，Owner确认修订并生成内容冻结ID。
+
