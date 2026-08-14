@@ -4,10 +4,13 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import re
 from pathlib import Path
 
 from validate_assembly_ready import validate_assembly_ready
+from validate_deck_spec import png_has_alpha
 from validate_design_loop import validate_chapter_report
 
 
@@ -17,7 +20,6 @@ PHASES = [
     "strategy",
     "project_agents",
     "manuscript",
-    "chapter_redteam",
     "full_redteam",
     "content_frozen",
     "visual_direction",
@@ -35,7 +37,6 @@ GATES = {
     "strategy": ["materials_scope", "brief_grill", "proposal_brief", "requirements"],
     "project_agents": ["materials_scope", "brief_grill", "proposal_brief", "requirements", "strategy", "outline"],
     "manuscript": ["materials_scope", "brief_grill", "proposal_brief", "requirements", "strategy", "outline", "project_agents"],
-    "chapter_redteam": ["strategy", "outline", "project_agents"],
     "full_redteam": ["project_agents"],
     "content_frozen": ["full_redteam", "content_freeze"],
     "visual_direction": ["content_freeze", "brand_visual_sources", "brand_visual_audit"],
@@ -49,6 +50,7 @@ GATES = {
 }
 
 BRAND_SOURCE_SUFFIXES = {".ai", ".eps", ".jpg", ".jpeg", ".key", ".pdf", ".png", ".ppt", ".pptx", ".svg", ".webp"}
+IMAGE2_DRAFT_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp"}
 DEFAULT_DESIGN_SAMPLE_TYPES = (
     "cover",
     "toc",
@@ -61,6 +63,30 @@ DEFAULT_DESIGN_SAMPLE_TYPES = (
     "content-visual-module",
     "closing",
 )
+DESIGN_SAMPLE_PROFILES = {
+    "compact": (
+        "cover",
+        "toc",
+        "chapter-image-led",
+        "content-medium",
+        "content-high",
+        "closing",
+    ),
+    "standard": (
+        "cover",
+        "toc",
+        "chapter-type-led",
+        "chapter-image-led",
+        "content-low",
+        "content-medium",
+        "content-high",
+        "closing",
+    ),
+    "extended": DEFAULT_DESIGN_SAMPLE_TYPES,
+}
+DESIGN_PROFILE_RANK = {"compact": 1, "standard": 2, "extended": 3}
+CHAPTER_SAMPLE_TYPES = {"chapter-type-led", "chapter-image-led", "chapter-data-led"}
+CONTENT_DENSITY_SAMPLE_TYPES = {"content-low", "content-medium", "content-high"}
 DESIGN_REQUIRED_MARKERS = (
     "## 6. 设计语言冻结",
     "### 6.1 首页",
@@ -71,6 +97,16 @@ DESIGN_REQUIRED_MARKERS = (
     "## 7. 内容页弹性合同",
     "## 8. 透明 PNG 表现层",
     "## 9. 章节批量生成规则",
+)
+FEISHU_DRAFT_FORMAT_VERSION = "feishu-proposal-draft-v1"
+FEISHU_PAGE_SECTIONS = (
+    "核心内容",
+    "逻辑展开",
+    "PPT上屏内容",
+    "讲解方向",
+    "策略与过桥",
+    "视觉生成建议",
+    "证据与来源",
 )
 
 
@@ -105,6 +141,149 @@ def registered_project_file(project: Path, value: object, required_root: str) ->
     if not resolved.is_file():
         return None, f"registered file does not exist: {raw}"
     return resolved, None
+
+
+def validate_verified_feishu_draft(project: Path, state: dict, chapters: list[dict]) -> list[str]:
+    errors: list[str] = []
+    draft = state.get("proposal_draft") if isinstance(state.get("proposal_draft"), dict) else {}
+    if not draft:
+        return ["full_redteam requires a verified Feishu proposal draft; local Markdown is only a temporary fallback"]
+    if draft.get("authority") != "feishu" or draft.get("status") != "verified":
+        errors.append("proposal_draft must use authority feishu with status verified before full_redteam")
+    if draft.get("format_version") != FEISHU_DRAFT_FORMAT_VERSION:
+        errors.append(f"proposal_draft.format_version must be {FEISHU_DRAFT_FORMAT_VERSION}")
+    for field in ("feishu_doc_url", "document_id", "last_verified_at"):
+        if not str(draft.get(field) or "").strip():
+            errors.append(f"proposal_draft.{field} is required")
+    revision_id = draft.get("revision_id")
+    if not isinstance(revision_id, int) or revision_id <= 0:
+        errors.append("proposal_draft.revision_id must be a positive integer from Feishu reread")
+
+    snapshot_path, snapshot_error = registered_project_file(
+        project,
+        draft.get("verified_snapshot_path"),
+        "content/feishu",
+    )
+    snapshot_text = ""
+    if snapshot_error:
+        errors.append(f"proposal_draft.verified_snapshot_path: {snapshot_error}")
+    elif snapshot_path:
+        snapshot_bytes = snapshot_path.read_bytes()
+        snapshot_text = snapshot_bytes.decode("utf-8")
+        actual_hash = hashlib.sha256(snapshot_bytes).hexdigest()
+        if draft.get("verified_snapshot_sha256") != actual_hash:
+            errors.append("proposal_draft.verified_snapshot_sha256 does not match the reread snapshot")
+
+    expected_slide_ids = [
+        str(slide_id)
+        for chapter in chapters
+        for slide_id in (chapter.get("slides") if isinstance(chapter.get("slides"), list) else [])
+    ]
+    verified_slide_ids = [
+        str(slide_id)
+        for slide_id in (draft.get("verified_slide_ids") if isinstance(draft.get("verified_slide_ids"), list) else [])
+    ]
+    if verified_slide_ids != expected_slide_ids:
+        errors.append("proposal_draft.verified_slide_ids must exactly match the confirmed chapter slide order")
+
+    if snapshot_text:
+        for marker in ("**本章回答：**", "**逻辑路径：**", "**情绪方向：**"):
+            if marker not in snapshot_text:
+                errors.append(f"verified Feishu proposal draft is missing chapter field: {marker}")
+        for slide_id in expected_slide_ids:
+            match = re.search(
+                rf"(?ms)^##\s+{re.escape(slide_id)}(?:\b|｜|\s).*?(?=^##\s+|^#\s+|\Z)",
+                snapshot_text,
+            )
+            if not match:
+                errors.append(f"verified Feishu proposal draft is missing slide section: {slide_id}")
+                continue
+            page_text = match.group(0)
+            for section in FEISHU_PAGE_SECTIONS:
+                if not re.search(rf"(?m)^###\s+{re.escape(section)}\s*$", page_text):
+                    errors.append(f"{slide_id}: verified Feishu proposal draft is missing section: {section}")
+        if re.search(r"(?m)^#{2,4}\s*(完整讲稿|逐字稿|Speaker Notes)", snapshot_text, re.IGNORECASE):
+            errors.append("verified Feishu proposal draft must not contain the final full speaker script")
+    return errors
+
+
+def validate_visual_direction_drafts(project: Path, state: dict, approvals: dict) -> list[str]:
+    errors: list[str] = []
+    visual_direction = state.get("visual_direction") if isinstance(state.get("visual_direction"), dict) else {}
+    directions = visual_direction.get("directions") if isinstance(visual_direction.get("directions"), list) else []
+    if not 2 <= len(directions) <= 3:
+        errors.append("visual_direction.directions must contain 2-3 generated visual directions")
+        return errors
+
+    direction_ids: list[str] = []
+    visual_theses: list[str] = []
+    for index, direction in enumerate(directions, start=1):
+        scope = f"visual_direction.directions[{index}]"
+        if not isinstance(direction, dict):
+            errors.append(f"{scope} must be an object")
+            continue
+        direction_id = str(direction.get("direction_id") or "").strip()
+        if not direction_id:
+            errors.append(f"{scope}.direction_id is required")
+        else:
+            direction_ids.append(direction_id)
+        for field in ("name", "visual_thesis", "visual_family_id"):
+            value = str(direction.get(field) or "").strip()
+            if not value:
+                errors.append(f"{scope}.{field} is required")
+            elif field == "visual_thesis":
+                visual_theses.append(value)
+        representative_slide_ids = (
+            direction.get("representative_slide_ids")
+            if isinstance(direction.get("representative_slide_ids"), list)
+            else []
+        )
+        if not [item for item in representative_slide_ids if str(item).strip()]:
+            errors.append(f"{scope}.representative_slide_ids must identify at least one real sample page")
+
+        assets = direction.get("image2_assets") if isinstance(direction.get("image2_assets"), list) else []
+        if not assets:
+            errors.append(f"{scope} must register at least one real Image2 draft")
+            continue
+        for asset_index, asset in enumerate(assets, start=1):
+            asset_scope = f"{scope}.image2_assets[{asset_index}]"
+            if not isinstance(asset, dict):
+                errors.append(f"{asset_scope} must be an object")
+                continue
+            if str(asset.get("generator") or "").strip().lower() != "image2":
+                errors.append(f"{asset_scope}.generator must be image2")
+            asset_path, asset_error = registered_project_file(
+                project,
+                asset.get("asset_path"),
+                "assets/image2",
+            )
+            if asset_error:
+                errors.append(f"{asset_scope}.asset_path: {asset_error}")
+            elif asset_path and asset_path.suffix.lower() not in IMAGE2_DRAFT_SUFFIXES:
+                errors.append(f"{asset_scope}.asset_path must be PNG, JPG, or WebP")
+            _, prompt_error = registered_project_file(
+                project,
+                asset.get("prompt_record"),
+                "assets/image2",
+            )
+            if prompt_error:
+                errors.append(f"{asset_scope}.prompt_record: {prompt_error}")
+
+    if len(direction_ids) != len(set(direction_ids)):
+        errors.append("visual_direction.direction_id values must be unique")
+    if len(visual_theses) != len(set(visual_theses)):
+        errors.append("visual_direction.visual_thesis values must describe distinct visual propositions")
+
+    selected_direction_id = str(visual_direction.get("selected_direction_id") or "").strip()
+    if not selected_direction_id or selected_direction_id not in direction_ids:
+        errors.append("visual_direction.selected_direction_id must reference one generated direction")
+    approval = approvals.get("visual_direction") if isinstance(approvals.get("visual_direction"), dict) else {}
+    approval_record_id = str(visual_direction.get("approval_record_id") or "").strip()
+    if is_approved(approvals, "visual_direction") and (
+        not approval_record_id or approval.get("record_id") != approval_record_id
+    ):
+        errors.append("visual_direction.approval_record_id must match its approval record")
+    return errors
 
 
 def validate_project(project: Path) -> list[str]:
@@ -151,17 +330,71 @@ def validate_project(project: Path) -> list[str]:
         calibration = state.get("design_calibration") if isinstance(state.get("design_calibration"), dict) else {}
         calibration_value = calibration.get("path") or "deck/design-calibration.html"
         calibration_path, calibration_error = registered_project_file(project, calibration_value, "deck")
+        planned_slide_count = calibration.get("planned_slide_count")
+        if not isinstance(planned_slide_count, int) or planned_slide_count <= 0:
+            errors.append("design_calibration.planned_slide_count must be a positive integer")
+            planned_slide_count = 0
+        expected_profile = (
+            "compact" if planned_slide_count and planned_slide_count <= 24
+            else "standard" if planned_slide_count and planned_slide_count <= 60
+            else "extended"
+        )
+        configured_profile = str(calibration.get("profile") or "auto").strip().lower()
+        profile = expected_profile if configured_profile == "auto" else configured_profile
+        if profile not in DESIGN_SAMPLE_PROFILES:
+            errors.append("design_calibration.profile must be auto, compact, standard, or extended")
+            profile = expected_profile
+        elif DESIGN_PROFILE_RANK[profile] < DESIGN_PROFILE_RANK[expected_profile]:
+            errors.append(
+                f"design_calibration.profile {profile} is too small for {planned_slide_count} planned slides; "
+                f"use at least {expected_profile}"
+            )
+            profile = expected_profile
         if calibration_error:
             errors.append(f"design_calibration.path: {calibration_error}")
         elif calibration_path:
             calibration_text = calibration_path.read_text(encoding="utf-8")
             configured_types = calibration.get("required_sample_types")
-            required_types = configured_types if isinstance(configured_types, list) and configured_types else DEFAULT_DESIGN_SAMPLE_TYPES
+            required_types = (
+                configured_types
+                if isinstance(configured_types, list) and configured_types
+                else DESIGN_SAMPLE_PROFILES[profile]
+            )
+            required_types = tuple(dict.fromkeys(str(item).strip() for item in required_types if str(item).strip()))
+            minimum_count = len(DESIGN_SAMPLE_PROFILES[profile])
+            minimum_chapter_variants = {"compact": 1, "standard": 2, "extended": 3}[profile]
+            minimum_content_densities = {"compact": 2, "standard": 3, "extended": 3}[profile]
+            if len(required_types) < minimum_count:
+                errors.append(
+                    f"design_calibration.required_sample_types needs at least {minimum_count} types for {profile}"
+                )
+            for essential in ("cover", "toc", "closing"):
+                if essential not in required_types:
+                    errors.append(f"design_calibration.required_sample_types must include {essential}")
+            if len(CHAPTER_SAMPLE_TYPES.intersection(required_types)) < minimum_chapter_variants:
+                errors.append(
+                    "design_calibration.required_sample_types does not cover enough chapter-page variants"
+                )
+            if len(CONTENT_DENSITY_SAMPLE_TYPES.intersection(required_types)) < minimum_content_densities:
+                errors.append(
+                    "design_calibration.required_sample_types does not cover enough content-density levels"
+                )
             for sample_type in required_types:
                 marker_double = f'data-design-sample="{sample_type}"'
                 marker_single = f"data-design-sample='{sample_type}'"
                 if marker_double not in calibration_text and marker_single not in calibration_text:
                     errors.append(f"Design calibration is missing required sample type: {sample_type}")
+            if "content-visual-module" in required_types:
+                alpha_value = calibration.get("alpha_sample_path")
+                alpha_path, alpha_error = registered_project_file(project, alpha_value, "assets")
+                if alpha_error:
+                    errors.append(f"design_calibration.alpha_sample_path: {alpha_error}")
+                elif alpha_path:
+                    if alpha_path.suffix.lower() != ".png" or not png_has_alpha(alpha_path):
+                        errors.append("design_calibration.alpha_sample_path must be a PNG with a real alpha channel")
+                    normalized_alpha = str(alpha_value).strip().replace("\\", "/")
+                    if normalized_alpha not in calibration_text:
+                        errors.append("Design calibration HTML must reference design_calibration.alpha_sample_path")
         if phase_index >= PHASES.index("design_system"):
             approval = approvals.get("design_calibration") if isinstance(approvals.get("design_calibration"), dict) else {}
             approval_id = str(calibration.get("approval_record_id") or "").strip()
@@ -174,6 +407,13 @@ def validate_project(project: Path) -> list[str]:
 
     if phase_index >= PHASES.index("visual_direction"):
         brand_visual = state.get("brand_visual") if isinstance(state.get("brand_visual"), dict) else {}
+        scope_decision = str(brand_visual.get("scope_decision") or "").strip()
+        if scope_decision not in {"official_brand", "visual_proxy"}:
+            errors.append("brand_visual.scope_decision must be official_brand or visual_proxy")
+        if not str(brand_visual.get("project_brand_name") or "").strip():
+            errors.append("brand_visual.project_brand_name is required")
+        if scope_decision == "visual_proxy" and not str(brand_visual.get("reference_brand_name") or "").strip():
+            errors.append("brand_visual.reference_brand_name is required for visual_proxy")
         source_ids = brand_visual.get("source_ids") if isinstance(brand_visual.get("source_ids"), list) else []
         source_files = brand_visual.get("source_files") if isinstance(brand_visual.get("source_files"), list) else []
         source_ids = [str(item).strip() for item in source_ids if str(item).strip()]
@@ -254,50 +494,54 @@ def validate_project(project: Path) -> list[str]:
                     if alpha_tokens.get("enabled") is not True or alpha_tokens.get("alpha_required") is not True:
                         errors.append("design-tokens.json transparent_png must enable real alpha-channel modules")
 
-    chapters = state.get("chapters") if isinstance(state.get("chapters"), list) else []
-    if phase == "chapter_redteam":
-        if not chapters:
-            errors.append("At least one chapter is required before chapter_redteam")
-        active_chapter_id = str(state.get("active_chapter_id") or "").strip()
-        if not active_chapter_id:
-            errors.append("active_chapter_id is required for chapter_redteam")
-        target = next(
-            (
-                chapter
-                for chapter in chapters
-                if isinstance(chapter, dict)
-                and str(chapter.get("chapter_id") or "").strip() == active_chapter_id
-            ),
-            None,
-        )
-        if active_chapter_id and target is None:
-            errors.append(f"active_chapter_id does not match a registered chapter: {active_chapter_id}")
-        elif target is not None:
-            slides = target.get("slides") if isinstance(target.get("slides"), list) else []
-            if not slides:
-                errors.append(f"{active_chapter_id}: slides must be non-empty before chapter red-team")
-            if target.get("manuscript_confirmed") is not True:
-                errors.append(f"{active_chapter_id}: manuscript is not fully confirmed")
-            if not target.get("confirmation_record_id"):
-                errors.append(f"{active_chapter_id}: missing confirmation_record_id")
-            source_value = target.get("source_path")
-            _, source_error = registered_project_file(project, source_value, "content/chapters")
-            if source_error:
-                errors.append(f"{active_chapter_id}.source_path: {source_error}")
+    if phase_index >= PHASES.index("visual_sample") or is_approved(approvals, "visual_direction"):
+        errors.extend(validate_visual_direction_drafts(project, state, approvals))
 
+    chapters = state.get("chapters") if isinstance(state.get("chapters"), list) else []
     if phase_index >= PHASES.index("full_redteam"):
+        errors.extend(validate_verified_feishu_draft(project, state, chapters))
         if not chapters:
             errors.append("At least one chapter is required before full_redteam")
         for index, chapter in enumerate(chapters, start=1):
             chapter_id = chapter.get("chapter_id") or f"chapter-{index}"
             if chapter.get("manuscript_confirmed") is not True:
                 errors.append(f"{chapter_id}: manuscript is not fully confirmed")
-            if chapter.get("redteam_passed") is not True:
-                errors.append(f"{chapter_id}: chapter red-team has not passed")
             if not chapter.get("confirmation_record_id"):
                 errors.append(f"{chapter_id}: missing confirmation_record_id")
-            if not chapter.get("redteam_report"):
-                errors.append(f"{chapter_id}: missing redteam_report")
+            slides = chapter.get("slides") if isinstance(chapter.get("slides"), list) else []
+            if not slides:
+                errors.append(f"{chapter_id}: slides must be non-empty before full-draft review")
+            source_value = chapter.get("source_path")
+            _, source_error = registered_project_file(project, source_value, "content/chapters")
+            if source_error:
+                errors.append(f"{chapter_id}.source_path: {source_error}")
+
+    full_review_required = phase_index >= PHASES.index("content_frozen") or is_approved(approvals, "full_redteam")
+    if full_review_required:
+        full_review = state.get("full_redteam") if isinstance(state.get("full_redteam"), dict) else {}
+        report_value = full_review.get("report_path")
+        report_path, report_error = registered_project_file(project, report_value, "reviews/redteam")
+        if report_error:
+            errors.append(f"full_redteam.report_path: {report_error}")
+        review_agent_id = str(full_review.get("review_agent_id") or "").strip()
+        if (
+            full_review.get("independent_agent") is not True
+            or not review_agent_id
+            or review_agent_id.lower().startswith(("local-main", "main-agent"))
+        ):
+            errors.append("full_redteam requires an independent review agent")
+        if report_path:
+            try:
+                report = load_json(report_path)
+            except ValueError as exc:
+                errors.append(str(exc))
+            else:
+                if report.get("status") != "passed":
+                    errors.append("full_redteam report status must be passed")
+                if report.get("independent_agent") is not True:
+                    errors.append("full_redteam report must confirm independent_agent")
+                if str(report.get("review_agent_id") or "").strip() != review_agent_id:
+                    errors.append("full_redteam review_agent_id must match its report")
 
     if phase_index >= PHASES.index("qa"):
         for index, chapter in enumerate(chapters, start=1):

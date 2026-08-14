@@ -251,7 +251,12 @@ def validate_verified_feishu_draft(project: Path, state: dict, chapters: list[di
                 continue
             page_text = match.group(0)
             for section in FEISHU_PAGE_SECTIONS:
-                if not re.search(rf"(?m)^###\s+{re.escape(section)}\s*$", page_text):
+                heading_field = re.search(rf"(?m)^###\s+{re.escape(section)}\s*$", page_text)
+                bold_paragraph_field = re.search(
+                    rf"(?m)^\*\*{re.escape(section)}[：:]\*\*",
+                    page_text,
+                )
+                if not heading_field and not bold_paragraph_field:
                     errors.append(f"{slide_id}: verified Feishu proposal draft is missing section: {section}")
         if re.search(r"(?m)^#{2,4}\s*(完整讲稿|逐字稿|Speaker Notes)", snapshot_text, re.IGNORECASE):
             errors.append("verified Feishu proposal draft must not contain the final full speaker script")

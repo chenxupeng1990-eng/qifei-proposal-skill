@@ -31,19 +31,19 @@
           "orphan_element_check": "逐项说明独立数字、标签、白底卡或装饰为何保留；无法服务主对象时删除、并入或图形化。"
         },
         "image2_decision": {
-          "decision": "generate|not_generate",
-          "semantic_role": "scene|hero|mechanism|semantic_icon|transparent_module|none",
-          "reason": "为什么需要或不需要Image2；先说明其服务的表达任务。",
+          "decision": "generate",
+          "semantic_role": "scene|hero|mechanism|semantic_icon|transparent_module",
+          "reason": "Image2资产如何服务本页核心思想；不得只作为过门禁的装饰。",
+          "visual_family_id": "与design-tokens.json一致的视觉家族ID",
           "semantic_nodes": ["仅语义图标填写：内容、商品、人群、场景或增长信号等无文字节点"],
           "text_forbidden": true,
           "html_protected_content": "必须由HTML承载的中文、数字、逻辑关系、可核验标签和注释。"
         },
-        "image2_task": "Image2负责的无文字场景、概念图或透明模块；若没有，明确写不使用的原因。",
+        "image2_task": "Image2负责的无文字场景、概念图、语义图标或透明表现模块。",
         "html_task": "HTML负责的精确中文、数字、时间线、图表或标注。",
         "visual_balance_plan": "主载体、辅助元素与文字如何分配视觉重量。"
       },
-      "visual_mode": "none",
-      "visual_not_required_reason": "仅当 HTML 自身承担可见主载体时填写；流程、场景、系统、机制和工作件页不得用此项回避主视觉。",
+      "visual_mode": "background|opaque-module|transparent-png",
       "visual": {
         "asset_id": null,
         "asset_path": null,

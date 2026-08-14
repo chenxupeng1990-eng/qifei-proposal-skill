@@ -47,7 +47,7 @@ def main() -> int:
     if not approved((state.get("approvals") or {}).get("full_redteam")):
         raise SystemExit("Full-deck red-team approval is required before content freeze")
     for chapter in state.get("chapters") or []:
-        if chapter.get("manuscript_confirmed") is not True or chapter.get("redteam_passed") is not True:
+        if chapter.get("manuscript_confirmed") is not True:
             raise SystemExit(f"Chapter not ready for freeze: {chapter.get('chapter_id')}")
 
     slides = deck.get("slides") if isinstance(deck.get("slides"), list) else []

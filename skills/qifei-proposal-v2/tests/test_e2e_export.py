@@ -51,6 +51,13 @@ class EndToEndExportTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         return result
 
+    def test_editable_compiler_preserves_inline_rich_text_runs(self) -> None:
+        capture = (SCRIPTS / "capture_editable_layout.mjs").read_text(encoding="utf-8")
+        compile_script = (SCRIPTS / "compile_editable_pptx.mjs").read_text(encoding="utf-8")
+        self.assertIn("runs: richRuns(node)", capture)
+        self.assertIn("item.runs.map", compile_script)
+        self.assertIn("color:hex(run.style?.colorRgb", compile_script)
+
     @staticmethod
     def presentation_route() -> dict:
         return {

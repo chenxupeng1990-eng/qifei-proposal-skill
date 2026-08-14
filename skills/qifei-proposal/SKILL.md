@@ -40,17 +40,16 @@ description: Govern and produce company-specific competitive proposals for Douyi
 2. **Grill Me 与提案策划书**：背景资料提交后立即调用 `grill-me-lite`，只追问会改变方向、范围、承诺或交付的关键决定；一次只问一个问题并提供推荐答案。达成共同理解后生成 `content/proposal-brief.md`，由 Owner 确认。若会话已安装并提供 `Visualize:visualize`，可生成决策树、范围地图或策划书确认视图；可视化只辅助确认，不替代书面策划书。
 3. **策略立场、连续性与动态目录**：仅在 Grill Me 和提案策划书确认后，先按 [references/proposal-persuasion-gate.md](references/proposal-persuasion-gate.md) 明确机会、矛盾、观点、主动选择、客户目标决策和全案情绪曲线；再按 [references/strategy-continuity-contract.md](references/strategy-continuity-contract.md) 建立总策略因果句、章节策略接口和只读标题链，最后形成动态目录。按 [references/writing-style-and-humanization.md](references/writing-style-and-humanization.md) 清理公式化和空泛表达后，让用户确认。立场、章节接口或标题链未通过时不得用中立目录占位。
 4. **生成项目 `AGENTS.md`**：目录确认后立即生成，记录项目事实、策划书、策略、角色、页级规则和门禁。
-5. **整章批量生成 PPT 提案成稿、飞书逐页确认**：先为当前章节生成页面论证链和只读标题链，确认其继承上一章输出并产生下一章所需输入；骨架确认后，按 [references/feishu-proposal-draft-format.md](references/feishu-proposal-draft-format.md) 一次性生成本章全部页面的核心内容、逻辑展开、上屏内容、讲解方向、策略过桥、视觉生成建议和证据，不得再逐页串行调用生成，也不得提前撰写完整演讲稿。整章初稿写入同一份飞书提案文档，以稳定 `slide_id` 作为评论锚点；团队可在飞书修改页序、拆页、合页、正文和标题，Agent 按评论局部修改并回读。每页仍需记录认知变化、目标情绪、鲜明判断、可见证明和下一页张力。整章必须通过连续阅读、说服力门禁和标题链验收。
-6. **逐章对抗检测**：每章全部页面确认后，启动新的子 Agent，对照标书、策划书、策略、证据、项目 `AGENTS.md` 和 [references/proposal-persuasion-gate.md](references/proposal-persuasion-gate.md) 做对抗检查；既检查错误，也检查观点是否被审慎措辞稀释、章节是否推动客户决策。修复后由用户再次确认。
-7. **全案对抗检测与内容冻结**：所有章节通过后再做一次全案检测，并按 [references/cross-page-semantic-qa.md](references/cross-page-semantic-qa.md) 复核页间推导、语义增量和跨页统计特征。只有 Proposal Owner 可冻结或重新打开页面。
-8. **品牌官方视觉审计**：要求用户上传品牌官方视觉参考至 `inputs/brand-official/`，登记来源 ID，提取品牌视觉符号、Logo 规则、字体、色卡、图形、材质、摄影和禁忌，写入 `evidence/brand-visual-audit.md` 并确认。审计必须区分“企业品牌识别层”与“产品/品类气质层”，并定义最低充分的品牌锚点与品牌介入强度；品牌校准不得把品牌色或某一种品牌特征机械放大，覆盖已确认的品类气质、内容任务和提案视觉命题。没有官方资料不得进入视觉方向。
-9. **视觉方向与初始样张**：依据冻结内容和品牌视觉审计提出 2-3 个客户定制方向；先用少量代表页选定方向。
-10. **设计语言校准集**：选定方向后生成独立 `deck/design-calibration.html`，必须包含首页、目录页、至少 3 种同源章节页、覆盖低/中/高密度的内容页和结尾感谢页。使用 Codex 浏览器逐页评论、修订并确认；只有全部类型确认后才批准 `design_calibration`。
-11. **生成 `DESIGN.md`**：把官方品牌视觉审计和已确认校准集编译为可执行视觉规范；冻结设计语言、固定页面和正文页弹性合同，并记录来源 ID。设计与生成规则见 [references/design-and-generation.md](references/design-and-generation.md)。
-12. **按页面合同选择生产路线**：把冻结内容编译为 `deck-spec.json` 和 `slide-contracts.json`。精确文字、数据、来源与严密关系需要可编辑时，生成评审 HTML 与逐页 PNG；图像原生且无需精确文字时，可由 Image2 直出 16:9 PNG，并在 Cowart 中批注迭代。所有页面共用同一 `design_version`，评论循环不拼装 PPT/PDF。
-13. **Codex 浏览器评论、修订与逐页确认**：使用 Codex 浏览器原生评论功能定位页面与问题。Agent 根据评论回到章节源稿、`deck-spec.json` 或 `DESIGN.md` 修改并重建受影响章节。评论解决不等于页面确认；只有 Proposal Owner 明确说“确认本页/确认这些页面”时，才把对应页面和版本信息写入 `deck/assembly-ready/manifest.json`。设计语言变更会使全部页面的拼装准备状态过期。
-14. **最终页序锁定与全案讲稿生成**：全部正式 PPT 页面完成内容、视觉、拆页与页序确认后，锁定最终页面清单。只以最终批准页面为输入，按最终顺序一次性生成全案演讲稿并写入飞书；讲稿必须与最终页码、`slide_id`、标题和画面内容逐页对应。规则见 [references/content-and-speaker.md](references/content-and-speaker.md)。
-15. **全案 QA 与一次性拼装**：全部正式页面进入拼装准备库且全案讲稿确认后，以批准 PNG 为视觉基准，完成内容忠实度、视觉质量、页序、讲稿映射和版本 QA。只有 Proposal Owner 明确确认“全部内容确认，开始拼装”，才一次性导出。默认输出最终 PNG、PDF 和图片型 PPT 预览；若用户明确要求可编辑文字层，可在相同批准基准上运行“视觉背景＋HTML 实测文字框”编译桥，并额外完成字段、坐标和渲染对照 QA。
+5. **整章批量生成 PPT 提案成稿、飞书逐页确认**：先为当前章节生成页面论证链和只读标题链，确认其继承上一章输出并产生下一章所需输入；骨架确认后，必须先读取 [references/feishu-proposal-draft-format.md](references/feishu-proposal-draft-format.md)，再一次性生成本章全部页面的核心内容、逻辑展开、上屏内容、讲解方向、策略过桥、视觉生成建议和证据，不得再逐页串行调用生成，也不得提前撰写完整演讲稿。整章初稿必须写入同一份飞书提案文档，以稳定 `slide_id` 作为评论锚点；本地 Markdown 只是同步备份，不能替代飞书母版。每次写入后必须重新读取飞书正文，保存 `content/feishu/proposal-draft.md` 回读快照，并在 `project-state.json.proposal_draft` 记录文档 URL、document_id、revision_id、快照哈希和完整 `slide_id` 顺序。未回读、格式不完整或只存在本地 Markdown 时，状态不得设为 `verified`。团队可在飞书修改页序、拆页、合页、正文和标题，Agent 按评论局部修改并再次回读。每页仍需记录认知变化、目标情绪、鲜明判断、可见证明和下一页张力。整章必须通过连续阅读、说服力门禁、标题链和飞书格式验收。
+6. **一次性全稿成稿完整性审查与内容冻结**：所有章节逐页确认完成后，只启动一次新的审查 Agent，按 [references/full-draft-integrity-redteam.md](references/full-draft-integrity-redteam.md) 检查全案策略逻辑、标题与表达、章节接口、情绪流、拆页密度和视觉载体可生成性，并按 [references/cross-page-semantic-qa.md](references/cross-page-semantic-qa.md) 复核页间推导与语义增量。用户确认的事实、策略与场外决策是只读权威；审查不得重新审判内容、外搜资料或引入安全、合规、风险判断。修复必要的结构与表达问题后由 Proposal Owner 确认并冻结内容。
+7. **品牌官方视觉审计**：要求用户上传品牌官方视觉参考至 `inputs/brand-official/`，登记来源 ID，并明确其身份是项目正式品牌资料，还是仅用于测试的视觉代理。提取品牌视觉符号、Logo 规则、字体、色卡、图形、材质、摄影和禁忌，写入 `evidence/brand-visual-audit.md` 并确认。审计必须区分“企业品牌识别层”与“产品/品类气质层”，并定义最低充分的品牌锚点与品牌介入强度；品牌校准不得把品牌色或某一种品牌特征机械放大，覆盖已确认的品类气质、内容任务和提案视觉命题。没有官方资料或身份范围未明确，不得进入视觉方向。
+8. **视觉方向与初始样张**：依据冻结内容和品牌视觉审计提出 2-3 个客户定制方向。每个方向都必须实际调用 Image2 生成至少一张代表页视觉稿，并登记独立的视觉命题、`visual_family_id`、代表页、生成资产和提示词记录；纯文字方向说明、Moodboard、HTML/CSS 换色或未生成图像的版式草图均不算视觉方向样张。Owner 只能从真实样张中选定方向。
+9. **设计语言校准集**：选定方向后生成独立 `deck/design-calibration.html`。按预计正式页数选择自适应校准档位：24页及以下为 `compact`（最低6张），25–60页为 `standard`（最低8张），60页以上为 `extended`（最低10张）。所有档位都必须覆盖首页、目录、至少一种章节页、正文密度压力测试和结尾；档位越高，章节变体和正文密度覆盖越完整。只有本案实际启用透明 PNG 时，才要求真实 Alpha 样本验证边缘、遮挡、锚点、缩放和 HTML 叠加。使用 Codex 浏览器逐页评论、修订并确认；覆盖本案主要设计风险后才批准 `design_calibration`。
+10. **生成 `DESIGN.md`**：把官方品牌视觉审计和已确认校准集编译为可执行视觉规范；冻结设计语言、固定页面和正文页弹性合同，并记录来源 ID。设计与生成规则见 [references/design-and-generation.md](references/design-and-generation.md)。
+11. **按页面合同选择生产路线**：把冻结内容编译为 `deck-spec.json` 和 `slide-contracts.json`。每页先锁定一个核心思想、一个主要表达对象、一个最佳载体和一个视觉锤，再记录 Image2/HTML 分工；不得为了填写合同增加装饰、卡片或无用字段。每张正式提案页必须使用至少一个已登记的 Image2 资产，HTML 不得独立承担整页审美；资产必须服务本页思想，并匹配当前 `design_version` 的同一 `visual_family_id`，不能用无关装饰图过门禁。精确文字、数据、来源与严密关系由 HTML 保护；图像原生且无需精确文字时，可由 Image2 直出 16:9 PNG。
+12. **视觉生成 Loop、评论与确认**：按“提取核心思想 → 选择载体 → 生成 → 单页与整章 montage 检查 → 回到正确权威源修改 → 再生成”的循环推进。使用 Codex 浏览器原生评论功能定位问题；单页问题只重建该页，公共设计语言变化才使相关页面整体过期。评论解决不等于页面确认；只有 Proposal Owner 明确说“确认本页/确认这些页面”时，才把对应页面和版本信息写入 `deck/assembly-ready/manifest.json`。循环中不拼装 PPT/PDF。
+13. **最终页序锁定与全案讲稿生成**：全部正式 PPT 页面完成内容、视觉、拆页与页序确认后，锁定最终页面清单。只以最终批准页面为输入，按最终顺序一次性生成全案演讲稿并写入飞书；讲稿必须与最终页码、`slide_id`、标题和画面内容逐页对应。规则见 [references/content-and-speaker.md](references/content-and-speaker.md)。
+14. **全案 QA 与一次性拼装**：全部正式页面进入拼装准备库且全案讲稿确认后，以批准 PNG 为视觉基准，完成内容忠实度、视觉质量、页序、讲稿映射和版本 QA。只有 Proposal Owner 明确确认“全部内容确认，开始拼装”，才一次性导出。默认输出最终 PNG、PDF 和图片型 PPT 预览；若用户明确要求可编辑文字层，可在相同批准基准上运行“视觉背景＋HTML 实测文字框”编译桥，并额外完成字段、坐标和渲染对照 QA。
 
 交付级别必须在导出前说清：
 
@@ -70,12 +69,13 @@ description: Govern and produce company-specific competitive proposals for Douyi
 - 策略立场未明确、客户目标决策未定义或全案情绪曲线未建立：不得生成正式目录和PPT提案成稿。
 - 总策略未编译为章节策略接口、章节可以任意换序或只读标题链无法复述策略推导：不得确认目录或进入PPT提案成稿。
 - 目录未确认：不得生成项目 `AGENTS.md` 之后的内容。
-- PPT提案成稿未完成、飞书逐页内容未确认：不得生成视觉成品。
-- 逐章与全案对抗检测未通过：不得内容冻结。
+- PPT提案成稿未完成、飞书逐页内容未确认，或 `proposal_draft` 缺少真实回读的URL、revision、快照哈希和完整 `slide_id`：不得进入全稿审查、内容冻结或视觉生产。
+- 一次性全稿成稿完整性审查未通过：不得内容冻结。
 - 内容未冻结：不得调用 Image2 生产正式素材。
 - 未上传并核准品牌官方视觉参考，或未完成品牌视觉审计：不得提出正式视觉方向或生成样张。
+- 视觉方向没有 2-3 套真实 Image2 样张，任一方向缺少视觉命题、`visual_family_id`、代表页、资产或提示词记录，或只提供文字说明/HTML换色：不得批准 `visual_direction` 或进入 `visual_sample`。
 - 初始样张未确认：不得生成设计语言校准集。
-- `deck/design-calibration.html` 未覆盖首页、目录页、至少 3 种章节页、低/中/高密度内容页和结尾感谢页，或未逐页确认：不得生成或批准 `DESIGN.md`。
+- `deck/design-calibration.html` 未达到与正式页数匹配的 `compact`、`standard` 或 `extended` 校准档位，未覆盖该档位要求的首页、目录、章节变体、正文密度压力页和结尾，或未逐页确认：不得生成或批准 `DESIGN.md`。
 - `DESIGN.md` 未记录品牌视觉来源 ID、企业品牌层与产品/品类层的色彩职责、最低品牌锚点和品牌介入强度：不得批准设计系统。
 - `DESIGN.md` 未定义固定设计语言、内容页弹性合同和章节批量生成规则，或未确认：不得按章节渲染。
 - 评论已解决或 Agent 自检通过：不得据此自动确认页面；缺少 Proposal Owner 的明确页面确认命令，不得写入拼装准备库。
@@ -112,7 +112,7 @@ description: Govern and produce company-specific competitive proposals for Douyi
 - 每章必须声明 `strategy_input`、`chapter_claim`、`reasoning_step`、`strategy_output` 和 `next_chapter_necessity`；上一章输出必须等于下一章输入。章节独立成立但不推进总策略，同样不得确认。
 - 每页使用稳定 `slide_id`；HTML、章节稿、证据账本和飞书演讲稿都用它关联。
 - 前期飞书主文档保存PPT提案成稿与页面协作信息，不保存完整演讲稿。完整讲稿在全部PPT页面和最终页序确认后另行生成，可写入同一文档的“最终演讲稿”区域或独立飞书讲稿文档。
-- 飞书不可用时，提案成稿先写入结构化 Markdown；最终讲稿先写入 `content/speaker-notes.md`，恢复后按最终 `slide_id` 和页码同步。
+- 飞书不可用时，提案成稿先写入结构化 Markdown，并将 `proposal_draft.status` 设为 `local_fallback_pending_sync`、记录 `fallback_reason`；该状态只允许继续本地起草，不能确认章节、进入全稿审查或内容冻结。飞书恢复后必须按稳定 `slide_id` 同步、回读并通过格式校验。最终讲稿的本地回退规则保持在 `content/speaker-notes.md`。
 - 对外页面不出现 `待确认`、内部权威等级、版本状态、风险备注或 Agent 工作痕迹。
 - 对外提案必须作出有证据的方向选择。正确但没有观点、观点有证据但不能推动客户决策、或删除品牌名后可原样放入任意行业报告的页面，不得确认。
 
@@ -148,6 +148,8 @@ Windows PowerShell 使用同一组命令时，将 `python3` 替换为 `py -3`；
 
 - 独立实现，不依赖或复制外部模板填空系统、主题资产或专有导出引擎。
 - 顶层 `agent.md` 是 Skill 级治理契约；项目 `AGENTS.md` 是项目内容与治理权威；`DESIGN.md` 是视觉权威；`deck-spec.json` 是冻结内容的编译产物；HTML 是视觉母版。
+- 视觉 Skill 的核心职责只有三项：保持跨页视觉一致性、保持版式语法一致性、让每页核心思想匹配最佳表达形式。校验器只防客观错误，不能代替创意和审美判断。
+- 每张正式页必须包含已登记的 Image2 资产，并由统一 `visual_family_id` 约束画面风格。Image2 是视觉底线，不是内容决策者：先完成内容判断与页面路由，再生成语义相关的场景、主视觉、机制、语义图标或透明模块。
 - 使用页面合同限制文字、数组和媒体槽位；字符预算只做预检，最终必须在浏览器测量溢出和越界。
 - 每页生成前必须写入页面生产路由：服务对象、使用情境、演讲任务、内容关系、最佳载体、唯一主导、视觉论点、Image2/HTML分工与视觉平衡。流程、场景、系统、机制和工作件页面若没有可见主载体，不得通过设计循环。
 - 每页只能有一个视觉锤；独立数字、白底说明条、重复口号或装饰元素若不引入、解释或导向该视觉锤，必须删除、并入主载体或转成图形关系。
@@ -170,7 +172,7 @@ Windows PowerShell 使用同一组命令时，将 `python3` 替换为 `py -3`；
 只有同时满足以下条件才宣布完成：
 
 - 所有章节和页面有确认记录；评论关闭不得替代 Proposal Owner 的明确页面确认。
-- 逐章及全案对抗检测通过。
+- 一次性全稿成稿完整性审查通过。
 - 内容冻结与视觉样张确认可追溯。
 - 设计语言校准集包含全部规定页面类型，且逐页确认记录可追溯。
 - `AGENTS.md`、`DESIGN.md`、`deck-spec.json` 与 HTML 无漂移。

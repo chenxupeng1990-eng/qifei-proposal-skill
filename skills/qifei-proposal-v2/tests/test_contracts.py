@@ -16,7 +16,7 @@ sys.path.insert(0, str(SCRIPTS))
 from freeze_deck_spec import content_hash  # noqa: E402
 from validate_deck_spec import png_has_alpha, title_has_terminal_period, valid_local_media, validate_deck, visual_length  # noqa: E402
 from validate_design_loop import validate_presentation_route  # noqa: E402
-from validate_project import validate_project  # noqa: E402
+from validate_project import FEISHU_PAGE_SECTIONS, validate_project  # noqa: E402
 
 
 class ContractTests(unittest.TestCase):
@@ -371,6 +371,34 @@ class ContractTests(unittest.TestCase):
             (project / "project-state.json").write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
             errors = validate_project(project)
             self.assertTrue(any("missing section: 视觉生成建议" in error for error in errors))
+
+    def test_full_redteam_accepts_bold_paragraph_page_fields_from_feishu_markdown(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = Path(temp)
+            chapter_path = project / "content" / "chapters" / "C1.md"
+            chapter_path.parent.mkdir(parents=True)
+            chapter_path.write_text("# Confirmed C1\n", encoding="utf-8")
+            state = self.write_full_redteam_project(
+                project,
+                [{
+                    "chapter_id": "C1",
+                    "slides": ["C1-S01"],
+                    "manuscript_confirmed": True,
+                    "confirmation_record_id": "confirm-C1",
+                    "source_path": "content/chapters/C1.md",
+                }],
+            )
+            self.attach_verified_feishu_draft(project, state, ["C1-S01"])
+            snapshot = project / "content" / "feishu" / "proposal-draft.md"
+            text = snapshot.read_text(encoding="utf-8")
+            for section in FEISHU_PAGE_SECTIONS:
+                text = text.replace(f"### {section}\n", f"**{section}：**")
+            snapshot.write_text(text, encoding="utf-8")
+            state = json.loads((project / "project-state.json").read_text(encoding="utf-8"))
+            state["proposal_draft"]["verified_snapshot_sha256"] = hashlib.sha256(text.encode("utf-8")).hexdigest()
+            (project / "project-state.json").write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
+            errors = validate_project(project)
+            self.assertEqual(errors, [])
 
     def test_full_redteam_requires_all_chapters_ready(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

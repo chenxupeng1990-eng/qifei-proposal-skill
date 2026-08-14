@@ -160,8 +160,15 @@ def validate_presentation_route(page: dict, scope: str) -> list[str]:
             )
         if decision == "generate" and semantic_role == "none":
             errors.append(f"{scope}: Image2 generation requires a non-none semantic_role")
+        if decision == "generate" and not str(image2_decision.get("visual_family_id") or "").strip():
+            errors.append(f"{scope}: Image2 visual_family_id is required")
         if decision == "not_generate" and semantic_role != "none":
             errors.append(f"{scope}: Image2 not_generate requires semantic_role none")
+        if decision == "not_generate":
+            errors.append(
+                f"{scope}: every formal page requires an Image2 asset; "
+                "HTML may protect precise content but cannot be the only visual source"
+            )
         if semantic_role == "semantic_icon":
             nodes = image2_decision.get("semantic_nodes")
             if not isinstance(nodes, list) or not any(str(node).strip() for node in nodes):
@@ -171,17 +178,10 @@ def validate_presentation_route(page: dict, scope: str) -> list[str]:
 
     visual_mode = str(page.get("visual_mode") or "").strip()
     if visual_mode == "none":
-        if isinstance(image2_decision, dict) and image2_decision.get("decision") != "not_generate":
-            errors.append(f"{scope}: visual_mode none requires Image2 decision not_generate")
-        if anchor_kind != "html":
-            errors.append(
-                f"{scope}: visual_mode none is only allowed when the primary visual anchor is HTML"
-            )
-        if expression_object in {"process", "system", "scene", "mechanism", "work_artifact"}:
-            errors.append(
-                f"{scope}: {expression_object} pages require a visible primary carrier; "
-                "do not use visual_mode none"
-            )
+        errors.append(
+            f"{scope}: visual_mode none is not allowed for formal proposal pages; "
+            "register an Image2 scene, hero, mechanism, semantic icon, or transparent module"
+        )
     elif isinstance(image2_decision, dict) and image2_decision.get("decision") != "generate":
         errors.append(f"{scope}: visual assets require Image2 decision generate")
 
@@ -225,6 +225,7 @@ def validate_chapter_report(project: Path, chapter_id: str) -> list[str]:
 
     contracts = contracts_doc.get("layouts") if isinstance(contracts_doc.get("layouts"), dict) else {}
     alpha_tokens = design_tokens.get("transparent_png") if isinstance(design_tokens.get("transparent_png"), dict) else {}
+    design_visual_family = str(design_tokens.get("visual_family_id") or "").strip()
     approved_alpha_dir = str(alpha_tokens.get("approved_dir") or "assets/approved/alpha").strip().rstrip("/") + "/"
     alpha_slots = {
         str(item.get("slot_id"))
@@ -279,6 +280,16 @@ def validate_chapter_report(project: Path, chapter_id: str) -> list[str]:
                     errors.append(f"{scope}: Image2 asset {asset_id!r} is not approved")
                 if str(manifest_item.get("path") or "").replace("\\", "/") != asset_path:
                     errors.append(f"{scope}: Image2 asset_path does not match asset manifest")
+                route = page.get("presentation_route") if isinstance(page.get("presentation_route"), dict) else {}
+                decision = route.get("image2_decision") if isinstance(route.get("image2_decision"), dict) else {}
+                route_family = str(decision.get("visual_family_id") or "").strip()
+                manifest_family = str(manifest_item.get("visual_family_id") or "").strip()
+                if not manifest_family:
+                    errors.append(f"{scope}: Image2 asset manifest requires visual_family_id")
+                elif route_family and manifest_family != route_family:
+                    errors.append(f"{scope}: Image2 asset visual_family_id does not match page route")
+                if design_visual_family and route_family != design_visual_family:
+                    errors.append(f"{scope}: page visual_family_id does not match design-tokens.json")
             asset_file, asset_error = project_file(project, asset_path, "assets")
             if asset_error:
                 errors.append(f"{scope}: Image2 asset {asset_error}")

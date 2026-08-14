@@ -2,7 +2,7 @@ import { createStateStore } from './state.js';
 
 export function mountPptMultiEditor({ documentId }) {
   document.documentElement.classList.add('ppt-editor-multi-active');
-  const slides = [...document.querySelectorAll('.slide')];
+  const slides = [...document.querySelectorAll('.slide, .slide-canvas')];
   const root = document.createElement('div');
   root.className = 'ppt-multi-toolbar';
   root.innerHTML = `<strong>全稿编辑</strong><span>双击文字编辑 · 自动保存到本机浏览器</span><button type="button">退出编辑</button>`;
@@ -21,7 +21,7 @@ export function mountPptMultiEditor({ documentId }) {
     shell.className = 'ppt-multi-shell';
     slide.parentNode.insertBefore(shell, slide);
     shell.append(slide);
-    const slideId = slide.dataset.page || slide.id || `slide-${index + 1}`;
+    const slideId = slide.dataset.page || slide.dataset.slideId || slide.id || `slide-${index + 1}`;
     const store = createStateStore({ documentId, slideId });
     const elements = [...slide.querySelectorAll('[data-editable="text"][data-edit-id]')];
     const saved = store.load();

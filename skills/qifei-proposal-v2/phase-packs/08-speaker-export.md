@@ -7,6 +7,7 @@
 ## 必须读取
 
 - [../references/content-and-speaker.md](../references/content-and-speaker.md)
+- 导出时读取 [../references/html-editor-and-editable-pptx.md](../references/html-editor-and-editable-pptx.md)。
 - 导出或拼装时再读取 [../references/workflow.md](../references/workflow.md) 的页面确认与交付部分。
 
 ## 讲稿门禁
@@ -31,3 +32,5 @@
 - 基础交付：PNG、PDF、图片型PPTX。
 - 增强交付：基础交付加原生文字层的半可编辑PPTX。
 - 不承诺：图表、复杂SVG、场景主视觉和Image2图像全部转为PowerPoint原生可编辑对象。
+
+增强交付必须依次完成布局捕获、PPTX编译和PPTX验证；验证报告为 `PASS` 后才可交付。PPTX只作为交付副本，正式改版仍回到HTML生产源。

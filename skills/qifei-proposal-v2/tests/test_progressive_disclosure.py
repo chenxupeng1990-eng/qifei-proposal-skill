@@ -111,6 +111,26 @@ class ProgressiveDisclosureTests(unittest.TestCase):
         self.assertIn("不得进入 `chapters[].slides`", text)
         self.assertIn("回写飞书并完成整份回读", text)
 
+    def test_html_editor_and_editable_pptx_are_a_routed_delivery_chain(self) -> None:
+        contract_path = SKILL_ROOT / "references" / "html-editor-and-editable-pptx.md"
+        self.assertTrue(contract_path.is_file())
+        contract = contract_path.read_text(encoding="utf-8")
+        generation = (SKILL_ROOT / "phase-packs" / "07-page-production-review.md").read_text(encoding="utf-8")
+        export = (SKILL_ROOT / "phase-packs" / "08-speaker-export.md").read_text(encoding="utf-8")
+
+        for phase_text in (generation, export):
+            self.assertIn("html-editor-and-editable-pptx.md", phase_text)
+        self.assertIn("?edit=1&capture=<slide-id>", contract)
+        for command in (
+            "npm run editable:capture",
+            "npm run editable:compile",
+            "npm run editable:validate",
+        ):
+            self.assertIn(command, contract)
+        self.assertIn("proposal-editable.validation.json", contract)
+        self.assertIn("视觉底图", contract)
+        self.assertIn("原生文字层", contract)
+
 
 if __name__ == "__main__":
     unittest.main()

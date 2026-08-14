@@ -119,6 +119,15 @@
     const exportMode = new URLSearchParams(location.search).get("export") === "1";
     if (exportMode) document.body.classList.add("export-mode");
 
+    function updatePreviewScale() {
+      if (exportMode) return;
+      const availableWidth = Math.max(0, window.innerWidth - 48);
+      const scale = Math.min(1, availableWidth / 1920);
+      document.documentElement.style.setProperty("--preview-scale", String(scale));
+    }
+    updatePreviewScale();
+    window.addEventListener("resize", updatePreviewScale);
+
     const root = document.documentElement;
     const color = design.colors || {};
     const fonts = design.fonts || {};
@@ -263,6 +272,7 @@
 
     const deck = document.getElementById("deck");
     (deckData.slides || []).forEach(slide => deck.append(renderSlide(slide)));
+    updatePreviewScale();
 
     function runQa() {
       const errors = [];

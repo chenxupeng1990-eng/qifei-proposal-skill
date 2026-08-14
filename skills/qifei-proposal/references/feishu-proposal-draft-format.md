@@ -14,6 +14,31 @@
 
 完整演讲稿等待全部PPT页面、拆页和最终顺序确认后，另行按最终页码生成。
 
+## 1.1 权威来源与回读凭证
+
+飞书提案文档是内容确认阶段的唯一权威母版。本地 Markdown 只能作为飞书整份回读后的可审计快照，或在飞书暂时不可用时承担待同步草稿。
+
+每轮写入或评论修改后必须：
+
+1. 重新抓取整份飞书文档，不以写入接口返回成功代替回读；
+2. 保存快照到 `content/feishu/proposal-draft.md`；
+3. 计算快照 SHA256；
+4. 在 `project-state.json.proposal_draft` 记录：
+   - `authority: "feishu"`；
+   - `status: "verified"`；
+   - `format_version: "feishu-proposal-draft-v1"`；
+   - `feishu_doc_url`；
+   - `document_id`；
+   - 正整数 `revision_id`；
+   - `last_verified_at`；
+   - `verified_snapshot_path`；
+   - `verified_snapshot_sha256`；
+   - 与已确认页序完全一致的 `verified_slide_ids`。
+
+缺少任一字段、快照哈希不匹配、飞书页序与章节状态不一致，或回读快照缺少本格式规定的章节／页面字段时，均不得登记为内容已确认。
+
+飞书不可用时将状态记为 `local_fallback_pending_sync` 并填写 `fallback_reason`。该状态不能进入全稿审查、内容冻结或视觉生产。
+
 ## 2. 章节格式
 
 每章使用以下结构：
@@ -128,3 +153,4 @@
 - 证据与来源可以回查；
 - 未提前生成完整演讲稿。
 
+除页面质量外，项目还必须存在有效的飞书回读凭证。Owner 的“确认”只批准当时看到的内容，不替代 revision、整份回读、格式完整性、页序一致性和快照哈希校验。

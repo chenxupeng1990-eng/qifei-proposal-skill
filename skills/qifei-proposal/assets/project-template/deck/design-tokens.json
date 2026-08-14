@@ -1,6 +1,7 @@
 {
   "schema_version": "1.0",
   "design_version": "design-v0",
+  "visual_family_id": "replace-with-approved-visual-family",
   "canvas": {"width": 1920, "height": 1080},
   "brand_visual": {
     "source_ids": [],

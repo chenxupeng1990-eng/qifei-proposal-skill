@@ -109,7 +109,7 @@ mkdirSync(OUTPUT_DIR, {recursive:true});
 const browser = await chromium.launch({executablePath, headless:true});
 try {
   const page = await browser.newPage({viewport:{width:1920,height:1080}, deviceScaleFactor:1});
-  await page.goto(`${pathToFileURL(HTML).href}?review=1`, {waitUntil:'load'});
+  await page.goto(`${pathToFileURL(HTML).href}?export=1&review=1`, {waitUntil:'load'});
   await page.waitForFunction(() => window.__qifeiReady === true, null, {timeout:30000});
   const qa = await page.evaluate(() => window.__qifeiQa);
   if (!qa?.ok) throw new Error(`Browser QA failed: ${JSON.stringify(qa?.errors || [])}`);
@@ -146,6 +146,34 @@ try {
     pages,
   };
   writeFileSync(REVIEW_MANIFEST, `${JSON.stringify(review, null, 2)}\n`, 'utf8');
+
+  const narrowPage = await browser.newPage({viewport:{width:594,height:863}, deviceScaleFactor:1});
+  await narrowPage.goto(`${pathToFileURL(HTML).href}?review=1`, {waitUntil:'load'});
+  await narrowPage.waitForFunction(() => window.__qifeiReady === true, null, {timeout:30000});
+  const responsiveQa = await narrowPage.evaluate(() => {
+    const frames = [...document.querySelectorAll('.slide-frame')];
+    const horizontalOverflow = document.documentElement.scrollWidth > document.documentElement.clientWidth;
+    const invalidFrames = frames
+      .map((frame, index) => {
+        const rect = frame.getBoundingClientRect();
+        return {
+          slide_id: frame.querySelector('.slide-canvas')?.dataset.slideId || `slide-${index + 1}`,
+          left: rect.left,
+          right: rect.right,
+          width: rect.width,
+          height: rect.height,
+          ratio: rect.width / rect.height,
+        };
+      })
+      .filter(item => item.left < -0.5 || item.right > innerWidth + 0.5 || Math.abs(item.ratio - 16 / 9) > 0.001);
+    return {horizontalOverflow, invalidFrames};
+  });
+  await narrowPage.screenshot({path:path.join(OUTPUT_DIR, 'responsive-preview.png'), fullPage:true});
+  await narrowPage.close();
+  if (responsiveQa.horizontalOverflow || responsiveQa.invalidFrames.length) {
+    throw new Error(`responsive-preview-overflow: ${JSON.stringify(responsiveQa)}`);
+  }
+
   console.log(`Captured ${count} review PNG(s) without generating PDF/PPT.`);
   console.log(`HTML: ${htmlRelative}`);
   console.log(`Review manifest: ${path.relative(PROJECT, REVIEW_MANIFEST).replaceAll('\\', '/')}`);

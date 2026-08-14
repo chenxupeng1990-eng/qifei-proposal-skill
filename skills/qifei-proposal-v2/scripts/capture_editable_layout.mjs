@@ -88,6 +88,33 @@ try {
         const match = String(value).match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
         return match ? match.slice(1, 4).map(Number) : [0, 0, 0];
       };
+      const textStyle = element => {
+        const value = getComputedStyle(element);
+        return {
+          fontFamily: value.fontFamily.split(',')[0].replaceAll('"', '').trim(),
+          fontSizePx: parseFloat(value.fontSize),
+          fontWeight: parseInt(value.fontWeight, 10) || 400,
+          fontStyle: value.fontStyle,
+          colorRgb: rgb(value.color),
+        };
+      };
+      const richRuns = node => {
+        const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+        const runs = [];
+        while (walker.nextNode()) {
+          const text = walker.currentNode.nodeValue || '';
+          if (!text) continue;
+          const style = textStyle(walker.currentNode.parentElement || node);
+          const previous = runs.at(-1);
+          if (previous && JSON.stringify(previous.style) === JSON.stringify(style)) previous.text += text;
+          else runs.push({text, style});
+        }
+        if (runs.length) {
+          runs[0].text = runs[0].text.replace(/^\s+/, '');
+          runs[runs.length - 1].text = runs[runs.length - 1].text.replace(/\s+$/, '');
+        }
+        return runs.filter(run => run.text);
+      };
       return nodes.map((node, nodeIndex) => {
         const style = getComputedStyle(node);
         const rect = node.getBoundingClientRect();
@@ -114,6 +141,7 @@ try {
             letterSpacingPx: style.letterSpacing === 'normal' ? 0 : parseFloat(style.letterSpacing),
             textAlign: ['center', 'right', 'justify'].includes(style.textAlign) ? style.textAlign : 'left',
           },
+          runs: richRuns(node),
         };
       }).filter(item => item.text && item.box.width > 0 && item.box.height > 0);
     }, {slideId});

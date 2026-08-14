@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.4",
+  "schema_version": "1.5",
   "project_id": "{{PROJECT_ID}}",
   "project_name": "{{PROJECT_NAME}}",
   "proposal_owner": "{{OWNER}}",
@@ -8,6 +8,19 @@
   "content_freeze_id": null,
   "design_version": null,
   "active_chapter_id": null,
+  "proposal_draft": {
+    "authority": "feishu",
+    "status": "not_started",
+    "format_version": "feishu-proposal-draft-v1",
+    "feishu_doc_url": null,
+    "document_id": null,
+    "revision_id": null,
+    "last_verified_at": null,
+    "verified_snapshot_path": "content/feishu/proposal-draft.md",
+    "verified_snapshot_sha256": null,
+    "verified_slide_ids": [],
+    "fallback_reason": null
+  },
   "speaker_notes": {
     "status": "not_started",
     "final_slide_count": null,
@@ -16,26 +29,31 @@
     "local_backup_path": "content/speaker-notes.md"
   },
   "brand_visual": {
+    "scope_decision": null,
+    "project_brand_name": null,
+    "reference_brand_name": null,
     "source_ids": [],
     "source_files": [],
     "audit_path": "evidence/brand-visual-audit.md",
     "design_incorporation_record_id": null
   },
+  "visual_direction": {
+    "directions": [],
+    "selected_direction_id": null,
+    "approval_record_id": null
+  },
   "design_calibration": {
     "path": "deck/design-calibration.html",
-    "required_sample_types": [
-      "cover",
-      "toc",
-      "chapter-type-led",
-      "chapter-image-led",
-      "chapter-data-led",
-      "content-low",
-      "content-medium",
-      "content-high",
-      "content-visual-module",
-      "closing"
-    ],
+    "profile": "auto",
+    "planned_slide_count": null,
+    "alpha_sample_path": null,
+    "required_sample_types": [],
     "approval_record_id": null
+  },
+  "full_redteam": {
+    "report_path": "reviews/redteam/FULL.json",
+    "review_agent_id": null,
+    "independent_agent": false
   },
   "assembly": {
     "manifest_path": "deck/assembly-ready/manifest.json",

@@ -1,4 +1,8 @@
 {
   "schema_version": "1.0",
-  "assets": []
+  "assets": [],
+  "asset_contract": {
+    "required_for_every_formal_page": true,
+    "required_fields": ["asset_id", "path", "status", "visual_family_id", "semantic_role", "prompt_record"]
+  }
 }

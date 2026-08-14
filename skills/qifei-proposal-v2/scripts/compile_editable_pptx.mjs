@@ -56,7 +56,19 @@ for (const page of manifest.slides || []) {
   });
   for (const item of page.text || []) {
     const {box, style} = item;
-    slide.addText(item.text, {
+    const content = Array.isArray(item.runs) && item.runs.length > 1
+      ? item.runs.map(run => ({
+          text:run.text,
+          options:{
+            fontFace:run.style?.fontFamily || style.fontFamily || 'Arial',
+            fontSize:pxToPt(run.style?.fontSizePx || style.fontSizePx),
+            bold:Number(run.style?.fontWeight ?? style.fontWeight) >= 600,
+            italic:(run.style?.fontStyle || style.fontStyle) === 'italic',
+            color:hex(run.style?.colorRgb || style.colorRgb || [0, 0, 0]),
+          },
+        }))
+      : item.text;
+    slide.addText(content, {
       x:pxToIn(box.x), y:pxToIn(box.y), w:pxToIn(box.width), h:pxToIn(box.height),
       fontFace:style.fontFamily || 'Arial', fontSize:pxToPt(style.fontSizePx),
       bold:Number(style.fontWeight) >= 600, italic:style.fontStyle === 'italic',

@@ -7,9 +7,10 @@
 ## 必须读取
 
 - [../references/page-production-loop.md](../references/page-production-loop.md)
+- 接入浏览器校稿时读取 [../references/html-editor-and-editable-pptx.md](../references/html-editor-and-editable-pptx.md)。
 - Image2或浏览器评论不可用时读取 [../references/environment-degradation.md](../references/environment-degradation.md)。
 - 已安装时可调用 `$proposal-ppt-production` 执行页面载体、Image2/HTML、评审PNG与组装准备；它不能改写内容权威或批准状态。
-- HTML评论与精细校准可调用 `$ppt-html-calibration-editor`；编辑器状态和评论关闭不等于页面确认。
+- HTML评论与精细校准调用 `$ppt-html-calibration-editor`；按交付合同提供单页编辑、全案文字校稿和干净截图入口。编辑器状态和评论关闭不等于页面确认。
 - 辅助 Skill 的输入输出统一按 [../references/integration-contracts.json](../references/integration-contracts.json) 归一化，不直接依赖其内部文件结构。
 
 ## 每页生产路由

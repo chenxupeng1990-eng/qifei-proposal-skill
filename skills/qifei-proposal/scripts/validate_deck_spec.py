@@ -162,6 +162,9 @@ def evidence_ids(project: Path) -> set[str]:
 
 
 def validate_deck(project: Path) -> list[str]:
+    # Local import avoids a module cycle: validate_design_loop also reuses PNG helpers here.
+    from validate_design_loop import validate_presentation_route
+
     errors: list[str] = []
     try:
         deck = load_json(project / "deck" / "deck-spec.json")
@@ -209,6 +212,7 @@ def validate_deck(project: Path) -> list[str]:
             errors.append(f"{scope}: title must not end with a Chinese or English period")
         if slide.get("status") != "content_frozen":
             errors.append(f"{scope}: status must be content_frozen before generation")
+        errors.extend(validate_presentation_route(slide, scope))
         approved_hash = slide.get("approved_content_hash")
         if not approved_hash:
             errors.append(f"{scope}: missing approved_content_hash")
