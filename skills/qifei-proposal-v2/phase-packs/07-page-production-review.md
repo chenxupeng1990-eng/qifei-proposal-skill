@@ -9,6 +9,7 @@
 - [../references/page-production-loop.md](../references/page-production-loop.md)
 - 接入浏览器校稿时读取 [../references/html-editor-and-editable-pptx.md](../references/html-editor-and-editable-pptx.md)。
 - Image2或浏览器评论不可用时读取 [../references/environment-degradation.md](../references/environment-degradation.md)。
+- 非Codex或API运行环境读取 [../references/task-modes-and-runtime.md](../references/task-modes-and-runtime.md)，按已声明适配器生成本地Review Bundle或外部评论记录。
 - 已安装时可调用 `$proposal-ppt-production` 执行页面载体、Image2/HTML、评审PNG与组装准备；它不能改写内容权威或批准状态。
 - HTML评论与精细校准调用 `$ppt-html-calibration-editor`；按交付合同提供单页编辑、全案文字校稿和干净截图入口。编辑器状态和评论关闭不等于页面确认。
 - 辅助 Skill 的输入输出统一按 [../references/integration-contracts.json](../references/integration-contracts.json) 归一化，不直接依赖其内部文件结构。
@@ -24,7 +25,7 @@
 
 ## Loop
 
-核心思想 → 载体 → Image2资产 → HTML实现 → 1920×1080单页检查 → 整章montage → 浏览器评论 → 回到权威源修改 → 重建。
+核心思想 → 载体 → 生成图像资产 → HTML实现 → 1920×1080单页检查 → 整章/整模块montage → 评审适配器 → 回到权威源修改 → 重建。
 
 ## 硬规则
 

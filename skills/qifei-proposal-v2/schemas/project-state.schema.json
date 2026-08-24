@@ -15,13 +15,38 @@
     "reopen_log"
   ],
   "properties": {
-    "schema_version": {"enum": ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6"]},
+    "schema_version": {"enum": ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7"]},
     "project_id": {"type": "string", "minLength": 1},
     "project_name": {"type": "string", "minLength": 1},
     "proposal_owner": {"type": "string", "minLength": 1},
     "created_at": {
       "type": "string",
       "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}"
+    },
+    "task_mode": {"enum": ["full_deck", "inherited_module", "standalone_module"]},
+    "deliverable_level": {"enum": ["content", "slides", "export"]},
+    "content_authority": {"enum": ["feishu", "local", "inherit_parent"]},
+    "module_context": {
+      "type": ["object", "null"],
+      "required": [
+        "module_id",
+        "parent_project_id",
+        "inherited_content_freeze_id",
+        "inherited_design_version",
+        "strategy_input",
+        "module_claim",
+        "strategy_output"
+      ],
+      "properties": {
+        "module_id": {"type": "string", "minLength": 1},
+        "parent_project_id": {"type": ["string", "null"]},
+        "inherited_content_freeze_id": {"type": ["string", "null"]},
+        "inherited_design_version": {"type": ["string", "null"]},
+        "strategy_input": {"type": ["string", "null"]},
+        "module_claim": {"type": ["string", "null"]},
+        "strategy_output": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
     },
     "phase": {
       "enum": [
@@ -33,6 +58,7 @@
         "full_redteam",
         "content_frozen",
         "visual_direction",
+        "visual_sample",
         "design_calibration",
         "design_system",
         "generation",
@@ -81,7 +107,7 @@
       "type": "object",
       "required": ["authority", "status", "format_version", "verified_slide_ids"],
       "properties": {
-        "authority": {"const": "feishu"},
+        "authority": {"enum": ["feishu", "local"]},
         "status": {
           "enum": ["not_started", "local_fallback_pending_sync", "verified"]
         },

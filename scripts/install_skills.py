@@ -14,7 +14,10 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent.parent
-SUITE_MANIFEST = ROOT / "skills" / "qifei-proposal" / "suite.json"
+SUITE_MANIFESTS = {
+    "v1": ROOT / "skills" / "qifei-proposal" / "suite.json",
+    "v2": ROOT / "skills" / "qifei-proposal-v2" / "suite.json",
+}
 
 
 def ignore(_directory: str, names: list[str]) -> set[str]:
@@ -41,11 +44,12 @@ def install_dependencies(skill: Path) -> None:
         raise SystemExit(completed.returncode)
 
 
-def load_suite() -> list[str]:
-    data = json.loads(SUITE_MANIFEST.read_text(encoding="utf-8"))
+def load_suite(version: str) -> list[str]:
+    manifest = SUITE_MANIFESTS[version]
+    data = json.loads(manifest.read_text(encoding="utf-8"))
     skills = [str(item["name"]) for item in data.get("skills") or []]
     if not skills:
-        raise SystemExit(f"Suite manifest contains no Skills: {SUITE_MANIFEST}")
+        raise SystemExit(f"Suite manifest contains no Skills: {manifest}")
     return skills
 
 
@@ -61,6 +65,12 @@ def validate_skill(skill: Path, expected_name: str) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--suite",
+        choices=sorted(SUITE_MANIFESTS),
+        default="v1",
+        help="Skill suite to install; defaults to the V1-compatible suite",
+    )
     parser.add_argument(
         "--target",
         default=str(Path.home() / ".codex" / "skills"),
@@ -80,7 +90,7 @@ def main() -> int:
 
     target = Path(args.target).expanduser().resolve()
     target.mkdir(parents=True, exist_ok=True)
-    skills = load_suite()
+    skills = load_suite(args.suite)
     sources = {name: ROOT / "skills" / name for name in skills}
     destinations = {name: target / name for name in skills}
     for name, source in sources.items():
@@ -126,7 +136,8 @@ def main() -> int:
     finally:
         shutil.rmtree(transaction, ignore_errors=True)
 
-    print("\nInstallation complete. Restart Codex, then invoke $qifei-proposal.")
+    entrypoint = "qifei-proposal-v2" if args.suite == "v2" else "qifei-proposal"
+    print(f"\nInstallation complete. Restart Codex, then invoke ${entrypoint}.")
     return 0
 
 

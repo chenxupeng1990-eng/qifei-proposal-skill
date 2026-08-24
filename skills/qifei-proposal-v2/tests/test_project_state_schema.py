@@ -44,6 +44,85 @@ class ProjectStateSchemaTests(unittest.TestCase):
             self.initialize(project)
             self.assertEqual(validate_project(project), [])
 
+    def test_standalone_module_initializes_with_local_authority_and_module_context(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / "module"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPTS / "init_project.py"),
+                    "--project",
+                    str(project),
+                    "--name",
+                    "Standalone Module",
+                    "--owner",
+                    "Owner",
+                    "--task-mode",
+                    "standalone_module",
+                    "--deliverable-level",
+                    "content",
+                ],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            state = json.loads((project / "project-state.json").read_text(encoding="utf-8"))
+            self.assertEqual(state["task_mode"], "standalone_module")
+            self.assertEqual(state["deliverable_level"], "content")
+            self.assertEqual(state["content_authority"], "local")
+            self.assertEqual(state["proposal_draft"]["authority"], "local")
+            self.assertEqual(state["module_context"]["module_id"], state["project_id"])
+            self.assertIsNone(state["module_context"]["parent_project_id"])
+            agents = (project / "AGENTS.md").read_text(encoding="utf-8")
+            self.assertIn("模块策略接口", agents)
+            self.assertNotIn("CH01_NEXT_NECESSITY", agents)
+            self.assertEqual(validate_project(project), [])
+
+    def test_inherited_module_copies_parent_freeze_and_design_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            parent = root / "parent"
+            parent_state = self.initialize(parent)
+            parent_state["content_freeze_id"] = "CF-PARENT-01"
+            parent_state["design_version"] = "DESIGN-PARENT-02"
+            (parent / "project-state.json").write_text(
+                json.dumps(parent_state, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+            (parent / "DESIGN.md").write_text("# Approved parent design\n", encoding="utf-8")
+            (parent / "deck" / "design-tokens.json").write_text(
+                '{"parent": true}\n', encoding="utf-8"
+            )
+
+            child = root / "child"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPTS / "init_project.py"),
+                    "--project",
+                    str(child),
+                    "--name",
+                    "Inherited Module",
+                    "--owner",
+                    "Owner",
+                    "--task-mode",
+                    "inherited_module",
+                    "--parent-project",
+                    str(parent),
+                ],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            state = json.loads((child / "project-state.json").read_text(encoding="utf-8"))
+            self.assertEqual(state["content_authority"], "inherit_parent")
+            self.assertEqual(state["content_freeze_id"], "CF-PARENT-01")
+            self.assertEqual(state["design_version"], "DESIGN-PARENT-02")
+            self.assertEqual(state["module_context"]["parent_project_id"], parent_state["project_id"])
+            self.assertEqual((child / "DESIGN.md").read_text(), "# Approved parent design\n")
+            self.assertEqual(validate_project(child), [])
+
     def test_schema_rejects_unknown_state_field(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = Path(tmp) / "project"

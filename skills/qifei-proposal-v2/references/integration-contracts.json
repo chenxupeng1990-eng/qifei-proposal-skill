@@ -56,7 +56,7 @@
           "comment_mapping"
         ]
       },
-      "fallback": "use_codex_browser_comments_and_local_html_edits"
+      "fallback": "use_hash_bound_local_review_bundle_or_external_review_record"
     }
   }
 }

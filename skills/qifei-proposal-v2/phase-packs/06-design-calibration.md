@@ -4,6 +4,8 @@
 
 用最少样张覆盖本案主要设计风险，并把确认结果编译为可执行设计合同。
 
+完整提案使用自适应校准档位；继承模块不重做校准；独立模块只校准实际出现的页面类型，不强制套用完整提案最低样张数。
+
 ## 必须读取
 
 - [../references/design-calibration-contract.md](../references/design-calibration-contract.md)

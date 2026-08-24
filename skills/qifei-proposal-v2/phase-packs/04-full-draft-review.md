@@ -4,6 +4,8 @@
 
 只执行一次全稿完整性审查，修复结构和表达问题后冻结内容。
 
+`full_deck` 执行一次独立全稿审查；模块模式不执行全稿红队，只检查模块策略接口、确认稿、页序和上下游承接后冻结模块内容。
+
 ## 必须读取
 
 - [../references/full-draft-integrity-redteam.md](../references/full-draft-integrity-redteam.md)
@@ -26,5 +28,4 @@
 
 ## 放行
 
-使用新的独立审查Agent，报告通过，Owner确认修订并生成内容冻结ID。
-
+完整提案由独立Agent上下文、独立API调用或指定人工评审者完成一次审查；模块由Owner确认模块接口与成稿。随后生成内容冻结ID。

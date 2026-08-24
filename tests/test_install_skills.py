@@ -78,6 +78,23 @@ class InstallSkillsTests(unittest.TestCase):
             self.assertFalse((target / "proposal-ppt-production").exists())
             self.assertFalse((target / "ppt-html-calibration-editor").exists())
 
+    def test_v2_suite_installs_v2_entrypoint_and_passes_its_startup_check(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            target = Path(temp)
+            result = self.run_install(target, "--suite", "v2")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertTrue((target / "qifei-proposal-v2" / "SKILL.md").is_file())
+            self.assertFalse((target / "qifei-proposal").exists())
+
+            checker = target / "qifei-proposal-v2" / "scripts" / "check_suite_dependencies.py"
+            check = subprocess.run(
+                [sys.executable, str(checker), "--skills-root", str(target)],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(check.returncode, 0, check.stdout + check.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

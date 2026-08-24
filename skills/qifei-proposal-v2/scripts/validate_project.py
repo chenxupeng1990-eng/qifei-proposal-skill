@@ -24,6 +24,7 @@ PHASES = [
     "full_redteam",
     "content_frozen",
     "visual_direction",
+    "visual_sample",
     "design_calibration",
     "design_system",
     "generation",
@@ -48,6 +49,27 @@ GATES = {
     "speaker_notes": ["content_freeze", "design", "final_page_order"],
     "qa": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "design_calibration", "design", "generation_ready", "design_loop", "final_page_order", "speaker_notes"],
     "export": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "design_calibration", "design", "generation_ready", "design_loop", "final_page_order", "speaker_notes", "content_qa", "visual_qa", "final_assembly"],
+}
+
+MODULE_GATES = {
+    "requirements": ["materials_scope"],
+    "strategy": ["materials_scope", "brief_grill", "proposal_brief", "requirements"],
+    "project_agents": ["materials_scope", "brief_grill", "proposal_brief", "requirements", "strategy", "outline"],
+    "manuscript": ["materials_scope", "brief_grill", "proposal_brief", "requirements", "strategy", "outline", "project_agents"],
+    "content_frozen": [
+        "materials_scope", "brief_grill", "proposal_brief", "requirements", "strategy", "outline",
+        "project_agents", "content_freeze",
+    ],
+    "visual_direction": ["content_freeze"],
+    "visual_sample": ["content_freeze", "visual_direction"],
+    "design_system": ["content_freeze", "visual_direction"],
+    "generation": ["content_freeze", "generation_ready"],
+    "review": ["content_freeze", "generation_ready"],
+    "qa": ["content_freeze", "generation_ready", "design_loop", "final_page_order"],
+    "export": [
+        "content_freeze", "generation_ready", "design_loop", "final_page_order",
+        "content_qa", "visual_qa", "final_assembly",
+    ],
 }
 
 BRAND_SOURCE_SUFFIXES = {".ai", ".eps", ".jpg", ".jpeg", ".key", ".pdf", ".png", ".ppt", ".pptx", ".svg", ".webp"}
@@ -263,12 +285,20 @@ def validate_verified_feishu_draft(project: Path, state: dict, chapters: list[di
     return errors
 
 
-def validate_visual_direction_drafts(project: Path, state: dict, approvals: dict) -> list[str]:
+def validate_visual_direction_drafts(
+    project: Path,
+    state: dict,
+    approvals: dict,
+    *,
+    minimum_directions: int = 2,
+) -> list[str]:
     errors: list[str] = []
     visual_direction = state.get("visual_direction") if isinstance(state.get("visual_direction"), dict) else {}
     directions = visual_direction.get("directions") if isinstance(visual_direction.get("directions"), list) else []
-    if not 2 <= len(directions) <= 3:
-        errors.append("visual_direction.directions must contain 2-3 generated visual directions")
+    if not minimum_directions <= len(directions) <= 3:
+        errors.append(
+            f"visual_direction.directions must contain {minimum_directions}-3 generated visual directions"
+        )
         return errors
 
     direction_ids: list[str] = []
@@ -361,12 +391,18 @@ def validate_project(project: Path) -> list[str]:
         errors.append(f"Unknown phase: {phase!r}")
         return errors
 
+    task_mode = str(state.get("task_mode") or "full_deck").strip()
+    full_deck = task_mode == "full_deck"
+    module_mode = task_mode in {"inherited_module", "standalone_module"}
     owner = str(state.get("proposal_owner") or "").strip()
     if not owner:
         errors.append("project-state.json is missing proposal_owner")
 
     approvals = state.get("approvals") if isinstance(state.get("approvals"), dict) else {}
-    for gate in GATES.get(phase, []):
+    required_gates = list(GATES.get(phase, []) if full_deck else MODULE_GATES.get(phase, []))
+    if task_mode == "standalone_module" and PHASES.index(phase) >= PHASES.index("generation"):
+        required_gates.extend(("visual_direction", "design"))
+    for gate in required_gates:
         if not is_approved(approvals, gate):
             errors.append(f"Phase {phase} requires approved gate: {gate}")
 
@@ -394,7 +430,7 @@ def validate_project(project: Path) -> list[str]:
                 errors.append(f"AGENTS.md has unresolved phase placeholder: {placeholder}")
     if phase_index >= PHASES.index("design_system") and not (project / "DESIGN.md").is_file():
         errors.append("DESIGN.md is required after design calibration confirmation")
-    if phase_index >= PHASES.index("design_calibration"):
+    if full_deck and phase_index >= PHASES.index("design_calibration"):
         calibration = state.get("design_calibration") if isinstance(state.get("design_calibration"), dict) else {}
         calibration_value = calibration.get("path") or "deck/design-calibration.html"
         calibration_path, calibration_error = registered_project_file(project, calibration_value, "deck")
@@ -473,7 +509,7 @@ def validate_project(project: Path) -> list[str]:
             if not (project / relative).is_file():
                 errors.append(f"Generation requires {relative}")
 
-    if phase_index >= PHASES.index("visual_direction"):
+    if full_deck and phase_index >= PHASES.index("visual_direction"):
         brand_visual = state.get("brand_visual") if isinstance(state.get("brand_visual"), dict) else {}
         scope_decision = str(brand_visual.get("scope_decision") or "").strip()
         if scope_decision not in {"official_brand", "visual_proxy"}:
@@ -562,11 +598,20 @@ def validate_project(project: Path) -> list[str]:
                     if alpha_tokens.get("enabled") is not True or alpha_tokens.get("alpha_required") is not True:
                         errors.append("design-tokens.json transparent_png must enable real alpha-channel modules")
 
-    if phase_index >= PHASES.index("design_calibration") or is_approved(approvals, "visual_direction"):
+    if full_deck and (phase_index >= PHASES.index("design_calibration") or is_approved(approvals, "visual_direction")):
         errors.extend(validate_visual_direction_drafts(project, state, approvals))
+    if task_mode == "standalone_module" and (
+        phase_index >= PHASES.index("visual_sample") or is_approved(approvals, "visual_direction")
+    ):
+        errors.extend(validate_visual_direction_drafts(
+            project,
+            state,
+            approvals,
+            minimum_directions=1,
+        ))
 
     chapters = state.get("chapters") if isinstance(state.get("chapters"), list) else []
-    if phase_index >= PHASES.index("full_redteam"):
+    if full_deck and phase_index >= PHASES.index("full_redteam"):
         errors.extend(validate_verified_feishu_draft(project, state, chapters))
         if not chapters:
             errors.append("At least one chapter is required before full_redteam")
@@ -584,7 +629,9 @@ def validate_project(project: Path) -> list[str]:
             if source_error:
                 errors.append(f"{chapter_id}.source_path: {source_error}")
 
-    full_review_required = phase_index >= PHASES.index("content_frozen") or is_approved(approvals, "full_redteam")
+    full_review_required = full_deck and (
+        phase_index >= PHASES.index("content_frozen") or is_approved(approvals, "full_redteam")
+    )
     if full_review_required:
         full_review = state.get("full_redteam") if isinstance(state.get("full_redteam"), dict) else {}
         report_value = full_review.get("report_path")
@@ -623,8 +670,38 @@ def validate_project(project: Path) -> list[str]:
             for loop_error in validate_chapter_report(project, str(chapter_id)):
                 errors.append(loop_error)
 
-    if phase_index >= PHASES.index("qa") or is_approved(approvals, "speaker_notes"):
+    if (full_deck and phase_index >= PHASES.index("qa")) or is_approved(approvals, "speaker_notes"):
         errors.extend(validate_speaker_notes(project, state))
+
+    if module_mode:
+        module = state.get("module_context") if isinstance(state.get("module_context"), dict) else {}
+        if not module:
+            errors.append("module task modes require module_context")
+        if task_mode == "standalone_module" and state.get("content_authority") not in {"local", "feishu"}:
+            errors.append("standalone_module content_authority must be local or feishu")
+        if task_mode == "inherited_module":
+            if state.get("content_authority") != "inherit_parent":
+                errors.append("inherited_module content_authority must be inherit_parent")
+            for field in ("parent_project_id", "inherited_content_freeze_id", "inherited_design_version"):
+                if not str(module.get(field) or "").strip():
+                    errors.append(f"inherited_module.module_context.{field} is required")
+        if phase_index >= PHASES.index("content_frozen"):
+            for field in ("strategy_input", "module_claim", "strategy_output"):
+                if not str(module.get(field) or "").strip():
+                    errors.append(f"module_context.{field} is required before content freeze")
+            if not chapters:
+                errors.append("module requires at least one confirmed chapter or content block before content freeze")
+            for index, chapter in enumerate(chapters, start=1):
+                chapter_id = chapter.get("chapter_id") or f"module-{index}"
+                if chapter.get("manuscript_confirmed") is not True:
+                    errors.append(f"{chapter_id}: module manuscript is not confirmed")
+                if not chapter.get("confirmation_record_id"):
+                    errors.append(f"{chapter_id}: missing confirmation_record_id")
+                if not (chapter.get("slides") if isinstance(chapter.get("slides"), list) else []):
+                    errors.append(f"{chapter_id}: module slides must be non-empty before content freeze")
+                _, source_error = registered_project_file(project, chapter.get("source_path"), "content/chapters")
+                if source_error:
+                    errors.append(f"{chapter_id}.source_path: {source_error}")
 
     for index, event in enumerate(state.get("reopen_log") or [], start=1):
         if event.get("reopened_by") != owner:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+import subprocess
 import struct
 import sys
 import tempfile
@@ -763,6 +764,105 @@ class ContractTests(unittest.TestCase):
         self.assertIn("?export=1&review=1", capture)
         self.assertIn("width:594,height:863", capture)
         self.assertIn("responsive-preview-overflow", capture)
+
+    def test_standalone_module_can_freeze_confirmed_local_content_without_full_redteam(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = Path(temp) / "module"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPTS / "init_project.py"),
+                    "--project",
+                    str(project),
+                    "--name",
+                    "Local Module",
+                    "--owner",
+                    "Owner",
+                    "--task-mode",
+                    "standalone_module",
+                    "--deliverable-level",
+                    "content",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            (project / "content" / "proposal-brief.md").write_text("已确认模块简报", encoding="utf-8")
+            (project / "AGENTS.md").write_text("已确认模块治理", encoding="utf-8")
+            chapter = project / "content" / "chapters" / "MOD01.md"
+            chapter.write_text("# 模块确认稿\n", encoding="utf-8")
+            state = json.loads((project / "project-state.json").read_text(encoding="utf-8"))
+            state["phase"] = "content_frozen"
+            state["content_freeze_id"] = "CF-MODULE-01"
+            state["module_context"].update({
+                "strategy_input": "已有项目需要补充用户证明",
+                "module_claim": "用户证明必须进入决策链",
+                "strategy_output": "形成可进入后续方案页的判断",
+            })
+            state["chapters"] = [{
+                "chapter_id": "MOD01",
+                "source_path": "content/chapters/MOD01.md",
+                "manuscript_confirmed": True,
+                "confirmation_record_id": "APR-MOD01",
+                "slides": ["M01", "M02"],
+            }]
+            for gate in (
+                "materials_scope", "brief_grill", "proposal_brief", "requirements",
+                "strategy", "outline", "project_agents", "content_freeze",
+            ):
+                state["approvals"][gate] = self.approved(f"APR-{gate}")
+            (project / "project-state.json").write_text(
+                json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+
+            self.assertEqual(validate_project(project), [])
+
+    def test_standalone_module_generation_requires_visual_baseline_approval(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = Path(temp) / "module"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPTS / "init_project.py"),
+                    "--project", str(project),
+                    "--name", "Visual Module",
+                    "--owner", "Owner",
+                    "--task-mode", "standalone_module",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            (project / "content" / "proposal-brief.md").write_text("已确认模块简报", encoding="utf-8")
+            (project / "AGENTS.md").write_text("已确认模块治理", encoding="utf-8")
+            (project / "content" / "chapters" / "MOD01.md").write_text("# 模块稿", encoding="utf-8")
+            state = json.loads((project / "project-state.json").read_text(encoding="utf-8"))
+            state["phase"] = "generation"
+            state["content_freeze_id"] = "CF-MODULE"
+            state["design_version"] = "MODULE-DESIGN-01"
+            state["module_context"].update({
+                "strategy_input": "输入",
+                "module_claim": "判断",
+                "strategy_output": "输出",
+            })
+            state["chapters"] = [{
+                "chapter_id": "MOD01",
+                "source_path": "content/chapters/MOD01.md",
+                "manuscript_confirmed": True,
+                "confirmation_record_id": "APR-MOD01",
+                "slides": ["M01"],
+            }]
+            for gate in ("brief_grill", "proposal_brief", "content_freeze", "generation_ready"):
+                state["approvals"][gate] = self.approved(f"APR-{gate}")
+            (project / "project-state.json").write_text(
+                json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+
+            errors = validate_project(project)
+            self.assertTrue(any("visual_direction" in error for error in errors), errors)
+            self.assertTrue(any("approved gate: design" in error for error in errors), errors)
 
 
 if __name__ == "__main__":

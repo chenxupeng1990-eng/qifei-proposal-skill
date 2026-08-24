@@ -6,6 +6,7 @@
 
 ## 必须读取
 
+- [../references/task-modes-and-runtime.md](../references/task-modes-and-runtime.md)：先确认任务是完整提案、继承模块还是独立模块，并向用户声明当前环境的交付边界。
 - [../references/knowledge-policy.md](../references/knowledge-policy.md)：资料权威、版本或保密边界发生判断时。
 - [../references/company-base.md](../references/company-base.md)：需要公司能力与案例时。
 - `references/company-facts.json`：需要数字、履历、案例成绩时。
@@ -15,6 +16,7 @@
 
 ## 必须产出
 
+- `task_mode`、`deliverable_level` 与运行能力报告。
 - 资料登记与缺口。
 - Grill Me 决策记录。
 - 按需生成的Visualize确认视图及其对应决策结论。
@@ -29,4 +31,4 @@
 
 ## 放行
 
-策划书无占位符，Owner确认，`validate_project.py`通过。
+完整提案的策划书或模块简报无占位符，Owner确认，`validate_project.py`通过。

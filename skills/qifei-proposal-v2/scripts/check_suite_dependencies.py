@@ -83,7 +83,7 @@ def main() -> int:
         print("\nInstall the complete suite:")
         print(f"git clone {repository}")
         print("cd qifei-proposal-skill")
-        print("python3 scripts/install_skills.py --force")
+        print("python3 scripts/install_skills.py --suite v2 --force")
         return 1
     print("PASS Proposal Skill suite: all required Skills are installed")
     return 0
