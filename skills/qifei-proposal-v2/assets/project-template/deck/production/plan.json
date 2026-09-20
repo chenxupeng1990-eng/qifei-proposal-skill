@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "project_id": "{{INIT:PROJECT_ID}}",
+  "content_freeze_id": null,
+  "design_version": null,
+  "manuscript_revision_id": null,
+  "max_agents": 3,
+  "integration_owner": "main-agent",
+  "shared_read_only": [
+    "project-state.json",
+    "AGENTS.md",
+    "DESIGN.md",
+    "deck/deck-spec.json",
+    "deck/slide-contracts.json",
+    "deck/design-tokens.json",
+    "content/proposal-brief.md",
+    "content/feishu/proposal-draft.md",
+    "content/strategy/",
+    "reviews/redteam/",
+    "deck/assembly-ready/"
+  ],
+  "waves": [],
+  "verification": {
+    "status": "pending",
+    "verified_slide_ids": [],
+    "last_verified_at": null
+  }
+}

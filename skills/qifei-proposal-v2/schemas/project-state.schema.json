@@ -15,7 +15,7 @@
     "reopen_log"
   ],
   "properties": {
-    "schema_version": {"enum": ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7"]},
+    "schema_version": {"enum": ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8"]},
     "project_id": {"type": "string", "minLength": 1},
     "project_name": {"type": "string", "minLength": 1},
     "proposal_owner": {"type": "string", "minLength": 1},
@@ -75,6 +75,7 @@
     "brand_visual": {"$ref": "#/$defs/brandVisual"},
     "visual_direction": {"$ref": "#/$defs/visualDirection"},
     "design_calibration": {"$ref": "#/$defs/designCalibration"},
+    "production": {"$ref": "#/$defs/production"},
     "full_redteam": {"$ref": "#/$defs/fullRedteam"},
     "assembly": {"$ref": "#/$defs/assembly"},
     "approvals": {
@@ -169,6 +170,20 @@
         "alpha_sample_path": {"type": ["string", "null"]},
         "required_sample_types": {"type": "array", "items": {"type": "string"}},
         "approval_record_id": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "production": {
+      "type": "object",
+      "required": ["mode", "max_agents", "plan_path", "status"],
+      "properties": {
+        "mode": {"enum": ["sequential", "parallel_after_gates"]},
+        "max_agents": {"type": "integer"},
+        "plan_path": {"type": "string", "minLength": 1},
+        "status": {
+          "enum": ["not_started", "ready", "in_flight", "awaiting_reverify", "verified", "blocked"]
+        },
+        "wave_id": {"type": ["string", "null"]}
       },
       "additionalProperties": false
     },

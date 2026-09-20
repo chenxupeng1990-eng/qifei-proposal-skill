@@ -156,9 +156,7 @@
         "D05"
       ],
       "manuscript_confirmed": true,
-      "confirmation_record_id": "demo-pages-confirmed",
-      "redteam_passed": true,
-      "redteam_report": "reviews/redteam/DEMO.json"
+      "confirmation_record_id": "demo-pages-confirmed"
     }
   ],
   "reopen_log": []

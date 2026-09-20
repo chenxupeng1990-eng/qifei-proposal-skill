@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.7",
+  "schema_version": "1.8",
   "project_id": "{{INIT:PROJECT_ID}}",
   "project_name": "{{INIT:PROJECT_NAME}}",
   "proposal_owner": "{{INIT:OWNER}}",
@@ -52,6 +52,13 @@
     "alpha_sample_path": null,
     "required_sample_types": [],
     "approval_record_id": null
+  },
+  "production": {
+    "mode": "parallel_after_gates",
+    "max_agents": 3,
+    "plan_path": "deck/production/plan.json",
+    "status": "not_started",
+    "wave_id": null
   },
   "full_redteam": {
     "report_path": "reviews/redteam/FULL.json",

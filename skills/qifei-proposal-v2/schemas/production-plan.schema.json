@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qifei.local/schemas/production-plan.schema.json",
+  "title": "Qifei Proposal V2 Parallel Production Plan",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "project_id",
+    "content_freeze_id",
+    "design_version",
+    "manuscript_revision_id",
+    "max_agents",
+    "integration_owner",
+    "shared_read_only",
+    "waves",
+    "verification"
+  ],
+  "properties": {
+    "schema_version": {"enum": ["1.0"]},
+    "project_id": {"type": "string", "minLength": 1},
+    "content_freeze_id": {"type": ["string", "null"]},
+    "design_version": {"type": ["string", "null"]},
+    "manuscript_revision_id": {"type": ["integer", "null"]},
+    "max_agents": {"type": "integer"},
+    "integration_owner": {"type": "string", "minLength": 1},
+    "shared_read_only": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "waves": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/wave"}},
+    "verification": {"$ref": "#/$defs/verification"}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "wave": {
+      "type": "object",
+      "required": ["wave_id", "status", "agents"],
+      "properties": {
+        "wave_id": {"type": "string", "minLength": 1},
+        "status": {"enum": ["ready", "in_flight", "awaiting_reverify", "verified", "abandoned"]},
+        "agents": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/agent"}}
+      },
+      "additionalProperties": false
+    },
+    "agent": {
+      "type": "object",
+      "required": ["agent_id", "slide_ids", "write_paths", "status"],
+      "properties": {
+        "agent_id": {"type": "string", "minLength": 1},
+        "slide_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "write_paths": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "status": {"enum": ["ready", "in_flight", "verified", "abandoned"]}
+      },
+      "additionalProperties": false
+    },
+    "verification": {
+      "type": "object",
+      "required": ["status", "verified_slide_ids", "last_verified_at"],
+      "properties": {
+        "status": {"enum": ["pending", "passed", "failed"]},
+        "verified_slide_ids": {"type": "array", "items": {"type": "string"}},
+        "last_verified_at": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    }
+  }
+}

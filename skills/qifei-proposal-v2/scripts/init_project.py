@@ -31,6 +31,8 @@ REQUIRED_DIRS = (
     "deck",
     "deck/chapters",
     "deck/review",
+    "deck/production",
+    "deck/production/results",
     "deck/assembly-ready/pages",
     "exports/png",
 )

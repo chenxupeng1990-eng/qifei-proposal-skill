@@ -41,7 +41,10 @@ class ProjectStateSchemaTests(unittest.TestCase):
     def test_initialized_project_passes_schema_and_intake_gate(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             project = Path(tmp) / "project"
-            self.initialize(project)
+            state = self.initialize(project)
+            self.assertEqual(state["production"]["mode"], "parallel_after_gates")
+            self.assertEqual(state["production"]["max_agents"], 3)
+            self.assertTrue((project / "deck" / "production" / "plan.json").is_file())
             self.assertEqual(validate_project(project), [])
 
     def test_standalone_module_initializes_with_local_authority_and_module_context(self) -> None:

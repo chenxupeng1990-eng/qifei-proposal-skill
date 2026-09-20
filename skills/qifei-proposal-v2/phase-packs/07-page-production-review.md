@@ -14,6 +14,16 @@
 - HTML评论与精细校准调用 `$ppt-html-calibration-editor`；按交付合同提供单页编辑、全案文字校稿和干净截图入口。编辑器状态和评论关闭不等于页面确认。
 - 辅助 Skill 的输入输出统一按 [../references/integration-contracts.json](../references/integration-contracts.json) 归一化，不直接依赖其内部文件结构。
 
+## 并行生产入口
+
+当 `project-state.json.production.mode` 为 `parallel_after_gates` 时，先读取
+[../references/parallel-production.md](../references/parallel-production.md)，并运行
+`python3 scripts/validate_production_plan.py <项目目录>`。只有内容冻结、飞书母稿回读确认、设计系统和
+`generation_ready` 全部通过，且计划校验通过后，才能启动生产波次。
+
+主 Agent 负责创建计划、分配不重叠的 `slide_id`、回收结果、重新渲染和复验；子 Agent 不得修改
+`project-state.json`、`AGENTS.md`、`DESIGN.md`、飞书快照、设计令牌、页面合同或拼装准备库。
+
 ## 每页生产路由
 
 - 服务对象与演讲任务。

@@ -13,6 +13,7 @@ from validate_assembly_ready import validate_assembly_ready
 from validate_deck_spec import png_has_alpha
 from validate_design_loop import validate_chapter_report
 from validate_json_schema import validate_json_schema
+from validate_production_plan import validate_production_plan
 
 
 PHASES = [
@@ -508,6 +509,7 @@ def validate_project(project: Path) -> list[str]:
         for relative in ("deck/deck-spec.json", "deck/slide-contracts.json", "deck/design-tokens.json"):
             if not (project / relative).is_file():
                 errors.append(f"Generation requires {relative}")
+        errors.extend(validate_production_plan(project, state))
 
     if full_deck and phase_index >= PHASES.index("visual_direction"):
         brand_visual = state.get("brand_visual") if isinstance(state.get("brand_visual"), dict) else {}

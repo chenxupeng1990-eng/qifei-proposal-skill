@@ -9,11 +9,16 @@
       "phase-packs/07-page-production-review.md",
       "references/visual-direction.md",
       "references/page-production-loop.md",
+      "references/parallel-production.md",
       "references/html-editor-and-editable-pptx.md",
       "references/task-modes-and-runtime.md",
       "scripts/doctor.py",
+      "scripts/validate_feishu_draft.py",
+      "scripts/validate_production_plan.py",
       "assets/module-template/AGENTS.md",
-      "schemas/project-state.schema.json"
+      "assets/project-template/deck/production/plan.json",
+      "schemas/project-state.schema.json",
+      "schemas/production-plan.schema.json"
     ]
   },
   "skills": [
