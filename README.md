@@ -281,7 +281,7 @@ tests/                           套件安装测试
 
 本仓库的可见性由仓库 Owner 控制；即使公开可见，本仓库也**不是无限制开源，也不授予商业使用权**。默认仅允许个人学习、研究、测试和非商业内部评估使用；未经仓库 Owner 书面许可，不得将本仓库或其衍生内容用于商业项目、商业服务、收费交付、对外售卖、商业培训或商业产品集成。
 
-如需商业使用、企业部署、商业交付、再分发或基于本仓库提供收费服务，请先联系仓库 Owner 获取单独的书面许可。除明确书面许可外，本仓库不授予任何商业授权。
+本仓库按 [PolyForm Noncommercial 1.0.0](LICENSE) 授权。完整条款见 [`LICENSE`](LICENSE)。如需商业使用、企业部署、商业交付、再分发或基于本仓库提供收费服务，请先联系仓库 Owner 获取单独的书面许可。除明确书面许可外，本仓库不授予任何商业授权。
 
 ---
 
@@ -408,6 +408,6 @@ The repository contains reusable rules, templates, scripts, tests, and a sanitiz
 
 Repository visibility is controlled by the Owner; even if this repository is made public, it is **not released under an unrestricted open-source license and does not grant commercial-use rights**. By default, it may be used for personal learning, research, testing, and non-commercial internal evaluation only.
 
-Commercial projects, paid delivery, commercial services, external resale, commercial training, enterprise deployment, redistribution, or product integration require separate written permission from the repository Owner. No commercial license is granted unless that permission is explicitly issued in writing.
+This repository is licensed under [PolyForm Noncommercial 1.0.0](LICENSE); see [`LICENSE`](LICENSE) for the full terms. Commercial projects, paid delivery, commercial services, external resale, commercial training, enterprise deployment, redistribution, or product integration require separate written permission from the repository Owner. No commercial license is granted unless that permission is explicitly issued in writing.
 
 The current branch is [`codex/qifei-proposal-base`](https://github.com/chenxupeng1990-eng/qifei-proposal-skill/tree/codex/qifei-proposal-base). Feedback and real-task testing are welcome.
