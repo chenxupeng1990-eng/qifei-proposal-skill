@@ -275,7 +275,13 @@ tests/                           套件安装测试
 
 当前为跨电脑测试候选版，已经覆盖项目初始化、阶段门禁、内容冻结、视觉方向、HTML／PNG 评审、浏览器越界检测以及 PNG、PDF、PPTX 导出链路。
 
-欢迎使用真实任务测试并提交反馈。公开发布前，仓库 Owner 仍需补充正式许可证和公开支持范围。
+欢迎使用真实任务测试并提交反馈。
+
+## 使用与授权 / Usage and licensing
+
+本仓库虽然公开可见，但**不是无限制开源，也不授予商业使用权**。默认仅允许个人学习、研究、测试和非商业内部评估使用；未经仓库 Owner 书面许可，不得将本仓库或其衍生内容用于商业项目、商业服务、收费交付、对外售卖、商业培训或商业产品集成。
+
+如需商业使用、企业部署、商业交付、再分发或基于本仓库提供收费服务，请先联系仓库 Owner 获取单独的书面许可。除明确书面许可外，本仓库不授予任何商业授权。
 
 ---
 
@@ -397,5 +403,11 @@ The gallery above shows anonymized visual references from recent work across nut
 ## Repository scope
 
 The repository contains reusable rules, templates, scripts, tests, and a sanitized demo. Client source materials, project-specific `AGENTS.md`, approved review pages, and final delivery files belong in their own project directories.
+
+## Usage and licensing
+
+This repository is publicly visible, but it is **not released under an unrestricted open-source license and does not grant commercial-use rights**. By default, it may be used for personal learning, research, testing, and non-commercial internal evaluation only.
+
+Commercial projects, paid delivery, commercial services, external resale, commercial training, enterprise deployment, redistribution, or product integration require separate written permission from the repository Owner. No commercial license is granted unless that permission is explicitly issued in writing.
 
 The latest public branch is [`codex/qifei-proposal-base`](https://github.com/chenxupeng1990-eng/qifei-proposal-skill/tree/codex/qifei-proposal-base). Feedback and real-task testing are welcome.
