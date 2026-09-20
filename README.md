@@ -2,15 +2,16 @@
   <img src="docs/readme-assets/hero-system.webp" alt="从碎片资料到完整演示作品的受控生产系统" width="100%">
 </p>
 
-<h1 align="center">Proposal Skill V2</h1>
+<h1 align="center">Proposal Skill V2<br><sub>从一个想法到一份可交付的作品 / From an idea to a deliverable</sub></h1>
 
 <p align="center">
-  <strong>让 Agent 不只是生成页面，而是把一个想法推进成一套可呈现、可验证、可交付的作品。</strong>
+  <strong>让 Agent 不只是生成页面，而是把一个想法推进成一套可呈现、可验证、可交付的作品。</strong><br>
+  <em>Not just page generation: a governed system for turning ideas into presentable, verifiable, deliverable work.</em>
 </p>
 
 <p align="center">
   <img alt="Version" src="https://img.shields.io/badge/version-0.2.0--rc.2-ff5f4d">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-79%20passing-1f8b4c">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-90%20passing-1f8b4c">
   <img alt="Python" src="https://img.shields.io/badge/Python-3.9%2B-3776ab">
   <img alt="Node" src="https://img.shields.io/badge/Node.js-18%2B-339933">
   <img alt="Platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-111827">
@@ -24,11 +25,36 @@ Proposal Skill V2 管理的是从想法到成品的整条链路：理解资料�
 
 > **策略系统决定作品上限，质量门禁守住交付下限。**
 
-[快速安装](#三分钟开始) · [核心差别](#它和普通-ppt-skill-有什么不同) · [完整工作流](#一条从想法到成品的生产链) · [任务模式](#不只是长提案) · [兼容边界](#不绑定-codex-订阅)
+[快速安装](#三分钟开始) · [核心差别](#它和普通-ppt-skill-有什么不同) · [完整工作流](#一条从想法到成品的生产链) · [任务模式](#不只是长提案) · [兼容边界](#不绑定-codex-订阅) · [English](#english)
 
 ## 先看成品
 
 下面不是设计模板，而是由同一套策略主轴、视觉语言和页面生产回环生成的真实脱敏样章。
+
+### 最近案例 / Recent case work
+
+下面四组截图来自近期真实提案的页面缩略图，用来展示这套方法如何跨越营养健康、医美护肤、防晒策略和品牌视觉系统等不同内容类型。案例图只作为视觉参考，不作为本仓库的客户资料或事实库。
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/readme-assets/cases/case-01-nutrition.png" alt="营养健康提案案例截图"></td>
+    <td width="50%"><img src="docs/readme-assets/cases/case-02-dermocosmetics.png" alt="医美护肤品牌提案案例截图"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>营养健康 / Nutrition &amp; wellness</sub></td>
+    <td align="center"><sub>医美护肤 / Dermocosmetics</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/readme-assets/cases/case-03-sunscreen-strategy.png" alt="防晒市场策略提案案例截图"></td>
+    <td width="50%"><img src="docs/readme-assets/cases/case-04-brand-system.png" alt="品牌视觉系统提案案例截图"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>市场策略 / Market strategy</sub></td>
+    <td align="center"><sub>品牌视觉系统 / Brand visual system</sub></td>
+  </tr>
+</table>
+
+> **看什么 / What to look for**：不是每一页用了什么模板，而是页面是否共同服务一个判断，视觉是否把内容关系变成了可读的表达，最终是否能进入真实评审和修改回环。
 
 <table>
   <tr>
@@ -250,3 +276,126 @@ tests/                           套件安装测试
 当前为跨电脑测试候选版，已经覆盖项目初始化、阶段门禁、内容冻结、视觉方向、HTML／PNG 评审、浏览器越界检测以及 PNG、PDF、PPTX 导出链路。
 
 欢迎使用真实任务测试并提交反馈。公开发布前，仓库 Owner 仍需补充正式许可证和公开支持范围。
+
+---
+
+<a id="english"></a>
+
+# English
+
+## What this is
+
+Proposal Skill V2 is a governed production system for turning an idea, brief, proposal, or content module into a presentable and reviewable deck. It helps an Agent understand the content, preserve the strategy, choose the right visual carrier, and deliver an editable production trail instead of a pile of disconnected pages.
+
+Its central principle is simple:
+
+> **Strategy sets the ceiling. Quality gates protect the floor.**
+
+This is not a template pack. It is a workflow with explicit decisions, state, evidence, review surfaces, and release gates.
+
+## Why it is different
+
+| Typical PPT skill | Proposal Skill V2 |
+|---|---|
+| Starts formatting as soon as text arrives | Clarifies audience, decision goal, stance, and core tension first |
+| Produces slides independently | Builds a strategy spine, chapter interfaces, and page-level argument chain |
+| Uses a template as the main consistency mechanism | Uses `DESIGN.md`, visual families, and page routes |
+| Lets the Agent decide that a page “looks fine” | Binds approvals to objects, versions, status, and review evidence |
+| Rebuilds a whole page after feedback | Runs a locate → modify → re-render → verify loop |
+| Treats PPT export as completion | Treats content, visuals, QA, page order, and speaker notes as one delivery system |
+
+The distinctive capability is not the number of tools. It is the Agent's ability to maintain a point of view across the whole deliverable:
+
+1. **Understand the material** and find the decision-relevant tension.
+2. **Maintain the strategy** across chapters, pages, titles, and transitions.
+3. **Choose the expression** before choosing Image2, HTML, data, scene, or text.
+4. **Control the quality** with objective gates for state, evidence, layout, rendering, and release.
+
+## From idea to deliverable
+
+```text
+Idea / brief / source material
+        ↓
+Decision interview: audience, goal, stance, core tension
+        ↓
+Strategy spine: thesis, chapter interfaces, argument order
+        ↓
+Manuscript: chapter-level generation, Feishu collaboration, page confirmation
+        ↓
+Content freeze: one full-draft integrity review
+        ↓
+Visual direction: real Image2 samples → Owner choice → DESIGN.md
+        ↓
+Page production: carrier decision → Image2 / HTML split → controlled waves
+        ↓
+Revision loop: locate → minimal change → re-render → verify
+        ↓
+Final QA: content, visual, dimensions, order, file integrity
+        ↓
+PNG / PDF / PPTX / page-numbered speaker notes
+```
+
+Parallel production is available only after the content, Feishu manuscript, design system, and generation gates are approved. The main Agent owns shared authority files and integrates each wave; production Agents work only on non-overlapping slide assignments.
+
+## Task modes
+
+V2 is not limited to long-form proposals.
+
+| Mode | Use it for | What remains controlled |
+|---|---|---|
+| `full_deck` | A new proposal, report, or presentation | Full strategy, full-draft review, freeze, visual direction, notes, export |
+| `inherited_module` | Adding or replacing a module in an existing governed deck | Parent strategy, design system, upstream/downstream interfaces, page QA |
+| `standalone_module` | A single page or a 2–8 page module | Lightweight brief, module logic, visual baseline, page loop, export |
+
+## Get started
+
+```bash
+git clone https://github.com/chenxupeng1990-eng/qifei-proposal-skill.git
+cd qifei-proposal-skill
+python3 scripts/bootstrap.py --suite v2
+python3 scripts/install_skills.py --suite v2
+```
+
+Then restart your Agent and call:
+
+```text
+$qifei-proposal-v2
+```
+
+Check the real runtime before starting a project:
+
+```bash
+python3 skills/qifei-proposal-v2/scripts/doctor.py --task-mode full_deck --json
+```
+
+Create a full deck or a smaller module:
+
+```bash
+python3 skills/qifei-proposal-v2/scripts/init_project.py \
+  --project <project-directory> \
+  --name <project-name> \
+  --owner <owner> \
+  --task-mode standalone_module \
+  --deliverable-level slides
+```
+
+## Runtime compatibility
+
+The workflow is not tied to a Codex subscription. Doctor selects the highest mode supported by the local runtime:
+
+- `codex_full`: native image, visual review, local rendering, and comments are available.
+- `api_full`: another Agent has file access, commands, image API, visual understanding, and local runtime support.
+- `local_production`: rendering and export are available, but missing image capability blocks formal visual approval.
+- `content_only`: strategy, manuscript, page routes, and prompt packages can be produced, but the system does not pretend to have completed visual or PPTX delivery.
+
+The adapters can use Codex Image2, an OpenAI-compatible image endpoint, Feishu or local Markdown as content authority, and native comments, review bundles, or independent human review as the review surface. Credentials are never written into project state, prompts, or logs.
+
+## Recent case references
+
+The gallery above shows anonymized visual references from recent work across nutrition and wellness, dermocosmetics, market strategy, and brand visual systems. These images demonstrate the range of the production system; they are not bundled as client source files or factual claims.
+
+## Repository scope
+
+The repository contains reusable rules, templates, scripts, tests, and a sanitized demo. Client source materials, project-specific `AGENTS.md`, approved review pages, and final delivery files belong in their own project directories.
+
+The latest public branch is [`codex/qifei-proposal-base`](https://github.com/chenxupeng1990-eng/qifei-proposal-skill/tree/codex/qifei-proposal-base). Feedback and real-task testing are welcome.
