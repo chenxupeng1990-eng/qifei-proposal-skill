@@ -27,6 +27,12 @@ Proposal Skill V2 管理的是从想法到成品的整条链路：理解资料�
 
 [快速安装](#三分钟开始) · [核心差别](#它和普通-ppt-skill-有什么不同) · [完整工作流](#一条从想法到成品的生产链) · [任务模式](#不只是长提案) · [兼容边界](#不绑定-codex-订阅) · [English](#english)
 
+## 30 秒演示 / 30-second demo
+
+从资料碎片到策略、页面生产与最终交付，30 秒看懂 Proposal Skill V2 的完整流程。
+
+https://github.com/user-attachments/assets/387f188c-4cf7-4e04-9ebd-a69e80e639fa
+
 ## 先看成品
 
 下面不是设计模板，而是由同一套策略主轴、视觉语言和页面生产回环生成的真实脱敏样章。
