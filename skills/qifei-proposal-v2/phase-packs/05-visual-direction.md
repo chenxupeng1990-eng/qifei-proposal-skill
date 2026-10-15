@@ -6,6 +6,7 @@
 
 ## 必须读取
 
+- [../references/design-and-generation.md](../references/design-and-generation.md)：跨阶段视觉不变量。
 - [../references/visual-direction.md](../references/visual-direction.md)
 - Image2不可用时读取 [../references/environment-degradation.md](../references/environment-degradation.md)。
 
@@ -24,6 +25,7 @@
 
 ## 禁止动作
 
+- 内容冻结前不生产正式视觉。
 - 不生成完整校准集。
 - 不生成 `DESIGN.md`。
 - 不批量生成正式页面。

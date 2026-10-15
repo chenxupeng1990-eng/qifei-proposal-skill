@@ -1,16 +1,16 @@
 ---
 name: qifei-proposal-v2
-description: Govern and produce complete presentations or bounded content modules across Codex, API agents, and local runtimes, with adaptive strategy, visual, review, and export gates.
+description: 公司提案总控：把品牌需求做成有观点、能打动评审、可视觉化交付的竞争性提案或提案模块（比稿、品牌提案、营销方案 PPT、飞书提案母稿、提案视觉与讲稿、导出 PNG/PDF/PPTX）。按项目阶段渐进加载规则，内置策略、内容、视觉、评审与导出门禁，支持 Codex、API Agent 与本地运行环境。用户说“做提案”“比稿”“写方案 PPT”“继续这个提案项目”“做提案里的某个模块”时使用。不用于通用文档排版、单张海报或与提案无关的 PPT 美化。
 ---
 
 # 公司提案总控 V2
 
-V2 与 `$qifei-proposal` 并行，不替换 V1。它使用相同项目结构和机器校验器，但把执行规则拆成阶段包，避免无关规则同时占用上下文。
+V1 `$qifei-proposal` 已弃用，新项目一律使用 V2。V2 沿用 V1 的项目结构和机器校验器，把执行规则拆成阶段包，避免无关规则同时占用上下文。
 
 ## 永久规则
 
 1. 完整读取本文件与 [agent.md](agent.md)。
-2. 先按 [references/task-modes-and-runtime.md](references/task-modes-and-runtime.md) 确定 `task_mode`，运行 `doctor.py`，向用户声明本次可交付能力和边界；能力缺失只阻塞实际依赖它的阶段。
+2. 先按 [references/task-modes-and-runtime.md](references/task-modes-and-runtime.md) 确定 `task_mode`，运行 `doctor.py`，向用户声明本次可交付能力和边界（最低可用配置见 [references/environment-degradation.md](references/environment-degradation.md)）；能力缺失只阻塞实际依赖它的阶段。
 3. Python可用后运行 `python3 scripts/check_suite_dependencies.py`；完整套件缺失时停止，环境能力缺失按Doctor结果路由。
 4. 读取项目 `AGENTS.md` 与 `project-state.json`，以 `phase` 选择且只选择一个当前阶段包。
 5. 完整读取当前阶段包；只读取该阶段包明确列出的 reference，不预读未来阶段。
@@ -19,13 +19,7 @@ V2 与 `$qifei-proposal` 并行，不替换 V1。它使用相同项目结构和�
 8. 用户已确认的项目事实、策略与场外决定是只读权威；不得在后续审查中重新审判。
 9. 对外内容必须有立场、观点和决策推动；中立、保守或只做风险判断不能替代策划。
 10. 内容权威由任务模式决定：完整提案默认飞书，继承模块沿用父项目，独立模块可明确选择飞书或本地Markdown。
-11. 内容冻结前不得生产正式视觉；全部正式页面与最终页序确认前不得生成完整讲稿。
-12. 完整提案视觉方向必须提交2–3套真实生成样张；独立模块至少提交一套真实视觉基线；纯方向说明和HTML/CSS换色不能通过。
-13. 每张正式页先确定核心思想和最佳载体，再分配图像生成与HTML；图像资产是视觉底线，不是内容决策者。
-14. 完整提案设计校准按页数采用 `compact`、`standard` 或 `extended`；继承模块复用父设计，独立模块只覆盖本模块真实风险。
-15. 不跨阶段执行，不因任务简单、用户连续说“确认”或已有文件而补记批准。
-16. 设计系统、飞书母稿和生成门禁全部通过后，页面生产可以按受控波次并行；主 Agent 持有共享权威文件，单个生产 Agent 只写自己分配的页面输出，硬上限为6个并行 Agent，默认3个。
-17. 每个生产波次结束后，主 Agent 必须重新渲染、复核和记录结果，确认当前波次通过后才能启动下一波；并行生产不能改变策略、页序、设计语言或批准状态。
+11. 不跨阶段执行，不因任务简单、用户连续说“确认”或已有文件而补记批准；视觉、校准、并行生产和讲稿的专门规则只在对应阶段包中生效。
 
 ## 阶段路由
 

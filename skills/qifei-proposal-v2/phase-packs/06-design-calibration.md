@@ -8,6 +8,7 @@
 
 ## 必须读取
 
+- [../references/design-and-generation.md](../references/design-and-generation.md)：跨阶段视觉不变量。
 - [../references/design-calibration-contract.md](../references/design-calibration-contract.md)
 - [../references/design-system-contract.md](../references/design-system-contract.md)
 - 所需视觉能力不可用时读取 [../references/environment-degradation.md](../references/environment-degradation.md)。

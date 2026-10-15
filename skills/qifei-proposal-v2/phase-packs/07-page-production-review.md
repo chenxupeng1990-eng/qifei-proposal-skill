@@ -6,6 +6,7 @@
 
 ## 必须读取
 
+- [../references/design-and-generation.md](../references/design-and-generation.md)：跨阶段视觉不变量。
 - [../references/page-production-loop.md](../references/page-production-loop.md)
 - 接入浏览器校稿时读取 [../references/html-editor-and-editable-pptx.md](../references/html-editor-and-editable-pptx.md)。
 - Image2或浏览器评论不可用时读取 [../references/environment-degradation.md](../references/environment-degradation.md)。
@@ -19,12 +20,14 @@
 当 `project-state.json.production.mode` 为 `parallel_after_gates` 时，先读取
 [../references/parallel-production.md](../references/parallel-production.md)，并运行
 `python3 scripts/validate_production_plan.py <项目目录>`。只有内容冻结、飞书母稿回读确认、设计系统和
-`generation_ready` 全部通过，且计划校验通过后，才能启动生产波次。
+`generation_ready` 全部通过，且计划校验通过后，才能启动生产波次。默认3个并行生产 Agent，硬上限6个。每个波次结束后，主 Agent 必须重新渲染、复核和记录结果，当前波次通过后才能启动下一波；并行生产不能改变策略、页序、设计语言或批准状态。
 
 主 Agent 负责创建计划、分配不重叠的 `slide_id`、回收结果、重新渲染和复验；子 Agent 不得修改
 `project-state.json`、`AGENTS.md`、`DESIGN.md`、飞书快照、设计令牌、页面合同或拼装准备库。
 
 ## 每页生产路由
+
+每张正式页先确定核心思想和最佳载体，再分配 Image2 与 HTML；图像资产是视觉底线，不是内容决策者。
 
 - 服务对象与演讲任务。
 - 核心思想和内容关系。
@@ -39,7 +42,7 @@
 
 ## 硬规则
 
-- 每张正式页至少使用一个服务核心思想的Image2资产。
+- 每张正式页至少使用一个服务核心思想的Image2资产。这是视觉下限保障：纯HTML页面容易单薄、廉价。资产可以是整页场景或主视觉，也可以是透明PNG元素（材质、光效、产品局部、图形母题、氛围层），数据页、时间表等以HTML为主载体的页面同样适用；资产必须属于本案视觉家族并服务本页核心思想。
 - HTML不能独立承担整页审美。
 - 不用无关装饰图过门禁。
 - 评论关闭和QA通过都不等于页面确认。
