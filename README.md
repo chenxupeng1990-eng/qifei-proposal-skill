@@ -228,9 +228,8 @@ API Key、访问令牌和中转密钥不会写入项目状态、提示词记录�
 | `grill-me-lite` | 一次一个问题的关键决策访谈 | 必装 |
 | `proposal-ppt-production` | 页面载体选择、视觉生产、QA 与组装 | 推荐 |
 | `ppt-html-calibration-editor` | 16:9 HTML 页面与浏览器评论的精细校准 | 可选 |
-| `qifei-proposal` | V1 兼容入口 | 仅旧项目 |
 
-`qifei-proposal` 是兼容旧项目保留的技术 Skill ID。默认模板和 Demo 均为通用场景，不包含真实客户资料或特定公司的事实库。
+V1 `qifei-proposal` 已从仓库移除，只保留 V2。默认模板和 Demo 均为通用场景，不包含真实客户资料或特定公司的事实库。
 
 ## 交付与可编辑性
 

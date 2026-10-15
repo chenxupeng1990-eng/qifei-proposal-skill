@@ -10,8 +10,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 INSTALLER = ROOT / "scripts" / "install_skills.py"
-CHECKER = ROOT / "skills" / "qifei-proposal" / "scripts" / "check_suite_dependencies.py"
-SUITE = ROOT / "skills" / "qifei-proposal" / "suite.json"
+CHECKER = ROOT / "skills" / "qifei-proposal-v2" / "scripts" / "check_suite_dependencies.py"
+SUITE = ROOT / "skills" / "qifei-proposal-v2" / "suite.json"
 
 
 class InstallSkillsTests(unittest.TestCase):
@@ -25,7 +25,7 @@ class InstallSkillsTests(unittest.TestCase):
 
     def test_manifest_declares_required_and_optional_roles(self) -> None:
         items = {item["name"]: item["requirement"] for item in json.loads(SUITE.read_text())["skills"]}
-        self.assertEqual(items["qifei-proposal"], "required")
+        self.assertEqual(items["qifei-proposal-v2"], "required")
         self.assertEqual(items["grill-me-lite"], "required")
         self.assertEqual(items["proposal-ppt-production"], "recommended")
         self.assertEqual(items["ppt-html-calibration-editor"], "optional")
@@ -33,9 +33,9 @@ class InstallSkillsTests(unittest.TestCase):
     def test_missing_grill_me_fails_startup_check(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            (root / "qifei-proposal").mkdir()
-            (root / "qifei-proposal" / "SKILL.md").write_text(
-                "---\nname: qifei-proposal\ndescription: test\n---\n",
+            (root / "qifei-proposal-v2").mkdir()
+            (root / "qifei-proposal-v2" / "SKILL.md").write_text(
+                "---\nname: qifei-proposal-v2\ndescription: test\n---\n",
                 encoding="utf-8",
             )
             result = subprocess.run(
@@ -46,7 +46,7 @@ class InstallSkillsTests(unittest.TestCase):
             )
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("missing required Skill: grill-me-lite", result.stdout)
-            self.assertIn("python3 scripts/install_skills.py --force", result.stdout)
+            self.assertIn("python3 scripts/install_skills.py --suite v2 --force", result.stdout)
 
     def test_complete_install_has_valid_metadata_and_passes_startup_check(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -74,7 +74,7 @@ class InstallSkillsTests(unittest.TestCase):
             result = self.run_install(target)
             self.assertNotEqual(result.returncode, 0)
             self.assertEqual(marker.read_text(encoding="utf-8"), "keep")
-            self.assertFalse((target / "qifei-proposal").exists())
+            self.assertFalse((target / "qifei-proposal-v2").exists())
             self.assertFalse((target / "proposal-ppt-production").exists())
             self.assertFalse((target / "ppt-html-calibration-editor").exists())
 

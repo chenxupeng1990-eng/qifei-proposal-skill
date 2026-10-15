@@ -16,7 +16,7 @@
 
 - 客户正式资料：见 `inputs/client/`。
 - 项目临时参考：见 `inputs/temporary-references/`。
-- 公司 Base：由 `qifei-proposal` Skill 提供。
+- 公司 Base：由 `qifei-proposal-v2` Skill 提供。
 - 项目证据：见 `evidence/evidence-ledger.json`。
 - 客户提供的项目事实可直接使用；不得擅自增加新功效、新成绩或新承诺。
 - 已确认提案策划书：见 `content/proposal-brief.md`。

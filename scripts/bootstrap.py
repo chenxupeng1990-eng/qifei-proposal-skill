@@ -12,10 +12,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 NODE_PACKAGES = {
-    "v1": (
-        ROOT / "skills" / "qifei-proposal",
-        ROOT / "skills" / "ppt-html-calibration-editor",
-    ),
     "v2": (
         ROOT / "skills" / "qifei-proposal-v2",
         ROOT / "skills" / "ppt-html-calibration-editor",
@@ -35,8 +31,8 @@ def main() -> int:
     parser.add_argument(
         "--suite",
         choices=sorted(NODE_PACKAGES),
-        default="v1",
-        help="Runtime suite to prepare; defaults to V1 compatibility",
+        default="v2",
+        help="Runtime suite to prepare (V1 was removed; only v2 remains)",
     )
     parser.add_argument(
         "--skip-install",
@@ -65,28 +61,22 @@ def main() -> int:
                 raise SystemExit(f"Missing lockfile: {lockfile}")
             run([npm, "ci", "--no-audit", "--no-fund"], cwd=package)
 
-    if args.suite == "v1":
-        command = [sys.executable, str(ROOT / "scripts" / "self_test.py")]
-        if args.release:
-            command.append("--release")
-        run(command)
-    else:
-        v2 = ROOT / "skills" / "qifei-proposal-v2"
-        run(["node", str(v2 / "scripts" / "check_environment.mjs")], cwd=v2)
-        run([
-            sys.executable, "-m", "unittest", "discover",
-            "-s", str(v2 / "tests"), "-p", "test_*.py",
-        ])
-        run([
-            sys.executable, "-m", "unittest", "discover",
-            "-s", str(ROOT / "tests"), "-p", "test_*.py",
-        ])
-        if args.release:
-            completed = subprocess.run(
-                ["git", "status", "--porcelain"], cwd=ROOT, capture_output=True, text=True, check=True
-            )
-            if completed.stdout.strip():
-                raise SystemExit("Release check requires a clean Git worktree")
+    v2 = ROOT / "skills" / "qifei-proposal-v2"
+    run(["node", str(v2 / "scripts" / "check_environment.mjs")], cwd=v2)
+    run([
+        sys.executable, "-m", "unittest", "discover",
+        "-s", str(v2 / "tests"), "-p", "test_*.py",
+    ])
+    run([
+        sys.executable, "-m", "unittest", "discover",
+        "-s", str(ROOT / "tests"), "-p", "test_*.py",
+    ])
+    if args.release:
+        completed = subprocess.run(
+            ["git", "status", "--porcelain"], cwd=ROOT, capture_output=True, text=True, check=True
+        )
+        if completed.stdout.strip():
+            raise SystemExit("Release check requires a clean Git worktree")
     print("\nBootstrap complete. The Skill suite is ready for installation.")
     return 0
 

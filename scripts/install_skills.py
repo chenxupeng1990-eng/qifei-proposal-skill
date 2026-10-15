@@ -15,7 +15,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SUITE_MANIFESTS = {
-    "v1": ROOT / "skills" / "qifei-proposal" / "suite.json",
     "v2": ROOT / "skills" / "qifei-proposal-v2" / "suite.json",
 }
 
@@ -68,8 +67,8 @@ def main() -> int:
     parser.add_argument(
         "--suite",
         choices=sorted(SUITE_MANIFESTS),
-        default="v1",
-        help="Skill suite to install; defaults to the V1-compatible suite",
+        default="v2",
+        help="Skill suite to install (V1 was removed; only v2 remains)",
     )
     parser.add_argument(
         "--target",
@@ -136,7 +135,7 @@ def main() -> int:
     finally:
         shutil.rmtree(transaction, ignore_errors=True)
 
-    entrypoint = "qifei-proposal-v2" if args.suite == "v2" else "qifei-proposal"
+    entrypoint = "qifei-proposal-v2"
     print(f"\nInstallation complete. Restart Codex, then invoke ${entrypoint}.")
     return 0
 

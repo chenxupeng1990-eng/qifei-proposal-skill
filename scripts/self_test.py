@@ -16,7 +16,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SKILLS = (
-    "qifei-proposal",
+    "qifei-proposal-v2",
     "grill-me-lite",
     "proposal-ppt-production",
     "ppt-html-calibration-editor",
@@ -121,7 +121,7 @@ def check_release_content() -> None:
 
 def check_json_files() -> None:
     targets = (
-        ROOT / "skills" / "qifei-proposal" / "references" / "company-facts.json",
+        ROOT / "skills" / "qifei-proposal-v2" / "references" / "company-facts.json",
         ROOT / "skills" / "proposal-ppt-production" / "assets" / "page-contract.example.json",
     )
     for path in targets:
@@ -162,7 +162,7 @@ def main() -> int:
     check_release_content()
     check_json_files()
 
-    qifei = ROOT / "skills" / "qifei-proposal"
+    qifei = ROOT / "skills" / "qifei-proposal-v2"
     editor = ROOT / "skills" / "ppt-html-calibration-editor"
     production = ROOT / "skills" / "proposal-ppt-production"
 
@@ -225,6 +225,8 @@ def main() -> int:
                 "Clean Install Smoke Test",
                 "--owner",
                 "Test Owner",
+                "--task-mode",
+                "full_deck",
             ],
         )
         run(
