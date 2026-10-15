@@ -42,6 +42,10 @@ FORBIDDEN_TEXT = (
     "my.feishu.cn/" + "docx/",
 )
 FORBIDDEN_TRACKED_SUFFIXES = (".pdf", ".ppt", ".pptx", ".key")
+# Public tutorial links that are intentionally published. Paths are relative to ROOT.
+ALLOWED_TEXT = {
+    "README.md": ("https://" + "my.feishu.cn/" + "docx/" + "AegvdkYQ8odUetxOo8bcOCILn64",),
+}
 
 
 def command_path(name: str) -> str:
@@ -97,6 +101,8 @@ def check_release_content() -> None:
     errors: list[str] = []
     for path in iter_release_text_files():
         text = path.read_text(encoding="utf-8", errors="replace")
+        for allowed in ALLOWED_TEXT.get(path.relative_to(ROOT).as_posix(), ()):
+            text = text.replace(allowed, "")
         for forbidden in FORBIDDEN_TEXT:
             if forbidden in text:
                 errors.append(f"{path.relative_to(ROOT)} contains {forbidden!r}")
