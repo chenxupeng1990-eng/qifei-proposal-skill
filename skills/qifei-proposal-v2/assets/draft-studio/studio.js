@@ -598,6 +598,7 @@
     const decided = comments.threads.length - open.length;
     document.getElementById("rail-counts").textContent = `未解决 ${open.length} · 已决定 ${decided}`;
     document.getElementById("rail-toggle").textContent = `评论 ${open.length}`;
+    document.getElementById("rail-tab").innerHTML = `<span>评论</span>${open.length ? `<b>${open.length}</b>` : ""}`;
     document.querySelectorAll("#rail-filter button").forEach((b) => b.classList.toggle("active", b.dataset.filter === filterMode));
     const perSlide = {};
     comments.threads.forEach((t) => {
@@ -665,6 +666,11 @@
       </div>
       <div class="card-meta">${esc(thread.slide)} · ${thread.id}${orphan ? ' · <span class="warn">原文已修改，找不到引用位置</span>' : ""}${resolved ? ` · <span class="decided">✓ ${esc(thread.status_by || "")} ${fmtTime(thread.status_at)} 决定</span>` : ""}</div>
       ${msgs}
+      ${!resolved && thread.messages.length && thread.messages[thread.messages.length - 1].author !== author ? `
+      <div class="quick">
+        <button type="button" class="btn primary" data-quick="resolve">✓ 同意并解决</button>
+        <button type="button" class="btn" data-quick="agree">同意</button>
+      </div>` : ""}
       <textarea class="reply" rows="1" placeholder="回复（Enter 发送，Shift+Enter 换行）"></textarea>
     </div>`;
   }
@@ -764,6 +770,7 @@
   function toggleRail(force) {
     const show = typeof force === "boolean" ? force : rail.hidden;
     rail.hidden = !show;
+    document.getElementById("rail-tab").hidden = show;
     document.body.classList.toggle("rail-open", show);
     try { localStorage.setItem("draft-studio-rail", show ? "1" : "0"); } catch (_) { /* optional */ }
     layoutCards();
@@ -849,6 +856,15 @@
     } catch (err) { toast(`回复没有保存：${err.message}`); }
   }
 
+  async function quickAgree(id, resolve) {
+    try {
+      await api("/api/comments/reply", { id, text: "同意。", author, resolve });
+      if (resolve) activeThread = null;
+      await loadComments(false);
+      toast(resolve ? `${id} 已同意并解决` : `${id} 已回复同意`, "ok");
+    } catch (err) { toast(`没有保存：${err.message}`); }
+  }
+
   async function setStatus(id, status) {
     try {
       await api("/api/comments/status", { id, status, author });
@@ -922,6 +938,8 @@
         return;
       }
       if (e.target.closest("[data-card-collapse]")) { deactivate(); return; }
+      const quick = e.target.closest("[data-quick]");
+      if (quick) { quickAgree(card.dataset.card, quick.dataset.quick === "resolve"); return; }
       const nav = e.target.closest("[data-card-nav]");
       const status = e.target.closest("[data-card-status]");
       if (nav) navigate(card.dataset.card, nav.dataset.cardNav);

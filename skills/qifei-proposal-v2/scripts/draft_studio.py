@@ -748,11 +748,15 @@ class CommentStore:
             self._write(data)
             return thread
 
-    def reply(self, thread_id: str, text: str, author: str) -> dict[str, Any]:
+    def reply(self, thread_id: str, text: str, author: str, resolve: bool = False) -> dict[str, Any]:
+        """Add a reply; with resolve, the same write also closes the thread (one-click agree)."""
         with self.lock:
             data = self.load()
             thread = self._find(data, thread_id)
-            thread["messages"].append({"author": self._text(author or "Owner", "author")[:40], "at": self._now(), "text": self._text(text, "reply")})
+            name = self._text(author or "Owner", "author")[:40]
+            thread["messages"].append({"author": name, "at": self._now(), "text": self._text(text, "reply")})
+            if resolve:
+                thread.update({"status": "resolved", "status_by": name, "status_at": self._now()})
             self._write(data)
             return thread
 
@@ -913,7 +917,9 @@ class StudioHandler(BaseHTTPRequestHandler):
             if path == "/api/comments":
                 thread = comments.create(payload, self.server.store.revision)
             elif path == "/api/comments/reply":
-                thread = comments.reply(str(payload["id"]), payload.get("text", ""), payload.get("author", ""))
+                thread = comments.reply(
+                    str(payload["id"]), payload.get("text", ""), payload.get("author", ""), bool(payload.get("resolve"))
+                )
             elif path == "/api/comments/status":
                 thread = comments.set_status(str(payload["id"]), str(payload.get("status")), payload.get("author", ""))
             else:

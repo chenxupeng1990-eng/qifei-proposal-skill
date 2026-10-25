@@ -243,6 +243,12 @@ class CommentStoreTests(unittest.TestCase):
         self.assertEqual((saved["status"], saved["status_by"]), ("resolved", "总悟"))
         self.assertEqual(self.store.create({"slide": "P02", "field": "P02:core", "quote": "x", "text": "y"}, 3)["id"], "C-0002")
 
+    def test_reply_can_resolve_in_one_write(self) -> None:
+        self.store.create({"slide": "P01", "field": "P01:core", "quote": "长期经营", "text": "改成三年？"}, 1)
+        self.store.reply("C-0001", "建议改成三年", "Agent")
+        thread = self.store.reply("C-0001", "同意。", "总悟", resolve=True)
+        self.assertEqual((thread["status"], thread["status_by"], thread["messages"][-1]["text"]), ("resolved", "总悟", "同意。"))
+
     def test_invalid_input_is_rejected(self) -> None:
         with self.assertRaises(draft_studio.EditError):
             self.store.create({"slide": "P01", "field": "P01:core", "quote": "", "text": "y"}, 1)
@@ -333,7 +339,10 @@ class StudioBrowserTests(StudioServerCase):
         self.assertLess(report["header_rows"]["height"], 40)
         self.assertEqual(report["header_rows"]["counts"], "未解决 0 · 已决定 1")
         self.assertEqual(report["decision_badge"].strip(), "1")
-        self.assertEqual(report["messages_in_file"], ["Owner", "Agent"])
+        self.assertEqual(report["messages_in_file"], ["Owner", "Agent", "Owner"])
+        self.assertTrue(report["quick_agree_offered"])
+        self.assertTrue(report["tab_shown_when_closed"])
+        self.assertTrue(report["rail_reopened_from_tab"])
         self.assertEqual(report["script_errors"], [])
 
 

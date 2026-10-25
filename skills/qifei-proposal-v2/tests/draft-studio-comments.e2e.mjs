@@ -65,7 +65,8 @@ try {
   report.long_message_expanded = await page.evaluate(() => document.querySelector('[data-card="C-0001"] .msg-text.full') !== null);
   report.agent_reply_shown = true;
   report.toast = await page.textContent('#toast');
-  await page.click('[data-card="C-0001"] [data-card-status="resolved"]');
+  report.quick_agree_offered = await page.isVisible('[data-card="C-0001"] [data-quick="resolve"]');
+  await page.click('[data-card="C-0001"] [data-quick="resolve"]');
   await page.waitForSelector('mark.cmt-mark.resolved[data-thread="C-0001"]', {timeout: 5000});
   report.decision_kept_visible = await page.isVisible('[data-card="C-0001"].collapsed');
   await page.click('[data-card="C-0001"]');
@@ -78,6 +79,10 @@ try {
   await page.click('[data-card="C-0001"]');
   await page.mouse.click(700, 120);
   report.collapsed_by_blank_click = await page.isVisible('[data-card="C-0001"].collapsed');
+  await page.click('.rail-close');
+  report.tab_shown_when_closed = await page.isVisible('#rail-tab');
+  await page.click('#rail-tab');
+  report.rail_reopened_from_tab = await page.isVisible('#rail') && !(await page.isVisible('#rail-tab'));
   report.header_rows = await page.evaluate(() => {
     const head = document.querySelector('.rail-row').getBoundingClientRect();
     return {height: Math.round(head.height), counts: document.getElementById('rail-counts').textContent};
