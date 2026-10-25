@@ -53,7 +53,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .doc-meta code { font-family: var(--mono); font-size: 11px; }
 .topbar-tools { display: flex; align-items: center; gap: 10px; }
 .segmented { display: flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 9px; padding: 2px; }
-.segmented button { border: 0; background: transparent; padding: 5px 12px; border-radius: 7px; font-size: 13px; color: var(--muted); }
+.segmented button { white-space: nowrap; border: 0; background: transparent; padding: 5px 12px; border-radius: 7px; font-size: 13px; color: var(--muted); }
 .segmented button.active { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / .08); font-weight: 600; }
 .search { width: 180px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 9px; padding: 6px 10px; font: inherit; font-size: 13px; }
 .btn { border: 1px solid var(--line); background: var(--surface); border-radius: 9px; padding: 6px 12px; font-size: 13px; }
@@ -248,7 +248,8 @@ mark.cmt-mark.resolved { background: transparent; border-bottom: 2px dotted var(
 .cmt-count { flex: none; align-self: center; border: 0; background: #fbecc4; color: #8a5a00; border-radius: 999px; font-size: 11px; font-weight: 650; padding: 2px 8px; line-height: 1.4; }
 .cmt-count::before { content: "💬 "; font-size: 10px; }
 .toc-slide .cmt-count { margin-left: auto; padding: 0 6px; }
-.rail-toggle { white-space: nowrap; }
+.rail-toggle, .btn { white-space: nowrap; }
+.topbar-tools { flex: none; }
 @media (max-width: 1179px) {
   body.rail-open .layout { grid-template-columns: 290px minmax(0, 1fr); }
   .rail { position: fixed; top: 64px; right: 0; bottom: 0; width: min(360px, 92vw); z-index: 18; overflow: auto; box-shadow: -10px 0 40px rgb(0 0 0 / .14); background: var(--bg); }
@@ -277,6 +278,10 @@ mark { background: color-mix(in srgb, var(--warn) 30%, transparent); color: inhe
   .doc { padding: 22px 16px 80px; }
   .topbar { gap: 10px; padding: 0 12px; }
   .doc-meta { display: none; }
+}
+@media (max-width: 720px) {
+  .topbar-title { display: none; }
+  .topbar-tools { flex: 1; justify-content: flex-end; gap: 6px; }
 }
 @media (max-width: 620px) {
   .segmented button { padding: 5px 8px; }
