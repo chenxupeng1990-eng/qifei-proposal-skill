@@ -299,6 +299,7 @@ def validate_chapter_report(project: Path, chapter_id: str) -> list[str]:
     expected_slides = [str(item) for item in chapter.get("slides") or []]
     pages = report.get("pages") if isinstance(report.get("pages"), list) else []
     seen: list[str] = []
+    base_owner: dict[str, str] = {}
     for index, page in enumerate(pages, start=1):
         scope = f"{chapter_id}.pages[{index}]"
         if not isinstance(page, dict):
@@ -356,6 +357,14 @@ def validate_chapter_report(project: Path, chapter_id: str) -> list[str]:
 
             if visual_mode == "background" and asset_file:
                 errors.extend(validate_base_image(asset_file, scope))
+                if asset_path in base_owner:
+                    errors.append(f"{scope}: shares its design base with {base_owner[asset_path]}; each page needs its own carrier")
+                base_owner.setdefault(asset_path, scope)
+                route = page.get("presentation_route") if isinstance(page.get("presentation_route"), dict) else {}
+                decision = route.get("image2_decision") if isinstance(route.get("image2_decision"), dict) else {}
+                _, master_error = project_file(project, decision.get("master_reference"), "deck")
+                if master_error:
+                    errors.append(f"{scope}: image2_decision.master_reference (approved master page used as Image2 reference) {master_error}")
             if visual_mode == "transparent-png" and asset_file:
                 slot_id = str(visual.get("slot_id") or "").strip()
                 if slot_id not in alpha_slots:

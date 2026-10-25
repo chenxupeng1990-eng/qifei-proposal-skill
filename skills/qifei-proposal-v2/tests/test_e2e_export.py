@@ -373,6 +373,12 @@ class EndToEndExportTests(unittest.TestCase):
                 "finalize", "--approved-by", "测试负责人", "--approval-id", "final-1",
             ])
             self.design_loop_report(project)
+            from validate_design_loop import validate_chapter_report  # noqa: PLC0415
+
+            loop_errors = validate_chapter_report(project, "C1")
+            # Both fixture pages reuse one base and name no master page: the loop must say so.
+            self.assertTrue(any("D02: shares its design base with D01" in e for e in loop_errors), loop_errors)
+            self.assertTrue(any("master_reference" in e for e in loop_errors), loop_errors)
             self.run_command(["node", str(SCRIPTS / "export_deck.mjs"), str(project)])
 
             pngs = sorted((project / "exports" / "png").glob("*.png"))
