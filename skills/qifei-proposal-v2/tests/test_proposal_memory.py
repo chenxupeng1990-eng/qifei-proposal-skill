@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import json
 import os
+import re
+import socket
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 
@@ -79,8 +85,9 @@ class ProposalMemoryTests(unittest.TestCase):
         (self.home / "owner.md").write_text(OWNER, encoding="utf-8")
         (self.home / "playbook" / "pitch.md").write_text(PLAYBOOK, encoding="utf-8")
         self.project = root / "project"
-        (self.project / "memory").mkdir(parents=True)
-        (self.project / "memory" / "decisions.md").write_text(PROJECT, encoding="utf-8")
+        self.project.mkdir()
+        (self.home / "projects" / "project").mkdir(parents=True)
+        (self.home / "projects" / "project" / "decisions.md").write_text(PROJECT, encoding="utf-8")
 
     def tearDown(self) -> None:
         self.tmp.cleanup()
@@ -145,7 +152,9 @@ class ProposalMemoryTests(unittest.TestCase):
         result = subprocess.run([sys.executable, str(SCRIPT), "init", "--project", str(project)],
                                 capture_output=True, text=True, env=env, check=False)
         self.assertEqual(result.returncode, 0, result.stderr)
-        for path in (fresh / "owner.md", fresh / "playbook" / "playbook.md", project / "memory" / "decisions.md"):
+        pdir = fresh / "projects" / "new-project"
+        for path in (fresh / "owner.md", fresh / "playbook" / "playbook.md", pdir / "decisions.md",
+                     pdir / "candidates.md", pdir / "project.json"):
             self.assertTrue(path.is_file(), path)
         (fresh / "owner.md").write_text(OWNER, encoding="utf-8")
         subprocess.run([sys.executable, str(SCRIPT), "init"], env=env, check=True, capture_output=True)
@@ -155,7 +164,8 @@ class ProposalMemoryTests(unittest.TestCase):
         for path in (
             SKILL_ROOT / "assets" / "memory-templates" / "owner.md",
             SKILL_ROOT / "assets" / "memory-templates" / "playbook.md",
-            SKILL_ROOT / "assets" / "project-template" / "memory" / "decisions.md",
+            SKILL_ROOT / "assets" / "memory-templates" / "project.md",
+            SKILL_ROOT / "assets" / "memory-templates" / "candidates.md",
         ):
             env = os.environ.copy()
             env["QIFEI_MEMORY_HOME"] = str(Path(self.tmp.name) / "empty")
@@ -169,6 +179,192 @@ class ProposalMemoryTests(unittest.TestCase):
         self.assertIn("scripts/proposal_memory.py load", skill)
         self.assertIn("references/proposal-memory.md", skill)
 
+
+CANDIDATES = """# 记忆候选
+
+## MC-0001｜可见证明写证据，不写设计方向
+- 建议层级：owner
+- 阶段：manuscript
+- 状态：candidate
+- 日期：2026-10-25
+- 来源：C-0001
+- 适用：all
+
+核心内容里的可见证明必须回答“凭什么”，引用证据编号；版式和载体写进视觉生成建议。
+
+## MC-0002｜本项目不做品牌架构图
+- 建议层级：project
+- 阶段：visual
+- 状态：candidate
+- 日期：2026-10-25
+- 来源：R2
+
+只保留生活方式场景带。
+"""
+
+
+class MemoryCandidateTests(unittest.TestCase):
+    """R2: studio decisions become candidates; only the Owner turns them into memory."""
+
+    def setUp(self) -> None:
+        sys.path.insert(0, str(SKILL_ROOT / "scripts"))
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import draft_studio  # noqa: PLC0415
+        from test_draft_format import page  # noqa: PLC0415
+
+        self.tmp = tempfile.TemporaryDirectory()
+        root = Path(self.tmp.name)
+        self.home = root / "home"
+        self.home.mkdir()
+        (self.home / "owner.md").write_text(OWNER, encoding="utf-8")
+        self.project = root / "project"
+        draft = self.project / "content" / "draft" / "proposal-draft.md"
+        draft.parent.mkdir(parents=True)
+        draft.write_text("# 开场｜示例\n\n" + page("P01", "长期经营") + page("P02", "渠道变化"), encoding="utf-8")
+        store = draft_studio.DraftStore(self.project, draft, None)
+        store.ensure_baseline()
+        store.save({"kind": "field", "slide": "P02", "key": "talk", "md": "先讲渠道失效，再讲机会。"},
+                   draft_studio.sha256_text(store.read()))
+        comments = draft_studio.CommentStore(draft)
+        decided = comments.create({"slide": "P01", "field": "P01:core", "quote": "核心内容的内容", "text": "这是证明还是方向？"}, 2)
+        comments.reply(decided["id"], "改成证据台账的核准表述。", "Agent")
+        comments.reply(decided["id"], "同意。", "Owner", resolve=True)
+        comments.create({"slide": "P02", "field": "P02:screen", "quote": "PPT上屏内容的内容", "text": "还没定"}, 2)
+        draft_studio.ConfirmationStore(draft).add({"record_id": "confirm-C1-r2-abc123", "chapter_id": "C1",
+                                                   "slides": {"P01": "x"}, "by": "Owner", "revision": 2})
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def run_memory(self, *args: str) -> subprocess.CompletedProcess[str]:
+        env = os.environ.copy()
+        env["QIFEI_MEMORY_HOME"] = str(self.home)
+        return subprocess.run([sys.executable, str(SCRIPT), *args], capture_output=True, text=True, env=env, check=False)
+
+    def write_candidates(self) -> Path:
+        path = self.home / "projects" / "project" / "candidates.md"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(CANDIDATES, encoding="utf-8")
+        return path
+
+    def test_signals_digest_decided_comments_owner_edits_and_confirmations(self) -> None:
+        result = self.run_memory("signals", "--project", str(self.project))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        out = result.stdout
+        self.assertIn("### C-0001｜P01 · 核心内容（Owner 决定）", out)
+        self.assertIn("- Agent：改成证据台账的核准表述。", out)
+        self.assertNotIn("C-0002", out)  # still open: not a decision yet
+        self.assertIn("### R2｜P02 · 讲解方向", out)
+        self.assertIn("- 改前：讲解方向的内容。", out)
+        self.assertIn("- 改后：先讲渠道失效，再讲机会。", out)
+        self.assertIn("confirm-C1-r2-abc123", out)
+        self.assertNotIn("R1", out)  # the baseline is not a decision
+
+    def test_signals_already_cited_are_hidden_unless_all(self) -> None:
+        self.write_candidates()
+        out = self.run_memory("signals", "--project", str(self.project)).stdout
+        self.assertNotIn("### C-0001", out)
+        self.assertNotIn("### R2", out)
+        self.assertIn("2 条信号已被候选或记忆引用", out)
+        self.assertIn("### C-0001", self.run_memory("signals", "--project", str(self.project), "--all").stdout)
+
+    def test_owner_accepts_an_edited_candidate_into_its_layer(self) -> None:
+        candidates = self.write_candidates()
+        result = self.run_memory("accept", "MC-0001", "--project", str(self.project), "--title", "可见证明只写证据")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("accepted as O-0004", result.stdout)
+        owner = (self.home / "owner.md").read_text(encoding="utf-8")
+        self.assertIn("## O-0004｜可见证明只写证据\n- 阶段：manuscript\n- 状态：active", owner)
+        self.assertRegex(owner, r"- 来源：C-0001；Owner 采纳 \d{4}-\d{2}-\d{2}（MC-0001）")
+        self.assertIn("- 状态：accepted:O-0004", candidates.read_text(encoding="utf-8"))
+        self.assertIn("O-0004", self.run_memory("load", "--project", str(self.project), "--phase", "manuscript").stdout)
+
+        self.assertEqual(self.run_memory("accept", "MC-0002", "--project", str(self.project)).returncode, 0)
+        self.assertIn("## D-0001｜本项目不做品牌架构图", (self.home / "projects" / "project" / "decisions.md").read_text(encoding="utf-8"))
+        check = self.run_memory("check", "--project", str(self.project))
+        self.assertEqual(check.returncode, 0, check.stdout)
+
+    def test_reject_and_decisions_are_final(self) -> None:
+        candidates = self.write_candidates()
+        self.assertEqual(self.run_memory("reject", "MC-0002", "--project", str(self.project)).returncode, 0)
+        self.assertIn("- 状态：rejected", candidates.read_text(encoding="utf-8"))
+        again = self.run_memory("accept", "MC-0002", "--project", str(self.project))
+        self.assertEqual(again.returncode, 1)
+        self.assertIn("already rejected", again.stderr)
+        self.assertFalse((self.home / "projects" / "project" / "decisions.md").exists())
+
+    def test_check_reports_candidate_errors(self) -> None:
+        path = self.write_candidates()
+        path.write_text(CANDIDATES.replace("- 来源：R2", "- 来源：感觉").replace("建议层级：owner", "建议层级：team"),
+                        encoding="utf-8")
+        result = self.run_memory("check", "--project", str(self.project))
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("MC-0002: 来源 must cite a signal id", result.stdout)
+        self.assertIn("MC-0001: 建议层级 must be one of", result.stdout)
+
+    def test_memory_box_shows_every_layer_and_takes_owner_decisions(self) -> None:
+        self.write_candidates()
+        self.run_memory("signals", "--project", str(self.project))  # any project command registers the project
+        with socket.socket() as sock:
+            sock.bind(("127.0.0.1", 0))
+            port = sock.getsockname()[1]
+        env = os.environ.copy()
+        env["QIFEI_MEMORY_HOME"] = str(self.home)
+        server = subprocess.Popen([sys.executable, str(SKILL_ROOT / "scripts" / "memory_box.py"), "--port", str(port)],
+                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
+        base = f"http://127.0.0.1:{port}"
+        try:
+            for _ in range(50):
+                try:
+                    html = urllib.request.urlopen(base + "/", timeout=1).read().decode("utf-8")
+                    break
+                except OSError:
+                    time.sleep(0.1)
+            else:
+                self.fail("memory box did not start")
+            token = json.loads(re.search(r"const TOKEN = (.*?);", html).group(1))
+
+            def call(path: str, body: dict | None = None) -> tuple[int, dict]:
+                req = urllib.request.Request(base + path, data=json.dumps(body).encode("utf-8") if body else None,
+                                             headers={"Content-Type": "application/json", "X-Box-Token": token})
+                try:
+                    with urllib.request.urlopen(req, timeout=5) as res:
+                        return res.status, json.loads(res.read().decode("utf-8"))
+                except urllib.error.HTTPError as error:
+                    with error:
+                        return error.code, json.loads(error.read().decode("utf-8"))
+
+            req = urllib.request.Request(base + "/api/memory")
+            with self.assertRaises(urllib.error.HTTPError):
+                urllib.request.urlopen(req, timeout=5)  # no token
+            status, data = call("/api/memory")
+            self.assertEqual([e["id"] for e in data["owner"]], ["O-0001", "O-0002", "O-0003"])
+            (project,) = data["projects"]
+            self.assertEqual(project["path"], str(self.project.resolve()))
+            self.assertEqual([c["id"] for c in project["candidates"]], ["MC-0001", "MC-0002"])
+
+            status, data = call("/api/candidate/accept", {"project": "project", "id": "MC-0001", "layer": "playbook",
+                                                          "stages": ["manuscript", "review"], "body": "可见证明引用证据编号。"})
+            self.assertEqual(status, 200, data)
+            self.assertEqual(data["accepted"], "PB-0001")
+            self.assertEqual(data["memory"]["playbook"][0]["stages"], ["manuscript", "review"])
+            self.assertEqual(call("/api/candidate/accept", {"project": "project", "id": "MC-0002", "stages": ["someday"]})[0], 400)
+            status, data = call("/api/candidate/reject", {"project": "project", "id": "MC-0002"})
+            self.assertEqual([c["status"] for c in data["memory"]["projects"][0]["candidates"]], ["accepted:PB-0001", "rejected"])
+
+            status, data = call("/api/entry/update", {"file": "owner.md", "id": "O-0001", "title": "数据页标题写判断",
+                                                      "body": "新的正文。", "stages": ["manuscript"], "scope": [], "status": "retired"})
+            self.assertEqual(status, 200, data)
+            owner = (self.home / "owner.md").read_text(encoding="utf-8")
+            self.assertIn("## O-0001｜数据页标题写判断\n- 阶段：manuscript\n- 状态：retired\n- 日期：2026-07-17", owner)
+            self.assertIn("新的正文。\n\n## O-0002", owner)
+            self.assertNotIn("O-0001", self.run_memory("load", "--project", str(self.project), "--phase", "manuscript").stdout)
+            self.assertEqual(self.run_memory("check", "--project", str(self.project)).returncode, 0)
+            self.assertEqual(call("/api/entry/update", {"file": "../outside.md", "id": "O-0001", "title": "x", "body": "x",
+                                                        "stages": ["all"], "status": "active"})[0], 400)
+        finally:
+            server.terminate()
+            server.wait(timeout=5)
 
 if __name__ == "__main__":
     unittest.main()
