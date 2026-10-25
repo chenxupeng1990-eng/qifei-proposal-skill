@@ -234,20 +234,20 @@ class CommentStoreTests(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_thread_lifecycle(self) -> None:
-        thread = self.store.create({"slide": "P01", "field": "P01:core", "quote": "长期经营", "prefix": "要承担的是", "suffix": "，而不是", "text": "再具体一点", "author": "总悟"}, 3)
+        thread = self.store.create({"slide": "P01", "field": "P01:core", "quote": "长期经营", "prefix": "要承担的是", "suffix": "，而不是", "text": "再具体一点", "author": "测试负责人"}, 3)
         self.assertEqual((thread["id"], thread["status"], thread["draft_revision"]), ("C-0001", "open", 3))
         self.store.reply("C-0001", "已补充三年目标", "Agent")
-        self.store.set_status("C-0001", "resolved", "总悟")
+        self.store.set_status("C-0001", "resolved", "测试负责人")
         saved = self.store.load()["threads"][0]
-        self.assertEqual([m["author"] for m in saved["messages"]], ["总悟", "Agent"])
-        self.assertEqual((saved["status"], saved["status_by"]), ("resolved", "总悟"))
+        self.assertEqual([m["author"] for m in saved["messages"]], ["测试负责人", "Agent"])
+        self.assertEqual((saved["status"], saved["status_by"]), ("resolved", "测试负责人"))
         self.assertEqual(self.store.create({"slide": "P02", "field": "P02:core", "quote": "x", "text": "y"}, 3)["id"], "C-0002")
 
     def test_reply_can_resolve_in_one_write(self) -> None:
         self.store.create({"slide": "P01", "field": "P01:core", "quote": "长期经营", "text": "改成三年？"}, 1)
         self.store.reply("C-0001", "建议改成三年", "Agent")
-        thread = self.store.reply("C-0001", "同意。", "总悟", resolve=True)
-        self.assertEqual((thread["status"], thread["status_by"], thread["messages"][-1]["text"]), ("resolved", "总悟", "同意。"))
+        thread = self.store.reply("C-0001", "同意。", "测试负责人", resolve=True)
+        self.assertEqual((thread["status"], thread["status_by"], thread["messages"][-1]["text"]), ("resolved", "测试负责人", "同意。"))
 
     def test_invalid_input_is_rejected(self) -> None:
         with self.assertRaises(draft_studio.EditError):
@@ -260,14 +260,14 @@ class CommentStoreTests(unittest.TestCase):
     def test_full_export_keeps_decisions_brief_does_not(self) -> None:
         self.store.create({"slide": "P01", "field": "P01:core", "quote": "长期经营", "text": "这是证明还是方向？"}, 1)
         self.store.reply("C-0001", "已改成证据", "Agent")
-        self.store.set_status("C-0001", "resolved", "总悟")
+        self.store.set_status("C-0001", "resolved", "测试负责人")
         model = draft_studio.parse_draft(FEISHU_DRAFT)
         threads = self.store.load()["threads"]
         full = draft_studio.export_markdown(model, "full", threads)
         record = full.split("#### 评审记录", 1)[1].split("###", 1)[0]
         self.assertIn("C-0001｜已决定", record)
         self.assertIn("Agent", record)
-        self.assertIn("决定：总悟", record)
+        self.assertIn("决定：测试负责人", record)
         self.assertNotIn("评审记录", draft_studio.export_markdown(model, "brief", threads))
 
     def test_field_labels_for_cli(self) -> None:
