@@ -30,6 +30,9 @@ IMAGE2_SEMANTIC_ROLES = {"scene", "hero", "mechanism", "semantic_icon", "transpa
 VISUAL_ARGUMENT_FIELDS = ("first_glance", "reading_path", "end_focus")
 VISUAL_HAMMER_FIELDS = ("primary_object", "supporting_elements", "orphan_element_check")
 IMAGE2_DECISION_FIELDS = ("decision", "semantic_role", "reason", "html_protected_content")
+# Default page route: a full-page Image2 design base composed with room for the text, HTML layered on top.
+BASE_ROLES = {"scene", "hero"}
+CANVAS = (1920, 1080)
 PRESENTATION_ROUTE_FIELDS = (
     "service_object",
     "use_situation",
@@ -93,7 +96,51 @@ def project_file(project: Path, value: object, required_root: str | None = None)
     return resolved, None
 
 
-def validate_presentation_route(page: dict, scope: str) -> list[str]:
+def owner_exception_ok(page: dict, approvals: dict | None) -> bool:
+    """A page may leave the base-image route only with an Owner approval record naming it."""
+    exception = page.get("route_exception")
+    if not isinstance(exception, dict):
+        return False
+    record_id = str(exception.get("record_id") or "").strip()
+    if not record_id or not str(exception.get("reason") or "").strip():
+        return False
+    if approvals is None:
+        return True
+    return any(
+        isinstance(item, dict) and item.get("approved") is True and str(item.get("record_id") or "") == record_id
+        for item in approvals.values()
+    )
+
+
+def image_size(path: Path) -> tuple[int, int] | None:
+    data = path.read_bytes()
+    if data[:8] == b"\x89PNG\r\n\x1a\n" and data[12:16] == b"IHDR":
+        return int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
+    if data[:2] == b"\xff\xd8":
+        index = 2
+        while index + 9 < len(data):
+            if data[index] != 0xFF:
+                index += 1
+                continue
+            marker = data[index + 1]
+            length = int.from_bytes(data[index + 2:index + 4], "big")
+            if marker in (0xC0, 0xC1, 0xC2):
+                return int.from_bytes(data[index + 7:index + 9], "big"), int.from_bytes(data[index + 5:index + 7], "big")
+            index += 2 + length
+    return None
+
+
+def validate_base_image(path: Path, scope: str) -> list[str]:
+    size = image_size(path)
+    if size is None:
+        return [f"{scope}: design base must be a PNG or JPEG image"]
+    width, height = size
+    if width < CANVAS[0] or height < CANVAS[1] or abs(width / height - 16 / 9) > 0.02:
+        return [f"{scope}: design base is {width}×{height}; it must cover the 16:9 canvas at 1920×1080 or larger"]
+    return []
+
+
+def validate_presentation_route(page: dict, scope: str, approvals: dict | None = None) -> list[str]:
     """Require a page to justify its visual carrier before it can pass review."""
     errors: list[str] = []
     route = page.get("presentation_route")
@@ -185,6 +232,16 @@ def validate_presentation_route(page: dict, scope: str) -> list[str]:
     elif isinstance(image2_decision, dict) and image2_decision.get("decision") != "generate":
         errors.append(f"{scope}: visual assets require Image2 decision generate")
 
+    if visual_mode != "background" and not owner_exception_ok(page, approvals):
+        errors.append(
+            f"{scope}: formal pages use a full-page Image2 design base (visual_mode background) with HTML "
+            "text layered on top; a boxed or inset illustration does not count. Another route needs "
+            "route_exception with an Owner approval record_id; DESIGN.md cannot grant it"
+        )
+    if visual_mode == "background" and isinstance(image2_decision, dict):
+        if str(image2_decision.get("semantic_role") or "") not in BASE_ROLES:
+            errors.append(f"{scope}: a design base is a scene or hero; semantic_role must be one of {sorted(BASE_ROLES)}")
+
     return errors
 
 
@@ -257,7 +314,7 @@ def validate_chapter_report(project: Path, chapter_id: str) -> list[str]:
             errors.append(f"{scope}: unknown template_id {template_id!r}")
         if not str(page.get("core_expression") or "").strip():
             errors.append(f"{scope}: core_expression is required before Image2")
-        errors.extend(validate_presentation_route(page, scope))
+        errors.extend(validate_presentation_route(page, scope, state.get("approvals") or {}))
         if not isinstance(page.get("iterations"), int) or page.get("iterations") < 1:
             errors.append(f"{scope}: iterations must be a positive integer")
 
@@ -297,6 +354,8 @@ def validate_chapter_report(project: Path, chapter_id: str) -> list[str]:
             if prompt_error:
                 errors.append(f"{scope}: prompt_record {prompt_error}")
 
+            if visual_mode == "background" and asset_file:
+                errors.extend(validate_base_image(asset_file, scope))
             if visual_mode == "transparent-png" and asset_file:
                 slot_id = str(visual.get("slot_id") or "").strip()
                 if slot_id not in alpha_slots:

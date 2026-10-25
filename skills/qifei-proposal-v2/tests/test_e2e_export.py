@@ -81,26 +81,24 @@ class EndToEndExportTests(unittest.TestCase):
             },
             "image2_decision": {
                 "decision": "generate",
-                "semantic_role": "semantic_icon",
-                "reason": "使用同一视觉家族的无文字语义资产验证混合导出链路",
+                "semantic_role": "scene",
+                "reason": "整页设计底图验证“底图＋文字层”的导出链路",
                 "visual_family_id": "e2e-visual-family",
-                "semantic_nodes": ["冻结内容"],
-                "text_forbidden": True,
                 "html_protected_content": "冻结文字与页面顺序",
             },
-            "image2_task": "提供无文字语义视觉资产",
+            "image2_task": "整页设计底图，预留文字区",
             "html_task": "承载冻结文字与页面顺序",
             "visual_balance_plan": "主标题优先",
         }
 
     @staticmethod
-    def write_alpha_png(path: Path) -> None:
+    def write_alpha_png(path: Path, width: int = 1, height: int = 1) -> None:
         def chunk(name: bytes, data: bytes) -> bytes:
             checksum = zlib.crc32(name + data) & 0xFFFFFFFF
             return struct.pack(">I", len(data)) + name + data + struct.pack(">I", checksum)
 
-        ihdr = struct.pack(">IIBBBBB", 1, 1, 8, 6, 0, 0, 0)
-        raw = b"\x00\x00\x00\x00\x00"
+        ihdr = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+        raw = (b"\x00" + b"\x00\x00\x00\x00" * width) * height
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(
             b"\x89PNG\r\n\x1a\n"
@@ -122,11 +120,11 @@ class EndToEndExportTests(unittest.TestCase):
         deck["content_freeze_id"] = None
         for slide in deck["slides"]:
             slide["presentation_route"] = self.presentation_route()
-            slide["visual_mode"] = "opaque-module"
+            slide["visual_mode"] = "background"
             slide["visual"] = {"src": "assets/approved/e2e-visual.png"}
         write_json(project / "deck" / "deck-spec.json", deck)
         e2e_visual = "assets/approved/e2e-visual.png"
-        self.write_alpha_png(project / e2e_visual)
+        self.write_alpha_png(project / e2e_visual, 1920, 1080)
         prompt_record = "assets/image2/e2e-visual-prompt.md"
         (project / prompt_record).parent.mkdir(parents=True, exist_ok=True)
         (project / prompt_record).write_text("无文字语义视觉测试资产。", encoding="utf-8")
@@ -137,7 +135,7 @@ class EndToEndExportTests(unittest.TestCase):
                 "path": e2e_visual,
                 "status": "approved",
                 "visual_family_id": "e2e-visual-family",
-                "semantic_role": "semantic_icon",
+                "semantic_role": "scene",
                 "prompt_record": prompt_record,
             }],
         })
@@ -292,7 +290,7 @@ class EndToEndExportTests(unittest.TestCase):
                 "template_id": template_id,
                 "core_expression": "验证冻结内容、浏览器渲染与批准页面一致",
                 "presentation_route": self.presentation_route(),
-                "visual_mode": "opaque-module",
+                "visual_mode": "background",
                 "visual": {
                     "asset_id": "e2e-visual",
                     "asset_path": "assets/approved/e2e-visual.png",
