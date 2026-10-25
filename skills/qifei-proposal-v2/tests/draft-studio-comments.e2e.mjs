@@ -61,7 +61,9 @@ try {
   report.agent_reply_shown = true;
   report.toast = await page.textContent('#toast');
   await page.click('[data-card="C-0001"] [data-card-status="resolved"]');
-  await page.waitForFunction(() => !document.querySelector('mark.cmt-mark[data-thread="C-0001"]'), undefined, {timeout: 5000});
+  await page.waitForSelector('mark.cmt-mark.resolved[data-thread="C-0001"]', {timeout: 5000});
+  report.decision_kept_visible = await page.isVisible('[data-card="C-0001"].collapsed');
+  report.decision_badge = await page.textContent(`#slide-${slideId} .cmt-count.done`);
   const threads = JSON.parse(execFileSync('python3', [studio, 'comments', project, '--json', '--all'], {encoding: 'utf8'}));
   report.status_in_file = threads[0].status;
   report.messages_in_file = threads[0].messages.map(m => m.author);

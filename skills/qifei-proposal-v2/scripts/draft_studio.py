@@ -399,8 +399,27 @@ def normalize_markdown(md: str) -> str:
     return "\n".join(out)
 
 
-def export_markdown(model: dict[str, Any], profile: str = "full") -> str:
+def review_record(threads: list[dict[str, Any]]) -> str:
+    """Comment threads of one page as a readable decision record."""
+    lines = []
+    for thread in threads:
+        state = "已决定" if thread.get("status") == "resolved" else "未解决"
+        lines.append(f"- **{thread['id']}｜{state}**　“{thread['quote']}”（{field_label(thread.get('field', ''))}）")
+        for message in thread.get("messages", []):
+            text = " ".join(str(message.get("text", "")).split())
+            lines.append(f"  - {message.get('author', '')} {str(message.get('at', ''))[:16].replace('T', ' ')}：{text}")
+        if thread.get("status") == "resolved":
+            lines.append(f"  - 决定：{thread.get('status_by', '')} {str(thread.get('status_at', ''))[:16].replace('T', ' ')}")
+    return "\n".join(lines)
+
+
+def export_markdown(model: dict[str, Any], profile: str = "full", threads: list[dict[str, Any]] | None = None) -> str:
+    """Full profile also carries each page's comment threads as a review record."""
     keep = None if profile == "full" else BRIEF_FIELDS
+    by_slide: dict[str, list[dict[str, Any]]] = {}
+    if profile == "full":
+        for thread in threads or []:
+            by_slide.setdefault(thread.get("slide", ""), []).append(thread)
     parts = [f"# {model['title']}"]
     meta = model.get("meta") or {}
     if meta.get("revision") is not None or meta.get("sha256"):
@@ -418,6 +437,9 @@ def export_markdown(model: dict[str, Any], profile: str = "full") -> str:
                     continue
                 parts.append(f"#### {field['name']}")
                 parts.append(normalize_markdown(field["md"]))
+            if by_slide.get(slide["id"]):
+                parts.append("#### 评审记录")
+                parts.append(review_record(by_slide[slide["id"]]))
     return tidy("\n\n".join(parts)) + "\n"
 
 
@@ -753,14 +775,14 @@ def script_json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False).replace("</", "<\\/")
 
 
-def render_html(model: dict[str, Any], live: dict[str, Any] | None = None) -> str:
+def render_html(model: dict[str, Any], live: dict[str, Any] | None = None, threads: list[dict[str, Any]] | None = None) -> str:
     template = (ASSET_ROOT / "studio.html").read_text(encoding="utf-8")
     replacements = {
         "{{TITLE}}": model["title"].replace("<", "&lt;"),
         "{{CSS}}": (ASSET_ROOT / "studio.css").read_text(encoding="utf-8"),
         "{{JS}}": (ASSET_ROOT / "studio.js").read_text(encoding="utf-8").replace("</script", "<\\/script"),
         "{{MODEL_JSON}}": script_json(model),
-        "{{MD_JSON}}": script_json({"full": export_markdown(model, "full"), "brief": export_markdown(model, "brief")}),
+        "{{MD_JSON}}": script_json({"full": export_markdown(model, "full", threads), "brief": export_markdown(model, "brief")}),
         "{{LIVE_JSON}}": script_json(live),
     }
     for key, value in replacements.items():
@@ -843,14 +865,17 @@ class StudioHandler(BaseHTTPRequestHandler):
             return self._json(403, {"error": "host not allowed"})
         if url.path == "/":
             live = {"token": self.server.token}
-            return self._send(200, render_html(self.server.store.model(), live).encode("utf-8"), "text/html; charset=utf-8")
+            html = render_html(self.server.store.model(), live, self.server.comments.load()["threads"])
+            return self._send(200, html.encode("utf-8"), "text/html; charset=utf-8")
         if not self._token_ok(query):
             return self._json(403, {"error": "missing studio token"})
         if url.path == "/api/model":
             return self._json(200, self.server.store.model())
         if url.path == "/api/markdown":
             profile = (query.get("profile") or ["full"])[0]
-            text = export_markdown(self.server.store.model(), "brief" if profile == "brief" else "full")
+            text = export_markdown(
+                self.server.store.model(), "brief" if profile == "brief" else "full", self.server.comments.load()["threads"]
+            )
             return self._send(200, text.encode("utf-8"), "text/markdown; charset=utf-8")
         if url.path == "/api/revisions":
             return self._json(200, self.server.store.entries())
@@ -1016,15 +1041,16 @@ def main() -> int:
             print("No open comment threads.")
         return 0
     model = build_model(project, args.draft)
+    threads = CommentStore(load_project(project, args.draft)[0]).load()["threads"]
     slide_count = sum(len(chapter["slides"]) for chapter in model["chapters"])
     if args.command == "render":
         out = Path(args.out)
         out = out if out.is_absolute() else project / out
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(render_html(model), encoding="utf-8")
+        out.write_text(render_html(model, threads=threads), encoding="utf-8")
         print(f"Rendered {len(model['chapters'])} chapter(s), {slide_count} page(s) -> {out}")
     else:
-        text = export_markdown(model, args.profile)
+        text = export_markdown(model, args.profile, threads)
         if args.out:
             out = Path(args.out)
             out = out if out.is_absolute() else project / out

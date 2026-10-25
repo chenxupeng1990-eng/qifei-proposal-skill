@@ -251,6 +251,19 @@ class CommentStoreTests(unittest.TestCase):
         with self.assertRaises(draft_studio.EditError):
             self.store.set_status("C-0001", "deleted", "x")
 
+    def test_full_export_keeps_decisions_brief_does_not(self) -> None:
+        self.store.create({"slide": "P01", "field": "P01:core", "quote": "长期经营", "text": "这是证明还是方向？"}, 1)
+        self.store.reply("C-0001", "已改成证据", "Agent")
+        self.store.set_status("C-0001", "resolved", "总悟")
+        model = draft_studio.parse_draft(FEISHU_DRAFT)
+        threads = self.store.load()["threads"]
+        full = draft_studio.export_markdown(model, "full", threads)
+        record = full.split("#### 评审记录", 1)[1].split("###", 1)[0]
+        self.assertIn("C-0001｜已决定", record)
+        self.assertIn("Agent", record)
+        self.assertIn("决定：总悟", record)
+        self.assertNotIn("评审记录", draft_studio.export_markdown(model, "brief", threads))
+
     def test_field_labels_for_cli(self) -> None:
         self.assertEqual(draft_studio.field_label("P09:core"), "核心内容")
         self.assertEqual(draft_studio.field_label("title:P09"), "标题")
@@ -312,6 +325,8 @@ class StudioBrowserTests(StudioServerCase):
         self.assertTrue(report["card_aligned"])
         self.assertTrue(report["agent_reply_shown"])
         self.assertEqual(report["status_in_file"], "resolved")
+        self.assertTrue(report["decision_kept_visible"])
+        self.assertEqual(report["decision_badge"].strip(), "1")
         self.assertEqual(report["messages_in_file"], ["Owner", "Agent"])
         self.assertEqual(report["script_errors"], [])
 

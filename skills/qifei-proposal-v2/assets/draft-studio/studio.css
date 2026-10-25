@@ -214,7 +214,9 @@ body.rail-open .layout { grid-template-columns: 290px minmax(0, 1fr) 340px; }
 .rail { border-left: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 60%, var(--surface)); min-width: 0; }
 .rail-head { position: sticky; top: 64px; z-index: 5; display: flex; align-items: center; gap: 8px; padding: 12px 14px; background: inherit; border-bottom: 1px solid var(--line); font-size: 12.5px; }
 .rail-title { font-weight: 650; font-size: 14px; flex: 1; }
-.rail-opt { color: var(--muted); display: flex; align-items: center; gap: 4px; cursor: pointer; }
+.rail-filter { display: flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 1px; }
+.rail-filter button { border: 0; background: none; color: var(--muted); font-size: 11.5px; padding: 2px 7px; border-radius: 6px; white-space: nowrap; }
+.rail-filter button.active { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgb(0 0 0 / .08); }
 .rail-author { border: 0; background: none; color: var(--muted); font-size: 12px; padding: 0; }
 .rail-close { border: 0; background: none; color: var(--muted); font-size: 16px; padding: 0 2px; }
 .rail-cards { position: relative; padding: 0 12px; }
@@ -222,7 +224,12 @@ body.rail-open .layout { grid-template-columns: 290px minmax(0, 1fr) 340px; }
 .card { position: absolute; left: 12px; right: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px 12px; box-shadow: 0 1px 2px rgb(0 0 0 / .04); transition: top .18s ease, box-shadow .15s; font-size: 13px; cursor: pointer; }
 .card.active { box-shadow: 0 6px 22px rgb(0 0 0 / .1); border-color: var(--line-strong); cursor: default; z-index: 2; }
 .card.active::before { content: ""; position: absolute; left: -1px; right: -1px; top: -1px; height: 4px; border-radius: 12px 12px 0 0; background: #f2b632; }
-.card.is-resolved { opacity: .72; }
+.card.is-resolved { border-color: color-mix(in srgb, var(--ok) 30%, var(--line)); }
+.card.collapsed { padding: 9px 12px; background: color-mix(in srgb, var(--ok-soft) 45%, var(--surface)); }
+.card.collapsed .card-top { gap: 6px; }
+.decided { color: var(--ok); font-weight: 600; font-size: 11.5px; white-space: nowrap; }
+.decision-line { font-size: 12.5px; line-height: 1.55; color: var(--ink-2); margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.decision-line b { font-weight: 600; margin-right: 6px; color: var(--ink); }
 .card-top { display: flex; align-items: center; gap: 8px; }
 .card-quote { flex: 1; min-width: 0; color: var(--muted); border-left: 3px solid var(--line-strong); padding-left: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12.5px; }
 .card-tools { display: flex; gap: 2px; border: 1px solid var(--line); border-radius: 999px; padding: 1px 4px; }
@@ -243,11 +250,14 @@ body.rail-open .layout { grid-template-columns: 290px minmax(0, 1fr) 340px; }
 .composer-bar { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 mark.cmt-mark { background: color-mix(in srgb, #f2b632 26%, transparent); border-bottom: 2px solid #f2b632; color: inherit; border-radius: 0; padding: 0; cursor: pointer; }
 mark.cmt-mark.active, mark.cmt-mark.pending { background: color-mix(in srgb, #f2b632 55%, transparent); }
-mark.cmt-mark.resolved { background: transparent; border-bottom: 2px dotted var(--line-strong); }
+mark.cmt-mark.resolved { background: transparent; border-bottom: 2px dotted var(--ok); }
+mark.cmt-mark.resolved.active { background: var(--ok-soft); }
 .sel-comment { position: fixed; z-index: 40; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); border-radius: 9px; padding: 5px 12px; font-size: 13px; font-weight: 600; box-shadow: 0 6px 18px rgb(0 0 0 / .14); }
 .sel-comment::before { content: "💬 "; }
 .cmt-count { flex: none; align-self: center; border: 0; background: #fbecc4; color: #8a5a00; border-radius: 999px; font-size: 11px; font-weight: 650; padding: 2px 8px; line-height: 1.4; }
 .cmt-count::before { content: "💬 "; font-size: 10px; }
+.cmt-count.done { background: var(--ok-soft); color: var(--ok); }
+.cmt-count.done::before { content: "✓ "; }
 .toc-slide .cmt-count { margin-left: auto; padding: 0 6px; }
 .rail-toggle, .btn { white-space: nowrap; }
 .topbar-tools { flex: none; }

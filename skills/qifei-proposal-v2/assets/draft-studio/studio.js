@@ -502,7 +502,9 @@
   const rail = document.getElementById("rail");
   const railCards = document.getElementById("rail-cards");
   const selButton = document.getElementById("sel-comment");
-  const showResolved = () => document.getElementById("show-resolved").checked;
+  // Decided threads stay visible by default: they are the record of why the draft changed.
+  let filterMode = "all";
+  try { filterMode = localStorage.getItem("draft-studio-filter") || "all"; } catch (_) { /* default */ }
   const listMode = () => window.innerWidth < 1180;
 
   async function api(path, body) {
@@ -586,21 +588,32 @@
     document.querySelectorAll(".cmt-count").forEach((el) => el.remove());
   }
 
-  const visibleThreads = () => comments.threads.filter((t) => t.status === "open" || showResolved());
+  const visibleThreads = () => comments.threads.filter((t) => filterMode === "all" || t.status === filterMode);
 
   function applyComments() {
     if (!live) return;
     clearMarks();
     const open = comments.threads.filter((t) => t.status === "open");
-    document.getElementById("rail-title").textContent = `评论（${open.length}）`;
+    const decided = comments.threads.length - open.length;
+    document.getElementById("rail-title").textContent = `评论 ${open.length}${decided ? ` · 已决定 ${decided}` : ""}`;
     document.getElementById("rail-toggle").textContent = `评论 ${open.length}`;
+    document.querySelectorAll("#rail-filter button").forEach((b) => b.classList.toggle("active", b.dataset.filter === filterMode));
     const perSlide = {};
-    open.forEach((t) => { perSlide[t.slide] = (perSlide[t.slide] || 0) + 1; });
-    Object.entries(perSlide).forEach(([id, n]) => {
+    comments.threads.forEach((t) => {
+      const c = perSlide[t.slide] || (perSlide[t.slide] = { open: 0, done: 0 });
+      t.status === "open" ? c.open++ : c.done++;
+    });
+    Object.entries(perSlide).forEach(([id, c]) => {
       const head = document.querySelector(`#${CSS.escape(anchor(id))} .slide-head`);
-      if (head) head.insertAdjacentHTML("beforeend", `<button type="button" class="cmt-count" data-goto-slide="${id}" title="本页未解决评论">${n}</button>`);
       const tocLink = document.querySelector(`.toc-slide[data-slide="${CSS.escape(id)}"]`);
-      if (tocLink) tocLink.insertAdjacentHTML("beforeend", `<span class="cmt-count">${n}</span>`);
+      if (c.open) {
+        if (head) head.insertAdjacentHTML("beforeend", `<button type="button" class="cmt-count" data-goto-slide="${id}" title="本页未解决评论">${c.open}</button>`);
+        if (tocLink) tocLink.insertAdjacentHTML("beforeend", `<span class="cmt-count">${c.open}</span>`);
+      }
+      if (c.done) {
+        if (head) head.insertAdjacentHTML("beforeend", `<button type="button" class="cmt-count done" data-goto-slide="${id}" title="本页已决定的意见">${c.done}</button>`);
+        if (tocLink && !c.open) tocLink.insertAdjacentHTML("beforeend", `<span class="cmt-count done">${c.done}</span>`);
+      }
     });
     for (const thread of visibleThreads()) {
       thread._marks = [];
@@ -621,6 +634,17 @@
 
   function cardHtml(thread) {
     const orphan = !thread._marks || !thread._marks.length;
+    if (thread.status === "resolved" && thread.id !== activeThread) {
+      // Collapsed decision record: the question and the final word, one line each.
+      const first = thread.messages[0];
+      const last = thread.messages[thread.messages.length - 1];
+      const line = (m) => `<div class="decision-line"><b>${esc(m.author)}</b>${esc(m.text).replace(/\n/g, " ")}</div>`;
+      return `<div class="card is-resolved collapsed" data-card="${thread.id}">
+        <div class="card-top"><span class="decided">✓ 已决定</span><span class="card-quote" title="${esc(thread.quote)}">${esc(thread.quote)}</span></div>
+        ${line(first)}${thread.messages.length > 1 ? line(last) : ""}
+        <div class="card-meta">${esc(thread.slide)} · ${thread.id} · ${esc(thread.status_by || "")} ${fmtTime(thread.status_at)} 决定 · ${thread.messages.length} 条${orphan ? ' · <span class="warn">原文已修改</span>' : ""}</div>
+      </div>`;
+    }
     const msgs = thread.messages.map((m) => `
       <div class="msg">${avatar(m.author)}<div class="msg-main"><div class="msg-head"><b>${esc(m.author)}</b><span>${fmtTime(m.at)}</span></div><div class="msg-text">${esc(m.text).replace(/\n/g, "<br>")}</div></div></div>`).join("");
     const resolved = thread.status === "resolved";
@@ -633,7 +657,7 @@
           <button type="button" data-card-status="${resolved ? "open" : "resolved"}" title="${resolved ? "重新打开" : "解决"}">${resolved ? "↺" : "✓"}</button>
         </span>
       </div>
-      <div class="card-meta">${esc(thread.slide)} · ${thread.id}${orphan ? ' · <span class="warn">原文已修改，找不到引用位置</span>' : ""}${resolved ? ` · 已由 ${esc(thread.status_by || "")} 解决` : ""}</div>
+      <div class="card-meta">${esc(thread.slide)} · ${thread.id}${orphan ? ' · <span class="warn">原文已修改，找不到引用位置</span>' : ""}${resolved ? ` · <span class="decided">✓ ${esc(thread.status_by || "")} ${fmtTime(thread.status_at)} 决定</span>` : ""}</div>
       ${msgs}
       <textarea class="reply" rows="1" placeholder="回复（Enter 发送，Shift+Enter 换行）"></textarea>
     </div>`;
@@ -647,7 +671,7 @@
     };
     threads.sort((a, b) => order(a) - order(b));
     railCards.innerHTML = (composer ? composerHtml() : "") + threads.map(cardHtml).join("") +
-      (threads.length || composer ? "" : `<div class="rail-empty">选中正文里的文字，就可以在这里加评论。</div>`);
+      (threads.length || composer ? "" : `<div class="rail-empty">${filterMode === "resolved" ? "还没有已决定的意见。" : "选中正文里的文字，就可以在这里加评论。"}</div>`);
     if (composer) {
       const box = railCards.querySelector(".composer textarea");
       box.value = composer.text || "";
@@ -701,9 +725,12 @@
   }
 
   function activate(id, scroll) {
+    const wasCollapsed = !!railCards.querySelector(`.card.collapsed[data-card="${CSS.escape(id)}"]`);
+    const leavingResolved = activeThread && comments.threads.some((t) => t.id === activeThread && t.status === "resolved");
     activeThread = id;
     document.querySelectorAll("mark.cmt-mark").forEach((m) => m.classList.toggle("active", m.dataset.thread === id));
-    railCards.querySelectorAll(".card").forEach((c) => c.classList.toggle("active", c.dataset.card === id));
+    if (wasCollapsed || leavingResolved) renderCards();
+    else railCards.querySelectorAll(".card").forEach((c) => c.classList.toggle("active", c.dataset.card === id));
     if (rail.hidden) toggleRail(true);
     layoutCards();
     if (scroll) {
@@ -806,6 +833,7 @@
     try {
       await api("/api/comments/status", { id, status, author });
       if (status === "resolved") activeThread = null;
+      if (status === "resolved" && filterMode === "open") toast("已决定的意见在“全部”或“已决定”里可以回看");
       await loadComments(false);
       toast(status === "resolved" ? `${id} 已解决` : `${id} 已重新打开`, "ok");
     } catch (err) { toast(err.message); }
@@ -825,7 +853,13 @@
     window.addEventListener("scroll", () => { if (!selButton.hidden) updateSelButton(); }, { passive: true });
     selButton.addEventListener("mousedown", (e) => e.preventDefault());
     selButton.addEventListener("click", () => { if (selButton._target) startComposer(selButton._target); });
-    document.getElementById("show-resolved").addEventListener("change", applyComments);
+    document.getElementById("rail-filter").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-filter]");
+      if (!b) return;
+      filterMode = b.dataset.filter;
+      try { localStorage.setItem("draft-studio-filter", filterMode); } catch (_) { /* optional */ }
+      applyComments();
+    });
     document.getElementById("rail-author").addEventListener("click", () => {
       const name = window.prompt("评论署名", author);
       if (name && name.trim()) {
@@ -840,7 +874,8 @@
       if (mark) { activate(mark.dataset.thread, false); return; }
       const goto = e.target.closest("[data-goto-slide]");
       if (goto) {
-        const first = comments.threads.find((t) => t.status === "open" && t.slide === goto.dataset.gotoSlide);
+        const mine = comments.threads.filter((t) => t.slide === goto.dataset.gotoSlide);
+        const first = mine.find((t) => t.status === "open") || mine[0];
         if (first) activate(first.id, true);
         return;
       }
