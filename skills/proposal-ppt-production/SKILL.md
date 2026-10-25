@@ -1,6 +1,6 @@
 ---
 name: proposal-ppt-production
-description: Use when turning a proposal, strategy document, report, or page outline into a high-design 16:9 presentation; when generating slide PNGs or PPTX; or when revising a deck whose narrative, information density, visual carrier, typography, whitespace, product integration, and cross-page consistency must be controlled.
+description: "提案页面生产。内容、页面结构和视觉方向都已经确认后，才把定稿变成 16:9 页面，出评审 PNG 并组装 PPTX。通常由 qifei-proposal-v2 在页面生产阶段调用；单独使用的前提是用户已经给出确认的页面大纲和视觉方向。不做策略和内容决策，也不批准页面；从零开始做提案用 qifei-proposal-v2。"
 ---
 
 # Proposal PPT Production
