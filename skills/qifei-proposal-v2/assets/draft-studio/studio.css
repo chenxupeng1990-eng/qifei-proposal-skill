@@ -280,8 +280,9 @@ mark { background: color-mix(in srgb, var(--warn) 30%, transparent); color: inhe
   .doc-meta { display: none; }
 }
 @media (max-width: 720px) {
-  .topbar-title { display: none; }
+  .topbar-title, .search { display: none; }
   .topbar-tools { flex: 1; justify-content: flex-end; gap: 6px; }
+  .segmented button { padding: 5px 8px; }
 }
 @media (max-width: 620px) {
   .segmented button { padding: 5px 8px; }
