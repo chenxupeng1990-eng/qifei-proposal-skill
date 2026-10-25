@@ -183,7 +183,8 @@ class StudioServerCase(unittest.TestCase):
             with urllib.request.urlopen(req, timeout=5) as res:
                 return res.status, json.loads(res.read().decode("utf-8"))
         except urllib.error.HTTPError as error:
-            return error.code, json.loads(error.read().decode("utf-8"))
+            with error:
+                return error.code, json.loads(error.read().decode("utf-8"))
 
 
 
@@ -224,6 +225,63 @@ class StudioServerTests(StudioServerCase):
         self.assertEqual((payload["actor"], payload["slides"]), ("external", ["P02"]))
 
 
+class CommentStoreTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.store = draft_studio.CommentStore(Path(self.tmp.name) / "proposal-draft.md")
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def test_thread_lifecycle(self) -> None:
+        thread = self.store.create({"slide": "P01", "field": "P01:core", "quote": "长期经营", "prefix": "要承担的是", "suffix": "，而不是", "text": "再具体一点", "author": "总悟"}, 3)
+        self.assertEqual((thread["id"], thread["status"], thread["draft_revision"]), ("C-0001", "open", 3))
+        self.store.reply("C-0001", "已补充三年目标", "Agent")
+        self.store.set_status("C-0001", "resolved", "总悟")
+        saved = self.store.load()["threads"][0]
+        self.assertEqual([m["author"] for m in saved["messages"]], ["总悟", "Agent"])
+        self.assertEqual((saved["status"], saved["status_by"]), ("resolved", "总悟"))
+        self.assertEqual(self.store.create({"slide": "P02", "field": "P02:core", "quote": "x", "text": "y"}, 3)["id"], "C-0002")
+
+    def test_invalid_input_is_rejected(self) -> None:
+        with self.assertRaises(draft_studio.EditError):
+            self.store.create({"slide": "P01", "field": "P01:core", "quote": "", "text": "y"}, 1)
+        with self.assertRaises(draft_studio.EditError):
+            self.store.reply("C-9999", "x", "Agent")
+        with self.assertRaises(draft_studio.EditError):
+            self.store.set_status("C-0001", "deleted", "x")
+
+    def test_field_labels_for_cli(self) -> None:
+        self.assertEqual(draft_studio.field_label("P09:core"), "核心内容")
+        self.assertEqual(draft_studio.field_label("title:P09"), "标题")
+        self.assertEqual(draft_studio.field_label("intro:ch01"), "章节说明")
+
+
+class CommentApiTests(StudioServerCase):
+    def test_comment_api_and_live_event(self) -> None:
+        stream = urllib.request.urlopen(urllib.request.Request(f"{self.base}/api/events?token={self.token}"), timeout=10)
+        self.assertEqual(stream.readline().strip(), b": connected")
+        status, created = self.request("/api/comments", {"slide": "P03", "field": "P03:core", "quote": "内容即货架", "text": "改成更口语"})
+        self.assertEqual(status, 200, created)
+        self.assertEqual(created["thread"]["draft_revision"], 0)
+        subprocess.run([sys.executable, str(SCRIPTS / "draft_studio.py"), "reply", str(self.project), "C-0001", "已改"], check=True, capture_output=True)
+        events = []
+        deadline = time.time() + 8
+        while time.time() < deadline and len(events) < 2:
+            line = stream.readline().decode("utf-8").strip()
+            if line.startswith("event:"):
+                events.append(line)
+        stream.close()
+        self.assertEqual(events, ["event: comments", "event: comments"])
+        status, data = self.request("/api/comments")
+        self.assertEqual([m["text"] for m in data["threads"][0]["messages"]], ["改成更口语", "已改"])
+        self.assertEqual(self.request("/api/comments/status", {"id": "C-0001", "status": "resolved"})[0], 200)
+        self.assertEqual(self.request("/api/comments/reply", {"id": "C-0404", "text": "x"})[0], 400)
+        self.assertEqual(self.request("/api/comments", {"quote": "x", "text": "y"}, token=None)[0], 403)
+        listed = subprocess.run([sys.executable, str(SCRIPTS / "draft_studio.py"), "comments", str(self.project)], capture_output=True, text=True, check=True)
+        self.assertIn("No open comment threads.", listed.stdout)
+
+
 @unittest.skipUnless(
     shutil.which("node") and (SKILL_ROOT / "node_modules" / "playwright-core").is_dir(),
     "node runtime dependencies are not installed",
@@ -239,6 +297,22 @@ class StudioBrowserTests(StudioServerCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         report = json.loads(result.stdout)
         self.assertTrue(report["saved_in_file"] and report["saved_in_page"] and report["outside_change_rendered"])
+        self.assertEqual(report["script_errors"], [])
+
+    def test_select_text_comment_reply_and_resolve(self) -> None:
+        result = subprocess.run(
+            ["node", str(Path(__file__).with_name("draft-studio-comments.e2e.mjs")), self.base + "/", str(self.project), "P01", "core", "长期经营"],
+            cwd=SKILL_ROOT, capture_output=True, text=True, check=False, timeout=60,
+        )
+        if result.returncode == 3:
+            self.skipTest("no Chromium-based browser available")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        report = json.loads(result.stdout)
+        self.assertEqual(report["highlight_text"], "长期经营")
+        self.assertTrue(report["card_aligned"])
+        self.assertTrue(report["agent_reply_shown"])
+        self.assertEqual(report["status_in_file"], "resolved")
+        self.assertEqual(report["messages_in_file"], ["Owner", "Agent"])
         self.assertEqual(report["script_errors"], [])
 
 

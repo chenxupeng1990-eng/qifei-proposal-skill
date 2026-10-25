@@ -646,6 +646,107 @@ class DraftStore:
             return self._record(text, "external", changed_slides(before, text), "draft file changed outside the studio")
 
 
+def field_label(anchor: str) -> str:
+    """'P09:core' -> '核心内容'; 'title:P09' -> '标题'; 'intro:ch01' -> '章节说明'."""
+    head, _, tail = anchor.partition(":")
+    if head == "title":
+        return "标题"
+    if head == "intro":
+        return "章节说明"
+    if head == "body":
+        return "整页"
+    return FIELD_NAMES.get(tail, anchor)
+
+
+class CommentStore:
+    """Comment threads anchored to quoted text in a page field, kept beside the draft.
+
+    People and agents share one file, so an agent can read open threads and reply
+    by writing `comments.json`; the studio picks the change up like a draft edit.
+    """
+
+    MAX_TEXT = 4000
+
+    def __init__(self, draft_path: Path) -> None:
+        self.path = draft_path.parent / "comments.json"
+        self.lock = threading.RLock()
+
+    def load(self) -> dict[str, Any]:
+        if not self.path.is_file():
+            return {"threads": []}
+        return json.loads(self.path.read_text(encoding="utf-8") or '{"threads": []}')
+
+    def digest(self) -> str | None:
+        return hashlib.sha256(self.path.read_bytes()).hexdigest() if self.path.is_file() else None
+
+    def _write(self, data: dict[str, Any]) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(prefix=".comments-", suffix=".json", dir=self.path.parent)
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(data, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+        os.replace(tmp, self.path)
+
+    @staticmethod
+    def _now() -> str:
+        return dt.datetime.now().astimezone().isoformat(timespec="seconds")
+
+    def _text(self, value: Any, name: str) -> str:
+        text = str(value or "").strip()
+        if not text:
+            raise EditError(f"{name} cannot be empty")
+        if len(text) > self.MAX_TEXT:
+            raise EditError(f"{name} is longer than {self.MAX_TEXT} characters")
+        return text
+
+    def _find(self, data: dict[str, Any], thread_id: str) -> dict[str, Any]:
+        for thread in data["threads"]:
+            if thread["id"] == thread_id:
+                return thread
+        raise EditError(f"unknown comment thread {thread_id}")
+
+    def create(self, payload: dict[str, Any], revision: int | None) -> dict[str, Any]:
+        with self.lock:
+            data = self.load()
+            number = max((int(t["id"].split("-")[1]) for t in data["threads"]), default=0) + 1
+            author = self._text(payload.get("author") or "Owner", "author")[:40]
+            thread = {
+                "id": f"C-{number:04d}",
+                "slide": str(payload.get("slide") or ""),
+                "field": str(payload.get("field") or ""),
+                "quote": self._text(payload.get("quote"), "quote")[:500],
+                "prefix": str(payload.get("prefix") or "")[-40:],
+                "suffix": str(payload.get("suffix") or "")[:40],
+                "status": "open",
+                "created_at": self._now(),
+                "draft_revision": revision,
+                "messages": [{"author": author, "at": self._now(), "text": self._text(payload.get("text"), "comment")}],
+            }
+            data["threads"].append(thread)
+            self._write(data)
+            return thread
+
+    def reply(self, thread_id: str, text: str, author: str) -> dict[str, Any]:
+        with self.lock:
+            data = self.load()
+            thread = self._find(data, thread_id)
+            thread["messages"].append({"author": self._text(author or "Owner", "author")[:40], "at": self._now(), "text": self._text(text, "reply")})
+            self._write(data)
+            return thread
+
+    def set_status(self, thread_id: str, status: str, author: str) -> dict[str, Any]:
+        if status not in {"open", "resolved"}:
+            raise EditError("status must be open or resolved")
+        with self.lock:
+            data = self.load()
+            thread = self._find(data, thread_id)
+            thread["status"] = status
+            thread["status_by"] = (author or "Owner")[:40]
+            thread["status_at"] = self._now()
+            self._write(data)
+            return thread
+
+
 # ---------- Rendering ----------
 
 def script_json(value: Any) -> str:
@@ -675,6 +776,8 @@ class StudioServer(ThreadingHTTPServer):
     def __init__(self, address: tuple[str, int], store: DraftStore) -> None:
         super().__init__(address, StudioHandler)
         self.store = store
+        self.comments = CommentStore(store.draft_path)
+        self.comments_digest = self.comments.digest()
         self.token = secrets.token_urlsafe(18)
         self.changed = threading.Condition()
         self.latest: dict[str, Any] = {"revision": store.revision, "sha256": store.last_sha(), "slides": []}
@@ -682,17 +785,28 @@ class StudioServer(ThreadingHTTPServer):
 
     def publish(self, entry: dict[str, Any]) -> None:
         with self.changed:
-            self.latest = {k: entry[k] for k in ("revision", "sha256", "slides", "actor") if k in entry}
+            self.latest = {
+                **{k: entry[k] for k in ("revision", "sha256", "slides", "actor") if k in entry},
+                "comments": self.latest.get("comments"),
+            }
+            self.changed.notify_all()
+
+    def publish_comments(self) -> None:
+        with self.changed:
+            self.comments_digest = self.comments.digest()
+            self.latest = {**self.latest, "comments": self.comments_digest}
             self.changed.notify_all()
 
     def watch(self, interval: float = 0.5) -> None:
         while not self.stopping.wait(interval):
             try:
                 entry = self.store.sync_external()
+                if entry:
+                    self.publish(entry)
+                if self.comments.digest() != self.comments_digest:
+                    self.publish_comments()
             except (OSError, ValueError):
                 continue
-            if entry:
-                self.publish(entry)
 
 
 class StudioHandler(BaseHTTPRequestHandler):
@@ -740,6 +854,8 @@ class StudioHandler(BaseHTTPRequestHandler):
             return self._send(200, text.encode("utf-8"), "text/markdown; charset=utf-8")
         if url.path == "/api/revisions":
             return self._json(200, self.server.store.entries())
+        if url.path == "/api/comments":
+            return self._json(200, self.server.comments.load())
         if url.path == "/api/events":
             return self._events()
         return self._json(404, {"error": "not found"})
@@ -748,6 +864,8 @@ class StudioHandler(BaseHTTPRequestHandler):
         url = urlparse(self.path)
         if not self._host_ok() or not self._token_ok({}):
             return self._json(403, {"error": "forbidden"})
+        if url.path.startswith("/api/comments"):
+            return self._comment_post(url.path)
         if url.path != "/api/save":
             return self._json(404, {"error": "not found"})
         try:
@@ -762,6 +880,24 @@ class StudioHandler(BaseHTTPRequestHandler):
             self.server.publish(entry)
         return self._json(200, {"entry": entry, "model": self.server.store.model()})
 
+    def _comment_post(self, path: str) -> None:
+        comments = self.server.comments
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+            payload = json.loads(self.rfile.read(length).decode("utf-8"))
+            if path == "/api/comments":
+                thread = comments.create(payload, self.server.store.revision)
+            elif path == "/api/comments/reply":
+                thread = comments.reply(str(payload["id"]), payload.get("text", ""), payload.get("author", ""))
+            elif path == "/api/comments/status":
+                thread = comments.set_status(str(payload["id"]), str(payload.get("status")), payload.get("author", ""))
+            else:
+                return self._json(404, {"error": "not found"})
+        except (EditError, KeyError, json.JSONDecodeError, ValueError) as error:
+            return self._json(400, {"error": str(error)})
+        self.server.publish_comments()
+        return self._json(200, {"thread": thread, "comments": comments.load()})
+
     def _events(self) -> None:
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream; charset=utf-8")
@@ -769,6 +905,7 @@ class StudioHandler(BaseHTTPRequestHandler):
         self.send_header("Connection", "keep-alive")
         self.end_headers()
         seen = self.server.latest.get("sha256")
+        seen_comments = self.server.comments_digest
         try:
             self.wfile.write(b": connected\n\n")
             self.wfile.flush()
@@ -776,11 +913,17 @@ class StudioHandler(BaseHTTPRequestHandler):
                 with self.server.changed:
                     self.server.changed.wait(timeout=15)
                     latest = dict(self.server.latest)
+                sent = False
                 if latest.get("sha256") != seen:
                     seen = latest.get("sha256")
                     data = json.dumps(latest, ensure_ascii=False)
                     self.wfile.write(f"event: revision\ndata: {data}\n\n".encode("utf-8"))
-                else:
+                    sent = True
+                if latest.get("comments") and latest.get("comments") != seen_comments:
+                    seen_comments = latest.get("comments")
+                    self.wfile.write(f"event: comments\ndata: {json.dumps({'digest': seen_comments})}\n\n".encode("utf-8"))
+                    sent = True
+                if not sent:
                     self.wfile.write(b": ping\n\n")
                 self.wfile.flush()
         except (BrokenPipeError, ConnectionResetError):
@@ -838,11 +981,40 @@ def main() -> int:
     studio.add_argument("--host", default="127.0.0.1")
     studio.add_argument("--port", type=int, default=8765)
     studio.add_argument("--open", action="store_true", help="open the studio in the default browser")
+    comments = sub.add_parser("comments", help="list comment threads (open ones by default)")
+    comments.add_argument("project")
+    comments.add_argument("--draft")
+    comments.add_argument("--all", action="store_true", help="include resolved threads")
+    comments.add_argument("--json", action="store_true")
+    reply = sub.add_parser("reply", help="reply to a comment thread as an agent")
+    reply.add_argument("project")
+    reply.add_argument("thread")
+    reply.add_argument("text")
+    reply.add_argument("--draft")
+    reply.add_argument("--author", default="Agent")
     args = parser.parse_args()
 
     project = Path(args.project).expanduser().resolve()
     if args.command == "serve":
         return serve(project, args.draft, args.host, args.port, args.open)
+    if args.command in {"comments", "reply"}:
+        draft_path, _ = load_project(project, args.draft)
+        store = CommentStore(draft_path)
+        if args.command == "reply":
+            thread = store.reply(args.thread, args.text, args.author)
+            print(f"Replied to {thread['id']} ({thread['slide']} {thread['field']}); the Owner decides whether to resolve it.")
+            return 0
+        threads = [t for t in store.load()["threads"] if args.all or t["status"] == "open"]
+        if args.json:
+            print(json.dumps(threads, ensure_ascii=False, indent=2))
+            return 0
+        for thread in threads:
+            print(f"{thread['id']} [{thread['status']}] {thread['slide']} {field_label(thread['field'])}｜“{thread['quote']}”")
+            for message in thread["messages"]:
+                print(f"    {message['author']} {message['at'][:16].replace('T', ' ')}：{message['text']}")
+        if not threads:
+            print("No open comment threads.")
+        return 0
     model = build_model(project, args.draft)
     slide_count = sum(len(chapter["slides"]) for chapter in model["chapters"])
     if args.command == "render":

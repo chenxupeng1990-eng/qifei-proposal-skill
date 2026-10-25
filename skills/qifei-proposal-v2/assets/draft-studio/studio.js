@@ -257,6 +257,7 @@
   function setView(view) {
     document.body.classList.remove("view-full", "view-client", "view-chain");
     document.body.classList.add(`view-${view}`);
+    if (typeof layoutCards === "function" && live) requestAnimationFrame(() => layoutCards());
     document.querySelectorAll(".segmented button").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
     try { localStorage.setItem("draft-studio-view", view); } catch (_) { /* storage may be unavailable */ }
   }
@@ -338,6 +339,7 @@
       const el = document.getElementById(anchorId);
       if (el) window.scrollBy({ top: el.getBoundingClientRect().top - offset, behavior: "instant" });
     }
+    applyComments();
     flashIds.forEach((id) => {
       const el = document.getElementById(anchor(id));
       if (el) { el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); }
@@ -411,6 +413,7 @@
     editing.form.remove();
     editing.host.hidden = false;
     editing = null;
+    applyComments();
     if (pendingRemote) { const next = pendingRemote; pendingRemote = null; applyRemote(next); }
   }
 
@@ -476,6 +479,7 @@
     source.addEventListener("open", () => state("实时"));
     source.addEventListener("error", () => state("重连中…", "off"));
     source.addEventListener("revision", (e) => applyRemote(JSON.parse(e.data)));
+    source.addEventListener("comments", () => { if (!composer) loadComments(true); });
   }
 
   if (live) {
@@ -489,12 +493,399 @@
     window.addEventListener("beforeunload", (e) => { if (editing && editing.textarea.value !== editing.original) e.preventDefault(); });
   }
 
+  // ---------- Comments: select text, comment beside it, reply, resolve ----------
+  let comments = { threads: [] };
+  let activeThread = null;
+  let composer = null;
+  let author = "Owner";
+  try { author = localStorage.getItem("draft-studio-author") || "Owner"; } catch (_) { /* default author */ }
+  const rail = document.getElementById("rail");
+  const railCards = document.getElementById("rail-cards");
+  const selButton = document.getElementById("sel-comment");
+  const showResolved = () => document.getElementById("show-resolved").checked;
+  const listMode = () => window.innerWidth < 1180;
+
+  async function api(path, body) {
+    const res = await fetch(path, {
+      method: body ? "POST" : "GET",
+      headers: { "Content-Type": "application/json", "X-Studio-Token": live.token },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "请求失败");
+    return data;
+  }
+
+  async function loadComments(announce) {
+    const before = new Map(comments.threads.map((t) => [t.id, t.messages.length]));
+    comments = await api("/api/comments");
+    if (announce) {
+      for (const t of comments.threads) {
+        const last = t.messages[t.messages.length - 1];
+        const grew = !before.has(t.id) || before.get(t.id) < t.messages.length;
+        if (grew && last && last.author !== author) toast(`${last.author} ${before.has(t.id) ? "回复了" : "评论了"} ${t.slide || ""}`);
+      }
+    }
+    applyComments();
+  }
+
+  function textNodes(root) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: (n) => n.parentElement.closest(".edit-btn, .editor, .cmt-count") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT,
+    });
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    return nodes;
+  }
+
+  function wrapRange(root, start, end, className, threadId) {
+    const marks = [];
+    let pos = 0;
+    for (const node of textNodes(root)) {
+      const len = node.nodeValue.length;
+      const from = Math.max(start, pos), to = Math.min(end, pos + len);
+      if (from < to) {
+        let target = node;
+        if (from > pos) target = target.splitText(from - pos);
+        if (to < pos + len) target.splitText(to - from);
+        const mark = document.createElement("mark");
+        mark.className = className;
+        if (threadId) mark.dataset.thread = threadId;
+        target.parentNode.insertBefore(mark, target);
+        mark.appendChild(target);
+        marks.push(mark);
+      }
+      pos += len;
+      if (pos >= end) break;
+    }
+    return marks;
+  }
+
+  function locate(root, thread) {
+    const text = textNodes(root).map((n) => n.nodeValue).join("");
+    let best = -1, bestScore = -1, from = 0;
+    while (true) {
+      const i = text.indexOf(thread.quote, from);
+      if (i < 0) break;
+      let score = 0;
+      if (thread.prefix && text.slice(0, i).endsWith(thread.prefix.slice(-12))) score += 2;
+      if (thread.suffix && text.slice(i + thread.quote.length).startsWith(thread.suffix.slice(0, 12))) score += 2;
+      if (score > bestScore) { best = i; bestScore = score; }
+      from = i + 1;
+    }
+    return best;
+  }
+
+  function clearMarks() {
+    document.querySelectorAll("mark.cmt-mark").forEach((m) => {
+      const parent = m.parentNode;
+      while (m.firstChild) parent.insertBefore(m.firstChild, m);
+      m.remove();
+      parent.normalize();
+    });
+    document.querySelectorAll(".cmt-count").forEach((el) => el.remove());
+  }
+
+  const visibleThreads = () => comments.threads.filter((t) => t.status === "open" || showResolved());
+
+  function applyComments() {
+    if (!live) return;
+    clearMarks();
+    const open = comments.threads.filter((t) => t.status === "open");
+    document.getElementById("rail-title").textContent = `评论（${open.length}）`;
+    document.getElementById("rail-toggle").textContent = `评论 ${open.length}`;
+    const perSlide = {};
+    open.forEach((t) => { perSlide[t.slide] = (perSlide[t.slide] || 0) + 1; });
+    Object.entries(perSlide).forEach(([id, n]) => {
+      const head = document.querySelector(`#${CSS.escape(anchor(id))} .slide-head`);
+      if (head) head.insertAdjacentHTML("beforeend", `<button type="button" class="cmt-count" data-goto-slide="${id}" title="本页未解决评论">${n}</button>`);
+      const tocLink = document.querySelector(`.toc-slide[data-slide="${CSS.escape(id)}"]`);
+      if (tocLink) tocLink.insertAdjacentHTML("beforeend", `<span class="cmt-count">${n}</span>`);
+    });
+    for (const thread of visibleThreads()) {
+      thread._marks = [];
+      const root = document.querySelector(`[data-field="${CSS.escape(thread.field)}"]`);
+      if (!root || root.hidden) continue;
+      const at = locate(root, thread);
+      if (at < 0) continue;
+      thread._marks = wrapRange(root, at, at + thread.quote.length, `cmt-mark${thread.status === "resolved" ? " resolved" : ""}`, thread.id);
+    }
+    renderCards();
+  }
+
+  const fmtTime = (iso) => {
+    const d = new Date(iso);
+    return isNaN(d) ? "" : `${d.getMonth() + 1}月${d.getDate()}日 ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  };
+  const avatar = (name) => `<span class="avatar${/agent|claude|codex/i.test(name) ? " agent" : ""}">${esc((name || "?").slice(0, 1).toUpperCase())}</span>`;
+
+  function cardHtml(thread) {
+    const orphan = !thread._marks || !thread._marks.length;
+    const msgs = thread.messages.map((m) => `
+      <div class="msg">${avatar(m.author)}<div class="msg-main"><div class="msg-head"><b>${esc(m.author)}</b><span>${fmtTime(m.at)}</span></div><div class="msg-text">${esc(m.text).replace(/\n/g, "<br>")}</div></div></div>`).join("");
+    const resolved = thread.status === "resolved";
+    return `<div class="card${resolved ? " is-resolved" : ""}${thread.id === activeThread ? " active" : ""}" data-card="${thread.id}">
+      <div class="card-top">
+        <span class="card-quote" title="${esc(thread.quote)}">${esc(thread.quote)}</span>
+        <span class="card-tools">
+          <button type="button" data-card-nav="next" title="下一条">⌄</button>
+          <button type="button" data-card-nav="prev" title="上一条">⌃</button>
+          <button type="button" data-card-status="${resolved ? "open" : "resolved"}" title="${resolved ? "重新打开" : "解决"}">${resolved ? "↺" : "✓"}</button>
+        </span>
+      </div>
+      <div class="card-meta">${esc(thread.slide)} · ${thread.id}${orphan ? ' · <span class="warn">原文已修改，找不到引用位置</span>' : ""}${resolved ? ` · 已由 ${esc(thread.status_by || "")} 解决` : ""}</div>
+      ${msgs}
+      <textarea class="reply" rows="1" placeholder="回复（Enter 发送，Shift+Enter 换行）"></textarea>
+    </div>`;
+  }
+
+  function renderCards() {
+    const threads = visibleThreads();
+    const order = (t) => {
+      const el = (t._marks && t._marks[0]) || document.getElementById(anchor(t.slide));
+      return el ? el.getBoundingClientRect().top + window.scrollY : Number.MAX_SAFE_INTEGER;
+    };
+    threads.sort((a, b) => order(a) - order(b));
+    railCards.innerHTML = (composer ? composerHtml() : "") + threads.map(cardHtml).join("") +
+      (threads.length || composer ? "" : `<div class="rail-empty">选中正文里的文字，就可以在这里加评论。</div>`);
+    if (composer) {
+      const box = railCards.querySelector(".composer textarea");
+      box.value = composer.text || "";
+      box.addEventListener("input", () => { composer.text = box.value; });
+      setTimeout(() => box.focus(), 0);
+    }
+    layoutCards();
+  }
+
+  function composerHtml() {
+    return `<div class="card composer active" data-card="__new">
+      <div class="card-top"><span class="card-quote">${esc(composer.quote)}</span></div>
+      <div class="msg">${avatar(author)}<div class="msg-main"><div class="msg-head"><b>${esc(author)}</b></div>
+      <textarea rows="3" placeholder="写下评论（⌘/Ctrl+Enter 发送，Esc 取消）"></textarea>
+      <div class="composer-bar"><button type="button" class="btn" data-composer="cancel">取消</button><button type="button" class="btn primary" data-composer="send">评论</button></div></div></div>
+    </div>`;
+  }
+
+  function anchorTop(id) {
+    if (id === "__new") return composer && composer.top;
+    const t = comments.threads.find((x) => x.id === id);
+    const el = t && ((t._marks && t._marks[0]) || document.getElementById(anchor(t.slide)));
+    return el ? el.getBoundingClientRect().top + window.scrollY : null;
+  }
+
+  function layoutCards() {
+    if (!live) return;
+    const cards = [...railCards.querySelectorAll(".card")];
+    if (listMode() || rail.hidden) { cards.forEach((c) => { c.style.top = ""; }); railCards.style.height = ""; return; }
+    const base = railCards.getBoundingClientRect().top + window.scrollY;
+    let cursor = 0;
+    const placed = cards.map((card) => ({ card, want: (anchorTop(card.dataset.card) ?? base) - base }))
+      .sort((a, b) => a.want - b.want);
+    const activeIndex = placed.findIndex((p) => p.card.classList.contains("active"));
+    placed.forEach((p) => { p.top = Math.max(p.want, cursor); cursor = p.top + p.card.offsetHeight + 10; });
+    if (activeIndex > 0) {
+      // Keep the active card level with its text; push earlier cards up when they collide.
+      const a = placed[activeIndex];
+      a.top = Math.max(a.want, 0);
+      for (let i = activeIndex - 1; i >= 0; i--) {
+        const next = placed[i + 1];
+        placed[i].top = Math.min(placed[i].top, next.top - placed[i].card.offsetHeight - 10);
+      }
+      for (let i = activeIndex + 1; i < placed.length; i++) {
+        const prev = placed[i - 1];
+        placed[i].top = Math.max(placed[i].want, prev.top + prev.card.offsetHeight + 10);
+      }
+    }
+    placed.forEach((p) => { p.card.style.top = `${p.top}px`; });
+    railCards.style.height = `${Math.max(cursor, ...placed.map((p) => p.top + p.card.offsetHeight)) + 40}px`;
+  }
+
+  function activate(id, scroll) {
+    activeThread = id;
+    document.querySelectorAll("mark.cmt-mark").forEach((m) => m.classList.toggle("active", m.dataset.thread === id));
+    railCards.querySelectorAll(".card").forEach((c) => c.classList.toggle("active", c.dataset.card === id));
+    if (rail.hidden) toggleRail(true);
+    layoutCards();
+    if (scroll) {
+      const t = comments.threads.find((x) => x.id === id);
+      const el = t && ((t._marks && t._marks[0]) || document.getElementById(anchor(t.slide)));
+      if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+      if (listMode()) { const card = railCards.querySelector(`[data-card="${id}"]`); if (card) card.scrollIntoView({ block: "nearest" }); }
+    }
+  }
+
+  function toggleRail(force) {
+    const show = typeof force === "boolean" ? force : rail.hidden;
+    rail.hidden = !show;
+    document.body.classList.toggle("rail-open", show);
+    try { localStorage.setItem("draft-studio-rail", show ? "1" : "0"); } catch (_) { /* optional */ }
+    layoutCards();
+  }
+
+  // Selection → floating "评论" button
+  function selectionTarget() {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
+    const range = sel.getRangeAt(0);
+    const quote = sel.toString().replace(/\s+/g, " ").trim();
+    if (!quote || quote.length > 500) return null;
+    const start = range.startContainer.nodeType === 1 ? range.startContainer : range.startContainer.parentElement;
+    const end = range.endContainer.nodeType === 1 ? range.endContainer : range.endContainer.parentElement;
+    const root = start.closest("[data-field]");
+    if (!root || root !== end.closest("[data-field]") || !root.closest(".slide, .chapter-intro") || root.closest(".editor")) return null;
+    const slideEl = root.closest(".slide");
+    const before = document.createRange();
+    before.setStart(root, 0);
+    before.setEnd(range.startContainer, range.startOffset);
+    const offset = before.toString().length;
+    const full = textNodes(root).map((n) => n.nodeValue).join("");
+    const exact = full.slice(offset, offset + range.toString().length);
+    return {
+      field: root.dataset.field,
+      slide: slideEl ? slideEl.dataset.slideId : "",
+      quote: exact.trim() || quote,
+      prefix: full.slice(Math.max(0, offset - 30), offset),
+      suffix: full.slice(offset + exact.length, offset + exact.length + 30),
+      rect: range.getBoundingClientRect(),
+      root, offset, length: exact.length,
+    };
+  }
+
+  function updateSelButton() {
+    const target = live && !editing ? selectionTarget() : null;
+    if (!target) { selButton.hidden = true; selButton._target = null; return; }
+    selButton._target = target;
+    selButton.hidden = false;
+    const r = target.rect;
+    selButton.style.top = `${Math.max(70, r.top - 40)}px`;
+    selButton.style.left = `${Math.min(window.innerWidth - 90, r.right - 30)}px`;
+  }
+
+  function startComposer(target) {
+    selButton.hidden = true;
+    window.getSelection().removeAllRanges();
+    wrapRange(target.root, target.offset, target.offset + target.length, "cmt-mark pending", null);
+    const pending = document.querySelector("mark.cmt-mark.pending");
+    composer = {
+      slide: target.slide, field: target.field, quote: target.quote, prefix: target.prefix, suffix: target.suffix,
+      top: pending ? pending.getBoundingClientRect().top + window.scrollY : target.rect.top + window.scrollY,
+    };
+    activeThread = "__new";
+    if (rail.hidden) toggleRail(true);
+    renderCards();
+  }
+
+  function cancelComposer() {
+    composer = null;
+    activeThread = null;
+    applyComments();
+  }
+
+  async function sendComposer() {
+    const text = (railCards.querySelector(".composer textarea") || {}).value || "";
+    if (!text.trim()) return;
+    try {
+      const { thread } = await api("/api/comments", { ...composer, text, author, rect: undefined });
+      composer = null;
+      await loadComments(false);
+      activate(thread.id, false);
+    } catch (err) { toast(`评论没有保存：${err.message}`); }
+  }
+
+  async function sendReply(card, textarea) {
+    const text = textarea.value.trim();
+    if (!text) return;
+    try {
+      await api("/api/comments/reply", { id: card.dataset.card, text, author });
+      activeThread = card.dataset.card;
+      await loadComments(false);
+    } catch (err) { toast(`回复没有保存：${err.message}`); }
+  }
+
+  async function setStatus(id, status) {
+    try {
+      await api("/api/comments/status", { id, status, author });
+      if (status === "resolved") activeThread = null;
+      await loadComments(false);
+      toast(status === "resolved" ? `${id} 已解决` : `${id} 已重新打开`, "ok");
+    } catch (err) { toast(err.message); }
+  }
+
+  function navigate(id, dir) {
+    const ids = [...railCards.querySelectorAll(".card:not(.composer)")].map((c) => c.dataset.card);
+    const i = ids.indexOf(id);
+    const next = ids[(i + (dir === "next" ? 1 : -1) + ids.length) % ids.length];
+    if (next) activate(next, true);
+  }
+
+  if (live) {
+    document.getElementById("rail-toggle").hidden = false;
+    document.getElementById("rail-author").textContent = `署名：${author} ✎`;
+    document.addEventListener("selectionchange", () => requestAnimationFrame(updateSelButton));
+    window.addEventListener("scroll", () => { if (!selButton.hidden) updateSelButton(); }, { passive: true });
+    selButton.addEventListener("mousedown", (e) => e.preventDefault());
+    selButton.addEventListener("click", () => { if (selButton._target) startComposer(selButton._target); });
+    document.getElementById("show-resolved").addEventListener("change", applyComments);
+    document.getElementById("rail-author").addEventListener("click", () => {
+      const name = window.prompt("评论署名", author);
+      if (name && name.trim()) {
+        author = name.trim().slice(0, 40);
+        try { localStorage.setItem("draft-studio-author", author); } catch (_) { /* optional */ }
+        document.getElementById("rail-author").textContent = `署名：${author} ✎`;
+        renderCards();
+      }
+    });
+    document.addEventListener("click", (e) => {
+      const mark = e.target.closest("mark.cmt-mark[data-thread]");
+      if (mark) { activate(mark.dataset.thread, false); return; }
+      const goto = e.target.closest("[data-goto-slide]");
+      if (goto) {
+        const first = comments.threads.find((t) => t.status === "open" && t.slide === goto.dataset.gotoSlide);
+        if (first) activate(first.id, true);
+        return;
+      }
+      if (e.target.closest("[data-composer]")) {
+        e.target.closest("[data-composer]").dataset.composer === "send" ? sendComposer() : cancelComposer();
+        return;
+      }
+      const card = e.target.closest(".card[data-card]");
+      if (!card || card.dataset.card === "__new") return;
+      const nav = e.target.closest("[data-card-nav]");
+      const status = e.target.closest("[data-card-status]");
+      if (nav) navigate(card.dataset.card, nav.dataset.cardNav);
+      else if (status) setStatus(card.dataset.card, status.dataset.cardStatus);
+      else if (!e.target.closest("textarea")) activate(card.dataset.card, true);
+    });
+    railCards.addEventListener("keydown", (e) => {
+      const box = e.target.closest("textarea");
+      if (!box) return;
+      const card = box.closest(".card");
+      if (card.dataset.card === "__new") {
+        if (e.key === "Escape") { e.preventDefault(); cancelComposer(); }
+        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); sendComposer(); }
+        return;
+      }
+      if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendReply(card, box); }
+    });
+    railCards.addEventListener("focusin", (e) => {
+      const card = e.target.closest(".card[data-card]");
+      if (card && card.dataset.card !== "__new" && activeThread !== card.dataset.card) activate(card.dataset.card, false);
+    });
+    new ResizeObserver(() => layoutCards()).observe(document.getElementById("doc"));
+    window.addEventListener("resize", () => layoutCards());
+    document.addEventListener("toggle", () => layoutCards(), true);
+    let railPref = "1";
+    try { railPref = localStorage.getItem("draft-studio-rail") ?? "1"; } catch (_) { /* default open */ }
+    toggleRail(railPref === "1" && !listMode());
+  }
+
   render();
   let saved = "full";
   try { saved = localStorage.getItem("draft-studio-view") || "full"; } catch (_) { /* default view */ }
   setView(saved);
   scrollSpy();
   connect();
+  if (live) loadComments(false).catch(() => toast("评论加载失败"));
 
   document.addEventListener("click", (e) => {
     const t = e.target.closest("button, a");
@@ -504,6 +895,7 @@
     if (t.dataset.action === "toggle-menu") { const m = document.getElementById("export-menu"); m.hidden = !m.hidden; }
     if (t.dataset.action === "print") { document.getElementById("export-menu").hidden = true; window.print(); }
     if (t.dataset.action === "toggle-toc") document.body.classList.toggle("toc-open");
+    if (t.dataset.action === "toggle-rail" && live) toggleRail();
     if (t.classList.contains("toc-slide")) document.body.classList.remove("toc-open");
   });
   document.addEventListener("click", (e) => {
