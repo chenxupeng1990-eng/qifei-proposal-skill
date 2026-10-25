@@ -38,12 +38,15 @@
   <main class="doc" id="doc"></main>
   <aside class="rail" id="rail" hidden aria-label="评论">
     <div class="rail-head">
-      <span class="rail-title" id="rail-title">评论</span>
+      <div class="rail-row">
+        <span class="rail-title" id="rail-title">评论</span>
+        <span class="rail-counts" id="rail-counts"></span>
+        <button type="button" class="rail-author" id="rail-author" title="修改署名"></button>
+        <button type="button" class="rail-close" data-action="toggle-rail" aria-label="收起评论栏">»</button>
+      </div>
       <div class="rail-filter" id="rail-filter" role="tablist" aria-label="评论筛选">
         <button type="button" data-filter="all">全部</button><button type="button" data-filter="open">未解决</button><button type="button" data-filter="resolved">已决定</button>
       </div>
-      <button type="button" class="rail-author" id="rail-author" title="修改署名"></button>
-      <button type="button" class="rail-close" data-action="toggle-rail" aria-label="收起评论">»</button>
     </div>
     <div class="rail-cards" id="rail-cards"></div>
   </aside>

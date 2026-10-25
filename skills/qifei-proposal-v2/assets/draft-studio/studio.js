@@ -495,6 +495,7 @@
 
   // ---------- Comments: select text, comment beside it, reply, resolve ----------
   let comments = { threads: [] };
+  const expandedMsgs = new Set();
   let activeThread = null;
   let composer = null;
   let author = "Owner";
@@ -595,7 +596,7 @@
     clearMarks();
     const open = comments.threads.filter((t) => t.status === "open");
     const decided = comments.threads.length - open.length;
-    document.getElementById("rail-title").textContent = `评论 ${open.length}${decided ? ` · 已决定 ${decided}` : ""}`;
+    document.getElementById("rail-counts").textContent = `未解决 ${open.length} · 已决定 ${decided}`;
     document.getElementById("rail-toggle").textContent = `评论 ${open.length}`;
     document.querySelectorAll("#rail-filter button").forEach((b) => b.classList.toggle("active", b.dataset.filter === filterMode));
     const perSlide = {};
@@ -645,9 +646,13 @@
         <div class="card-meta">${esc(thread.slide)} · ${thread.id} · ${esc(thread.status_by || "")} ${fmtTime(thread.status_at)} 决定 · ${thread.messages.length} 条${orphan ? ' · <span class="warn">原文已修改</span>' : ""}</div>
       </div>`;
     }
-    const msgs = thread.messages.map((m) => `
-      <div class="msg">${avatar(m.author)}<div class="msg-main"><div class="msg-head"><b>${esc(m.author)}</b><span>${fmtTime(m.at)}</span></div><div class="msg-text">${esc(m.text).replace(/\n/g, "<br>")}</div></div></div>`).join("");
+    const msgs = thread.messages.map((m, i) => {
+      const key = `${thread.id}:${i}`;
+      return `
+      <div class="msg">${avatar(m.author)}<div class="msg-main"><div class="msg-head"><b>${esc(m.author)}</b><span>${fmtTime(m.at)}</span></div><div class="msg-text${expandedMsgs.has(key) ? " full" : ""}" data-msg="${key}">${esc(m.text).replace(/\n/g, "<br>")}</div></div></div>`;
+    }).join("");
     const resolved = thread.status === "resolved";
+    const isActive = thread.id === activeThread;
     return `<div class="card${resolved ? " is-resolved" : ""}${thread.id === activeThread ? " active" : ""}" data-card="${thread.id}">
       <div class="card-top">
         <span class="card-quote" title="${esc(thread.quote)}">${esc(thread.quote)}</span>
@@ -655,6 +660,7 @@
           <button type="button" data-card-nav="next" title="下一条">⌄</button>
           <button type="button" data-card-nav="prev" title="上一条">⌃</button>
           <button type="button" data-card-status="${resolved ? "open" : "resolved"}" title="${resolved ? "重新打开" : "解决"}">${resolved ? "↺" : "✓"}</button>
+          ${isActive ? '<button type="button" class="collapse" data-card-collapse title="收起（Esc）">收起</button>' : ""}
         </span>
       </div>
       <div class="card-meta">${esc(thread.slide)} · ${thread.id}${orphan ? ' · <span class="warn">原文已修改，找不到引用位置</span>' : ""}${resolved ? ` · <span class="decided">✓ ${esc(thread.status_by || "")} ${fmtTime(thread.status_at)} 决定</span>` : ""}</div>
@@ -672,6 +678,11 @@
     threads.sort((a, b) => order(a) - order(b));
     railCards.innerHTML = (composer ? composerHtml() : "") + threads.map(cardHtml).join("") +
       (threads.length || composer ? "" : `<div class="rail-empty">${filterMode === "resolved" ? "还没有已决定的意见。" : "选中正文里的文字，就可以在这里加评论。"}</div>`);
+    // Long messages show five lines first; "展开全文" reveals the rest.
+    railCards.querySelectorAll(".msg-text:not(.full)").forEach((el) => {
+      if (el.scrollHeight > el.clientHeight + 2) el.insertAdjacentHTML("afterend", '<button type="button" class="more" data-msg-toggle>展开全文</button>');
+    });
+    railCards.querySelectorAll(".msg-text.full").forEach((el) => el.insertAdjacentHTML("afterend", '<button type="button" class="more" data-msg-toggle>收起全文</button>'));
     if (composer) {
       const box = railCards.querySelector(".composer textarea");
       box.value = composer.text || "";
@@ -739,6 +750,15 @@
       if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
       if (listMode()) { const card = railCards.querySelector(`[data-card="${id}"]`); if (card) card.scrollIntoView({ block: "nearest" }); }
     }
+  }
+
+  function deactivate() {
+    if (!activeThread || activeThread === "__new") return;
+    const wasResolved = comments.threads.some((t) => t.id === activeThread && t.status === "resolved");
+    activeThread = null;
+    document.querySelectorAll("mark.cmt-mark.active").forEach((m) => m.classList.remove("active"));
+    if (wasResolved) renderCards();
+    else { railCards.querySelectorAll(".card.active").forEach((c) => c.classList.remove("active")); layoutCards(); }
   }
 
   function toggleRail(force) {
@@ -884,7 +904,24 @@
         return;
       }
       const card = e.target.closest(".card[data-card]");
-      if (!card || card.dataset.card === "__new") return;
+      if (!card) {
+        // A click on empty space (not a selection, control or the rail) puts the active card away.
+        const selecting = !window.getSelection().isCollapsed;
+        if (!selecting && !e.target.closest(".rail, button, a, input, textarea, .editor, .sel-comment, summary")) deactivate();
+        return;
+      }
+      if (card.dataset.card === "__new") return;
+      const toggleMsg = e.target.closest("[data-msg-toggle]");
+      if (toggleMsg) {
+        const text = toggleMsg.previousElementSibling;
+        const key = text.dataset.msg;
+        expandedMsgs.has(key) ? expandedMsgs.delete(key) : expandedMsgs.add(key);
+        text.classList.toggle("full");
+        toggleMsg.textContent = text.classList.contains("full") ? "收起全文" : "展开全文";
+        layoutCards();
+        return;
+      }
+      if (e.target.closest("[data-card-collapse]")) { deactivate(); return; }
       const nav = e.target.closest("[data-card-nav]");
       const status = e.target.closest("[data-card-status]");
       if (nav) navigate(card.dataset.card, nav.dataset.cardNav);
@@ -900,7 +937,13 @@
         if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); sendComposer(); }
         return;
       }
+      if (e.key === "Escape" && !box.value.trim()) { e.preventDefault(); box.blur(); deactivate(); }
       if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendReply(card, box); }
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape" || e.defaultPrevented || editing || composer) return;
+      if (e.target.closest && e.target.closest("textarea, input")) return;
+      deactivate();
     });
     railCards.addEventListener("focusin", (e) => {
       const card = e.target.closest(".card[data-card]");

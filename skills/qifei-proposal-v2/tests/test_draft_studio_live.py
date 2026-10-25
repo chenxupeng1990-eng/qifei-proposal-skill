@@ -326,6 +326,12 @@ class StudioBrowserTests(StudioServerCase):
         self.assertTrue(report["agent_reply_shown"])
         self.assertEqual(report["status_in_file"], "resolved")
         self.assertTrue(report["decision_kept_visible"])
+        self.assertEqual(report["long_message_clamped"], "展开全文")
+        self.assertTrue(report["long_message_expanded"])
+        for key in ("expanded_on_click", "collapsed_by_button", "collapsed_by_escape", "collapsed_by_blank_click"):
+            self.assertTrue(report[key], key)
+        self.assertLess(report["header_rows"]["height"], 40)
+        self.assertEqual(report["header_rows"]["counts"], "未解决 0 · 已决定 1")
         self.assertEqual(report["decision_badge"].strip(), "1")
         self.assertEqual(report["messages_in_file"], ["Owner", "Agent"])
         self.assertEqual(report["script_errors"], [])
