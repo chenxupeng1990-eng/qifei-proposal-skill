@@ -128,7 +128,7 @@ class DraftStudioParsingTests(unittest.TestCase):
         self.assertEqual([c["title"] for c in model["chapters"]], ["开场｜重新选择增长伙伴", "抖音机会更大"])
         self.assertEqual([s["id"] for s in model["chapters"][0]["slides"]], ["P01", "P02"])
         keys = [f["key"] for f in model["chapters"][0]["slides"][0]["fields"]]
-        self.assertEqual(keys, ["lead", "core", "logic", "screen", "talk", "visual", "bridge", "evidence"])
+        self.assertEqual(keys, ["lead", "core", "logic", "screen", "talk", "bridge", "visual", "evidence"])
 
     def test_chapter_file_bullets_become_page_fields(self) -> None:
         model = draft_studio.parse_draft(CHAPTER_FILE)

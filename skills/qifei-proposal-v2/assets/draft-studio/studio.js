@@ -24,6 +24,7 @@
     s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
     s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
     s = s.replace(/(^|[^*])\*([^*\s][^*]*)\*/g, "$1<em>$2</em>");
+    s = s.replace(/&lt;br\s*\/?&gt;/g, "<br>");  // Feishu keeps line breaks inside table cells as <br>
     return s.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${codes[i]}</code>`);
   }
 
@@ -58,6 +59,12 @@
   function directiveHtml(type, title, body) {
     const inner = block(body.join("\n"));
     if (type === "flow") return flowHtml(body.join(" ").replace(/^\s*-\s*/gm, "").trim());
+    if (type === "columns") {
+      const cols = [];
+      body.forEach((l) => { if (l.trim() === "::col" || !cols.length) cols.push([]); if (l.trim() !== "::col") cols[cols.length - 1].push(l); });
+      const filled = cols.filter((c) => c.join("").trim());
+      return `<div class="columns" style="grid-template-columns: repeat(${filled.length}, minmax(0, 1fr))">${filled.map((c) => `<div class="md">${block(c.join("\n"))}</div>`).join("")}</div>`;
+    }
     if (type === "compare") {
       const halves = body.join("\n").split(/^\s*---\s*$/m);
       return `<div class="compare">${halves.map((h) => `<div class="md">${block(h)}</div>`).join("")}</div>`;
@@ -179,7 +186,13 @@
 
   const editBtn = (attrs, label = "编辑") => live ? `<button type="button" class="edit-btn" ${attrs}>${label}</button>` : "";
 
+  const PLACEHOLDER = /^(待补充|待填写|待补写|TODO|TBD)[。.！!]?$/i;
+
   function fieldHtml(field, slide) {
+    if (PLACEHOLDER.test(field.md.trim())) {
+      const edit = live && field.span ? editBtn(`data-edit="field" data-slide="${slide.id}" data-key="${field.key}"`) : "";
+      return `<section class="field field-${field.key} field-todo"><div class="field-label">${field.name}${edit}</div><div class="field-body" data-field="${slide.id}:${field.key}"><span class="todo">待补充</span></div></section>`;
+    }
     const canEdit = live && field.span;
     const edit = canEdit ? editBtn(`data-edit="field" data-slide="${slide.id}" data-key="${field.key}"`) : "";
     let body;
@@ -220,6 +233,12 @@
 
     const toc = [`<div class="toc-summary">${Object.keys(STATUS).filter((k) => counts[k]).map((k) => `<span class="chip st-${k}">${STATUS[k]} ${counts[k]}</span>`).join("")}</div>`];
     const doc = [`<div class="doc-head"><h1>${inline(model.title)}</h1><div class="sub">${model.chapters.length} 章 · ${all.length} 页 · 来源 <code>${esc(meta.source || "")}</code></div></div>`];
+    const issues = model.format_issues || [];
+    if (issues.length) {
+      const pages = new Set(issues.map((i) => i.page).filter((p) => p !== "-"));
+      const list = issues.slice(0, 40).map((i) => `<li><code>${esc(i.page)}</code> ${inline(i.message)}</li>`).join("");
+      doc.push(`<details class="format-warn"><summary><b>这份母稿不是标准格式</b>：${issues.length} 处问题，涉及 ${pages.size} 页。先运行 <code>draft_studio.py normalize</code> 转换；转换前，认不出的内容按正文显示。</summary><ul>${list}</ul>${issues.length > 40 ? `<p>还有 ${issues.length - 40} 处，运行 <code>draft_studio.py check</code> 查看全部。</p>` : ""}</details>`);
+    }
     if (model.preface_md) doc.push(`<div class="preface md">${block(model.preface_md)}</div>`);
 
     model.chapters.forEach((ch, ci) => {

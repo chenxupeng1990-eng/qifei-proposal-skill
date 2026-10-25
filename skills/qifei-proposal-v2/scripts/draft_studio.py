@@ -51,9 +51,11 @@ FIELD_NAMES = {
     "visual": "视觉生成建议",
     "evidence": "证据与来源",
     "lead": "页面预览",
+    "body": "正文",
     "other": "其他",
 }
-FIELD_ORDER = ("lead", "core", "logic", "screen", "talk", "visual", "bridge", "evidence", "other")
+# Same order as the single draft format (策略与过桥 before 视觉生成建议).
+FIELD_ORDER = ("lead", "core", "body", "logic", "screen", "talk", "bridge", "visual", "evidence", "other")
 
 # Chapter files written as "- 名称：值" bullets map onto the same fields.
 BULLET_FIELDS = {
@@ -126,6 +128,14 @@ def from_feishu_markup(text: str) -> tuple[str, str | None]:
         elif re.match(r"^\s*<callout[^>]*>\s*$", line):
             out.append(":::callout")
         elif re.match(r"^\s*</callout>\s*$", line):
+            out.append(":::")
+        elif re.match(r"^\s*<grid[^>]*>\s*$", line):
+            out.append(":::columns")
+        elif re.match(r"^\s*<column[^>]*>\s*$", line):
+            out.append("::col")
+        elif re.match(r"^\s*</column>\s*$", line):
+            out.append("")
+        elif re.match(r"^\s*</grid>\s*$", line):
             out.append(":::")
         else:
             out.append(line)
@@ -296,9 +306,12 @@ def split_fields(lines: list[str], start: int, end: int, slide_level: int) -> di
         spans[current][1] = start + offset + 1
     if not has_field_headings:
         buckets, spans = split_bullet_fields(body), {}
+        if set(buckets) <= {"other"}:
+            # Not the standard format and no recognisable bullets: show it as plain body text, never hide it.
+            buckets = {"body": body}
     elif "lead" in buckets and not re.search(r"!\[", "\n".join(buckets["lead"])):
-        buckets["other"] = buckets.pop("lead") + buckets.get("other", [])
-        spans["other"] = spans.pop("lead")
+        buckets["body"] = buckets.pop("lead")
+        spans["body"] = spans.pop("lead")
     fields = []
     for key in FIELD_ORDER:
         content = tidy("\n".join(buckets.get(key, [])))
@@ -383,7 +396,18 @@ def normalize_markdown(md: str) -> str:
     lines = md.split("\n")
     index = 0
     while index < len(lines):
+        if lines[index].strip() == "::col":
+            index += 1
+            continue
         match = DIRECTIVE_OPEN.match(lines[index].strip())
+        if match and match.group(1) == "columns":
+            index += 1
+            while index < len(lines) and lines[index].strip() != ":::":
+                if lines[index].strip() != "::col":
+                    out.append(lines[index])
+                index += 1
+            index += 1
+            continue
         if match and match.group(1):
             label = {"callout": "提示", "flow": "流程", "compare": "对比", "data": "数据"}.get(match.group(1), match.group(1))
             heading = match.group(2).strip()
@@ -413,6 +437,17 @@ def review_record(threads: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+def demote_headings(md: str) -> str:
+    """Headings inside a field sit one level below the field heading in the export."""
+    out, fence = [], False
+    for line in md.split("\n"):
+        if line.lstrip().startswith("```"):
+            fence = not fence
+        match = None if fence else re.match(r"^(#{1,5})(\s.*)$", line)
+        out.append("#" * max(5, len(match.group(1)) + 1) + match.group(2) if match else line)
+    return "\n".join(out)
+
+
 def export_markdown(model: dict[str, Any], profile: str = "full", threads: list[dict[str, Any]] | None = None) -> str:
     """Full profile also carries each page's comment threads as a review record."""
     keep = None if profile == "full" else BRIEF_FIELDS
@@ -436,7 +471,7 @@ def export_markdown(model: dict[str, Any], profile: str = "full", threads: list[
                 if keep is not None and field["key"] not in keep:
                     continue
                 parts.append(f"#### {field['name']}")
-                parts.append(normalize_markdown(field["md"]))
+                parts.append(demote_headings(normalize_markdown(field["md"])))
             if by_slide.get(slide["id"]):
                 parts.append("#### 评审记录")
                 parts.append(review_record(by_slide[slide["id"]]))
@@ -479,6 +514,7 @@ def model_from_text(
             if edited and slide["id"] in edited and slide["status"] in {"confirmed", "verified"}:
                 slide["status"] = "modified"
     draft_state = (state or {}).get("proposal_draft") or {}
+    model["format_issues"] = check_format(text)
     model["meta"] = {
         "source": str(draft_path.relative_to(project)) if draft_path.is_relative_to(project) else str(draft_path),
         "authority": draft_state.get("authority"),
@@ -500,6 +536,230 @@ def build_model(project: Path, draft_arg: str | None) -> dict[str, Any]:
     if store.log_path.is_file():
         return model_from_text(text, project, draft_path, state, store.revision, store.edited_slides())
     return model_from_text(text, project, draft_path, state)
+
+
+# ---------- The single draft format: check and one-time normalize ----------
+
+CANONICAL_FIELDS = ("核心内容", "逻辑展开", "PPT上屏内容", "讲解方向", "策略与过桥", "视觉生成建议", "证据与来源")
+CANONICAL_PAGE = re.compile(r"^## ([A-Z]{1,4}\d{1,3}[A-Za-z]?)｜(\S.*)$")
+PLACEHOLDER = re.compile(r"^(待补充|待填写|待补写|TODO|TBD)[。.！!]?$", re.I)
+IMAGE_LINE = re.compile(r"^\s*!\[[^\]]*\]\([^)]*\)\s*$")
+# Older drafts used other names for the same fields; normalize maps them, check rejects them.
+FIELD_ALIASES = {
+    "核心内容": "核心内容", "本页结论": "核心内容", "本屏任务": "核心内容", "本页任务": "核心内容",
+    "逻辑展开": "逻辑展开",
+    "PPT上屏内容": "PPT上屏内容", "上屏内容": "PPT上屏内容",
+    "讲解方向": "讲解方向", "演讲任务": "讲解方向",
+    "策略与过桥": "策略与过桥",
+    "视觉生成建议": "视觉生成建议", "建议呈现": "视觉生成建议", "页面呈现": "视觉生成建议",
+    "建议视觉": "视觉生成建议", "设计思路": "视觉生成建议",
+    "证据与来源": "证据与来源", "事实与素材": "证据与来源",
+}
+# Judgement labels keep their wording inside 逻辑展开 rather than becoming a field of their own.
+KEEP_LABEL_IN_LOGIC = {"品牌判断", "策略结论"}
+BOLD_LABEL = re.compile(r"^(?:[-*]\s+)?\*\*\s*([^*：:]{2,12}?)\s*[：:]?\s*\*\*\s*[：:]?\s*(.*)$")
+REFERENCE_LABEL = re.compile(r"^([^\s*#|>\-!\[][^：:\s]{0,6}参考)[：:]\s*(.*)$")
+
+
+def _norm(name: str) -> str:
+    return re.sub(r"\s+", "", name)
+
+
+def _page_spans(lines: list[str]) -> list[tuple[int, int, int, str, str]]:
+    """(start, end, level, id, title) for every page heading in any of the known spellings."""
+    hits = []
+    for index, line, in_fence in iter_lines_outside_fences(lines):
+        if in_fence:
+            continue
+        match = SLIDE_HEADING.match(line)
+        if match:
+            hits.append((index, len(match.group(1)), match.group(2) or match.group(3), match.group(4).strip()))
+    if not hits:
+        return []
+    levels = [hit[1] for hit in hits]
+    level = max(set(levels), key=levels.count)
+    hits = [hit for hit in hits if hit[1] == level]
+    spans = []
+    for n, (start, lvl, page_id, title) in enumerate(hits):
+        end = hits[n + 1][0] if n + 1 < len(hits) else len(lines)
+        for index in range(start + 1, end):
+            heading = HEADING.match(lines[index])
+            if heading and len(heading.group(1)) < lvl:
+                end = index
+                break
+        spans.append((start, end, lvl, page_id, title))
+    return spans
+
+
+def check_format(text: str) -> list[dict[str, str]]:
+    """Every deviation from the single draft format, as {page, message}."""
+    lines = from_feishu_markup(text.replace("\r\n", "\n"))[0].split("\n")
+    pages = _page_spans(lines)
+    if not pages:
+        return [{"page": "-", "message": "没有找到页面：页面要写成二级标题 `## P01｜结论式标题`"}]
+    issues: list[dict[str, str]] = []
+    add = lambda page, message: issues.append({"page": page, "message": message})
+    if not any(HEADING.match(l) and len(HEADING.match(l).group(1)) == 1 for l in lines[: pages[0][0]]):
+        add("-", "第一页之前没有一级标题的章节：章节要写成 `# 章节名称｜本章结论`")
+    seen: set[str] = set()
+    for start, end, level, page_id, title in pages:
+        if page_id in seen:
+            add(page_id, "页码重复")
+        seen.add(page_id)
+        if not CANONICAL_PAGE.match(lines[start]):
+            add(page_id, f"页面标题要写成 `## {page_id}｜{title}`（二级标题、不加方括号、用全角｜）")
+        if level != 2:
+            continue  # the remaining checks assume the canonical levels; normalize first
+        fields: list[tuple[str, int]] = []
+        for index, line, in_fence in iter_lines_outside_fences(lines[start + 1:end]):
+            if in_fence:
+                continue
+            heading = HEADING.match(line)
+            if heading and len(heading.group(1)) == 3:
+                fields.append((_norm(heading.group(2)), start + 1 + index))
+            elif heading and len(heading.group(1)) == 2:
+                add(page_id, f"二级标题只能用于页面：`{line.strip()}` 请改成正文或 `####` 小标题")
+            label = BOLD_LABEL.match(line.strip())
+            if label and _norm(label.group(1)) in FIELD_ALIASES:
+                add(page_id, f"用了加粗标签 `**{label.group(1)}**`，请改成 `### {FIELD_ALIASES[_norm(label.group(1))]}`")
+        names = [name for name, _ in fields]
+        for name in names:
+            if name not in CANONICAL_FIELDS:
+                if name in FIELD_ALIASES:
+                    add(page_id, f"`### {name}` 请改成 `### {FIELD_ALIASES[name]}`")
+                else:
+                    add(page_id, f"`### {name}` 不是字段：字段内的小标题请用 `####`")
+        for name in CANONICAL_FIELDS:
+            if names.count(name) > 1:
+                add(page_id, f"`### {name}` 出现了 {names.count(name)} 次")
+            if name not in names:
+                add(page_id, f"缺少 `### {name}`")
+        known = [name for name in names if name in CANONICAL_FIELDS]
+        if known and known != [name for name in CANONICAL_FIELDS if name in known]:
+            add(page_id, "字段顺序应为：" + "、".join(CANONICAL_FIELDS))
+        first_field = fields[0][1] if fields else end
+        stray = [l for l in lines[start + 1:first_field] if l.strip() and not IMAGE_LINE.match(l) and l.strip() != "---"]
+        if stray:
+            add(page_id, "页面标题和 `### 核心内容` 之间只能放页面预览图，其余内容请放进字段")
+        for n, (name, at) in enumerate(fields):
+            if name not in CANONICAL_FIELDS:
+                continue
+            stop = next((f_at for f_name, f_at in fields[n + 1:] if f_name in CANONICAL_FIELDS), end)
+            body = [l.strip() for l in lines[at + 1:stop] if l.strip() and l.strip() != "---"]
+            if not body or (len(body) == 1 and PLACEHOLDER.match(body[0])):
+                add(page_id, f"`### {name}` 是空的")
+    return issues
+
+
+def normalize_draft(text: str) -> tuple[str, list[dict[str, str]]]:
+    """Rewrite an older draft into the single format; return the new text and what was decided."""
+    text = text.replace("\r\n", "\n")
+    lines = text.split("\n")
+    mapped = from_feishu_markup(text)[0].split("\n")
+    pages = _page_spans(mapped)
+    if not pages:
+        raise ValueError("No page units found; nothing to normalize.")
+    notes: list[dict[str, str]] = []
+    note = lambda page, message: notes.append({"page": page, "message": message})
+    slide_starts = {start: (start, level, page_id, title) for start, _, level, page_id, title in pages}
+    chapter_level = pick_chapter_level(mapped, pages[0][2], slide_starts)
+    page_by_start = {p[0]: p for p in pages}
+    out: list[str] = []
+    index = 0
+    chapter_seen = False
+    while index < len(lines):
+        if index in page_by_start:
+            start, end, level, page_id, title = page_by_start[index]
+            out += normalize_page(lines[start + 1:end], level, page_id, title, note)
+            index = end
+            continue
+        heading = HEADING.match(mapped[index])
+        if heading and chapter_level and len(heading.group(1)) == chapter_level:
+            out.append(f"# {heading.group(2)}")
+            chapter_seen = True
+        elif heading and chapter_seen and len(heading.group(1)) > chapter_level:
+            out.append(f"**{heading.group(2)}**")  # chapter intro sections become bold paragraph labels
+            note("-", f"章节说明里的小标题 `{heading.group(2)}` 改成了加粗段落")
+        else:
+            out.append(lines[index])
+        index += 1
+    result = re.sub(r"\n{3,}", "\n\n", "\n".join(out)).strip() + "\n"
+    return result, notes
+
+
+def normalize_page(body: list[str], level: int, page_id: str, title: str, note) -> list[str]:
+    images: list[str] = []
+    segments: list[tuple[str, list[str]]] = []
+    current: tuple[str, list[str]] | None = None
+    has_field_headings = any(
+        (h := HEADING.match(l)) and len(h.group(1)) == level + 1 and _norm(h.group(2)) in FIELD_ALIASES for l in body
+    )
+    in_fence = False
+    for line in body:
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            in_fence = not in_fence
+        heading = None if in_fence else HEADING.match(line)
+        label = None if in_fence or has_field_headings else BOLD_LABEL.match(stripped)
+        reference = None if in_fence else REFERENCE_LABEL.match(stripped)
+        if heading and len(heading.group(1)) == level + 1 and _norm(heading.group(2)) in FIELD_ALIASES:
+            current = (FIELD_ALIASES[_norm(heading.group(2))], [])
+            if _norm(heading.group(2)) not in CANONICAL_FIELDS:
+                note(page_id, f"`{heading.group(2)}` 改名为 `{current[0]}`")
+            segments.append(current)
+            continue
+        if label and _norm(label.group(1)) in FIELD_ALIASES:
+            name = FIELD_ALIASES[_norm(label.group(1))]
+            if _norm(label.group(1)) != name:
+                note(page_id, f"`{label.group(1)}` 归入 `{name}`")
+            current = (name, [label.group(2)] if label.group(2).strip() else [])
+            segments.append(current)
+            # An inline conclusion ("**本页结论：**…") is the judgement only; what follows it supports it.
+            if name == "核心内容" and label.group(2).strip():
+                current = None
+            continue
+        if label and _norm(label.group(1)) in KEEP_LABEL_IN_LOGIC:
+            note(page_id, f"`{label.group(1)}` 放进 `逻辑展开`，保留原标签")
+            current = ("逻辑展开", [stripped])
+            segments.append(current)
+            continue
+        if reference:
+            note(page_id, f"`{reference.group(1)}` 归入 `证据与来源`")
+            segments.append(("证据与来源", [stripped]))
+            current = None
+            continue
+        if heading and len(heading.group(1)) > level:
+            # Sub-headings inside a field always sit at level 4, one below the field headings.
+            depth = len(heading.group(1)) - level + (2 if has_field_headings else 3)
+            line = "#" * min(6, max(4, depth)) + " " + heading.group(2)
+        if current is None:
+            if IMAGE_LINE.match(line) and not segments:
+                images.append(line)
+                continue
+            if not stripped or stripped == "---":
+                continue
+            current = ("逻辑展开", [])
+            segments.append(current)
+            note(page_id, "没有标签的正文放进了 `逻辑展开`")
+        current[1].append(line)
+    merged: dict[str, list[str]] = {name: [] for name in CANONICAL_FIELDS}
+    for name, content in segments:
+        block = tidy("\n".join(content))
+        if block:
+            merged[name].append(block)
+    out = [f"## {page_id}｜{title}", ""]
+    if images:
+        out += images + [""]
+    for name in CANONICAL_FIELDS:
+        out.append(f"### {name}")
+        out.append("")
+        if merged[name]:
+            out.append("\n\n".join(merged[name]))
+        else:
+            out.append("待补充")
+            note(page_id, f"缺少 `{name}`，已占位“待补充”，需要补写")
+        out.append("")
+    return out
 
 
 # ---------- Editing ----------
@@ -994,6 +1254,33 @@ def serve(project: Path, draft_arg: str | None, host: str, port: int, open_brows
     return 0
 
 
+def run_normalize(project: Path, draft_arg: str | None, write: bool) -> int:
+    draft_path, _ = load_project(project, draft_arg)
+    original = draft_path.read_text(encoding="utf-8")
+    normalized, notes = normalize_draft(original)
+    remaining = check_format(normalized)
+    stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+    grouped: dict[str, list[str]] = {}
+    for item in notes:
+        grouped.setdefault(item["message"], []).append(item["page"])
+    print(f"Normalize {draft_path.name}: {len(check_format(original))} issue(s) before, {len(remaining)} after")
+    for message, pages in sorted(grouped.items(), key=lambda kv: -len(kv[1])):
+        shown = "、".join(sorted(set(pages))[:8]) + ("…" if len(set(pages)) > 8 else "")
+        print(f"  {len(pages):3}× {message}  [{shown}]")
+    if not write:
+        preview = draft_path.with_name(f"{draft_path.stem}.normalize-preview.md")
+        preview.write_text(normalized, encoding="utf-8")
+        print(f"Preview written to {preview} (the draft itself is unchanged; run again with --write to apply)")
+        return 0
+    backup = draft_path.with_name(f"{draft_path.stem}.pre-normalize-{stamp}.md")
+    backup.write_text(original, encoding="utf-8")
+    draft_path.write_text(normalized, encoding="utf-8")
+    draft_path.with_name(f"{draft_path.stem}.normalize-preview.md").unlink(missing_ok=True)
+    print(f"Draft replaced; original kept at {backup}")
+    print("Remaining issues are content gaps (empty fields marked 待补充) that need writing, not formatting.")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -1012,6 +1299,13 @@ def main() -> int:
     studio.add_argument("--host", default="127.0.0.1")
     studio.add_argument("--port", type=int, default=8765)
     studio.add_argument("--open", action="store_true", help="open the studio in the default browser")
+    check = sub.add_parser("check", help="check the draft against the single draft format")
+    check.add_argument("project")
+    check.add_argument("--draft")
+    norm = sub.add_parser("normalize", help="convert an older draft into the single format (preview unless --write)")
+    norm.add_argument("project")
+    norm.add_argument("--draft")
+    norm.add_argument("--write", action="store_true", help="replace the draft (the original is kept as a backup)")
     comments = sub.add_parser("comments", help="list comment threads (open ones by default)")
     comments.add_argument("project")
     comments.add_argument("--draft")
@@ -1028,6 +1322,15 @@ def main() -> int:
     project = Path(args.project).expanduser().resolve()
     if args.command == "serve":
         return serve(project, args.draft, args.host, args.port, args.open)
+    if args.command == "check":
+        draft_path, _ = load_project(project, args.draft)
+        issues = check_format(draft_path.read_text(encoding="utf-8"))
+        for issue in issues:
+            print(f"{issue['page']}\t{issue['message']}")
+        print(f"{'FAIL' if issues else 'PASS'}: {len(issues)} format issue(s) in {draft_path.name}")
+        return 1 if issues else 0
+    if args.command == "normalize":
+        return run_normalize(project, args.draft, args.write)
     if args.command in {"comments", "reply"}:
         draft_path, _ = load_project(project, args.draft)
         store = CommentStore(draft_path)

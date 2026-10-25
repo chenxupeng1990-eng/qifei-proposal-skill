@@ -32,4 +32,4 @@
 
 ## 放行
 
-所有章节逐页确认，飞书回读凭证完整，格式和标题链通过。
+所有章节逐页确认，飞书回读凭证完整，`python3 scripts/draft_studio.py check <项目目录>` 为 PASS，标题链通过。旧写法的母稿先用 `normalize` 转换。

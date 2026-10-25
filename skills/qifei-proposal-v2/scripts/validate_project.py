@@ -9,6 +9,7 @@ import json
 import re
 from pathlib import Path
 
+from draft_studio import check_format
 from validate_assembly_ready import validate_assembly_ready
 from validate_deck_spec import png_has_alpha
 from validate_design_loop import validate_chapter_report
@@ -122,7 +123,9 @@ DESIGN_REQUIRED_MARKERS = (
     "## 8. 透明 PNG 表现层",
     "## 9. 章节批量生成规则",
 )
-FEISHU_DRAFT_FORMAT_VERSION = "feishu-proposal-draft-v1"
+FEISHU_DRAFT_FORMAT_VERSION = "proposal-draft-v2"
+# v1 projects predate the single draft format; they keep the looser section check below.
+ACCEPTED_DRAFT_FORMAT_VERSIONS = {"proposal-draft-v2", "feishu-proposal-draft-v1"}
 FEISHU_PAGE_SECTIONS = (
     "核心内容",
     "逻辑展开",
@@ -224,7 +227,7 @@ def validate_verified_feishu_draft(project: Path, state: dict, chapters: list[di
         return ["full_redteam requires a verified Feishu proposal draft; local Markdown is only a temporary fallback"]
     if draft.get("authority") != "feishu" or draft.get("status") != "verified":
         errors.append("proposal_draft must use authority feishu with status verified before full_redteam")
-    if draft.get("format_version") != FEISHU_DRAFT_FORMAT_VERSION:
+    if draft.get("format_version") not in ACCEPTED_DRAFT_FORMAT_VERSIONS:
         errors.append(f"proposal_draft.format_version must be {FEISHU_DRAFT_FORMAT_VERSION}")
     for field in ("feishu_doc_url", "document_id", "last_verified_at"):
         if not str(draft.get(field) or "").strip():
@@ -260,6 +263,9 @@ def validate_verified_feishu_draft(project: Path, state: dict, chapters: list[di
     if verified_slide_ids != expected_slide_ids:
         errors.append("proposal_draft.verified_slide_ids must exactly match the confirmed chapter slide order")
 
+    if snapshot_text and draft.get("format_version") == FEISHU_DRAFT_FORMAT_VERSION:
+        for issue in check_format(snapshot_text):
+            errors.append(f"{issue['page']}: draft format: {issue['message']}")
     if snapshot_text:
         for marker in ("**本章回答：**", "**逻辑路径：**", "**情绪方向：**"):
             if marker not in snapshot_text:

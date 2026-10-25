@@ -93,6 +93,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .md, .slide-title, .card { overflow-wrap: anywhere; }
 .preface { margin-bottom: 28px; }
 
+.format-warn { margin: 0 0 22px; padding: 12px 16px; border-radius: 12px; background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent); color: var(--ink-2); font-size: 13.5px; line-height: 1.7; }
+.format-warn summary { cursor: pointer; }
+.format-warn ul { margin: 8px 0 0; padding-left: 18px; max-height: 260px; overflow: auto; }
+.format-warn code { font-family: var(--mono); font-size: 12px; }
+
 /* Chapter */
 .chapter { margin: 48px 0 0; }
 .chapter-head { padding: 0 0 18px; margin-bottom: 18px; border-bottom: 1px solid var(--line); }
@@ -170,6 +175,11 @@ details.internal > .md { margin-top: 8px; }
 .callout { display: flex; gap: 10px; border-radius: 10px; padding: 12px 14px; margin: 10px 0; background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); }
 .callout .ic { flex: none; color: var(--accent); font-weight: 700; }
 .callout .ct > :first-child { margin-top: 0; } .callout .ct > :last-child { margin-bottom: 0; }
+.columns { display: grid; gap: 10px; margin: 10px 0; }
+.columns > .md { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--surface-2); }
+.columns > .md h4:first-child { margin-top: 0; }
+.todo { display: inline-block; font-size: 12px; color: var(--warn); background: var(--warn-soft); border: 1px dashed color-mix(in srgb, var(--warn) 45%, transparent); border-radius: 6px; padding: 1px 8px; }
+@media (max-width: 620px) { .columns { grid-template-columns: 1fr !important; } }
 .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
 .compare > div { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--surface-2); }
 .datacards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 10px 0; }

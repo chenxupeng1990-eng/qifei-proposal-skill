@@ -8,7 +8,8 @@ from pathlib import Path
 from typing import Any
 
 
-FEISHU_DRAFT_FORMAT_VERSION = "feishu-proposal-draft-v1"
+FEISHU_DRAFT_FORMAT_VERSION = "proposal-draft-v2"
+ACCEPTED_DRAFT_FORMAT_VERSIONS = {"proposal-draft-v2", "feishu-proposal-draft-v1"}
 FEISHU_PAGE_SECTIONS = (
     "核心内容",
     "逻辑展开",
@@ -50,7 +51,7 @@ def validate_feishu_draft_evidence(project: Path, state: dict[str, Any]) -> list
         ]
     if draft.get("authority") != "feishu" or draft.get("status") != "verified":
         errors.append("proposal_draft must use authority feishu with status verified before production")
-    if draft.get("format_version") != FEISHU_DRAFT_FORMAT_VERSION:
+    if draft.get("format_version") not in ACCEPTED_DRAFT_FORMAT_VERSIONS:
         errors.append(f"proposal_draft.format_version must be {FEISHU_DRAFT_FORMAT_VERSION}")
     for field in ("feishu_doc_url", "document_id", "last_verified_at"):
         if not str(draft.get(field) or "").strip():
