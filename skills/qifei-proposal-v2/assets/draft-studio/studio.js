@@ -295,6 +295,16 @@
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
   }
 
+  // Scroll only the TOC panel. scrollIntoView would also start a (smooth) scroll on the page
+  // itself, which cancels trackpad momentum mid-swipe and feels like the page gets stuck.
+  function keepInToc(link) {
+    const toc = document.getElementById("toc");
+    const l = link.getBoundingClientRect();
+    const t = toc.getBoundingClientRect();
+    if (l.top < t.top + 8) toc.scrollTop += l.top - t.top - 8;
+    else if (l.bottom > t.bottom - 8) toc.scrollTop += l.bottom - t.bottom + 8;
+  }
+
   let spy = null;
   function scrollSpy() {
     if (spy) spy.disconnect();
@@ -304,7 +314,7 @@
         if (!e.isIntersecting) return;
         links.forEach((a) => a.classList.remove("active"));
         const link = links.get(e.target.dataset.slideId);
-        if (link) { link.classList.add("active"); link.scrollIntoView({ block: "nearest" }); }
+        if (link) { link.classList.add("active"); keepInToc(link); }
       });
     }, { rootMargin: "-80px 0px -70% 0px" });
     document.querySelectorAll(".slide").forEach((el) => io.observe(el));
