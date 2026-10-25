@@ -51,11 +51,12 @@ try {
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+Enter' : 'Control+Enter');
   await page.waitForSelector('mark.cmt-mark[data-thread="C-0001"]', {timeout: 5000});
   report.highlight_text = await page.textContent('mark.cmt-mark[data-thread="C-0001"]');
-  report.card_aligned = await page.evaluate(() => {
+  // Cards glide into place (CSS transition on top), so wait for the resting position.
+  report.card_aligned = await page.waitForFunction(() => {
     const mark = document.querySelector('mark.cmt-mark[data-thread="C-0001"]').getBoundingClientRect();
     const card = document.querySelector('[data-card="C-0001"]').getBoundingClientRect();
     return Math.abs(mark.top - card.top) < 40 && card.left > mark.right;
-  });
+  }, undefined, {timeout: 2000}).then(() => true, () => false);
   const longReply = Array.from({length: 9}, (_, i) => `第 ${i + 1} 点：口径说明`).join('\n');
   execFileSync('python3', [studio, 'reply', project, 'C-0001', longReply]);
   await page.waitForFunction(() => document.querySelectorAll('[data-card="C-0001"] .msg').length === 2, undefined, {timeout: 5000});
