@@ -109,7 +109,7 @@ class RuntimeDoctorTests(unittest.TestCase):
             report["boundaries"],
         )
 
-    def test_missing_feishu_blocks_manuscript_confirmation_not_early_strategy(self) -> None:
+    def test_missing_feishu_does_not_block_a_full_deck(self) -> None:
         result = self.run_doctor(
             {
                 "agent_host": "generic_api_agent",
@@ -129,8 +129,10 @@ class RuntimeDoctorTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         report = json.loads(result.stdout)
         self.assertFalse(report["blockers"])
-        self.assertIn("manuscript_confirmation", report["stage_blockers"])
+        # The local draft studio is the content authority, so Feishu is optional.
+        self.assertNotIn("manuscript_confirmation", report["stage_blockers"])
         self.assertNotIn("strategy", report["stage_blockers"])
+        self.assertEqual(report["adapters"]["content_authority"], "studio")
 
 
 if __name__ == "__main__":

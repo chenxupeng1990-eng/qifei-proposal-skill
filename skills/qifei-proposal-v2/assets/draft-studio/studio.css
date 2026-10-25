@@ -98,6 +98,15 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .format-warn ul { margin: 8px 0 0; padding-left: 18px; max-height: 260px; overflow: auto; }
 .format-warn code { font-family: var(--mono); font-size: 12px; }
 
+.authority-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 22px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); font-size: 13px; color: var(--ink-2); }
+.authority-bar .ab-label { font-weight: 600; color: var(--ink); }
+.authority-bar .ab-sep { color: var(--line-strong); }
+.authority-bar .ab-ok { color: var(--ok); font-weight: 600; }
+.authority-bar .btn { margin-left: auto; }
+.confirm-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 12.5px; }
+.confirm-row .muted, .muted { color: var(--muted); }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+
 /* Chapter */
 .chapter { margin: 48px 0 0; }
 .chapter-head { padding: 0 0 18px; margin-bottom: 18px; border-bottom: 1px solid var(--line); }

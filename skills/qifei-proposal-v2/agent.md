@@ -7,7 +7,7 @@
 ## 权威顺序
 
 1. Proposal Owner 已确认决定与冻结记录。
-2. 项目 `AGENTS.md`、飞书确认稿和 `project-state.json`。
+2. 项目 `AGENTS.md`、权威源中已确认的母稿（工作台或飞书）和 `project-state.json`。
 3. 客户正式资料与标书。
 4. 项目临时资料。
 5. 公司知识库。

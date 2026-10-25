@@ -1,10 +1,28 @@
 # 提案母稿工作台合同
 
-母稿工作台把提案母稿渲染成适合阅读的富格式页面，导出干净的 Markdown；运行本地服务时，可以在页面上直接编辑，保存即写盘，所有打开的页面实时刷新。还可以像飞书一样框选文字评论、回复、解决，Agent 也读写同一份评论。工作台成为正式权威源、接入阶段门禁，在 M4 完成。
+母稿工作台是完整提案默认的内容权威源（`content_authority: "studio"`）。它负责以下几件事：
+- 把母稿渲染成适合阅读的富格式页面，导出干净的 Markdown。
+- 运行本地服务时，可以在页面上直接编辑，保存即写盘，所有打开的页面实时刷新。
+- 像飞书一样框选文字评论、回复、解决，Agent 也读写同一份评论。
+- 让 Owner 逐章确认，并登记已核验版本，作为阶段门禁的凭证。
 
-## 权威源不变
+## 作为权威源：确认与登记（studio 项目）
 
-- 权威源仍是项目登记的母稿：`project-state.json.proposal_draft.verified_snapshot_path`。没有登记时，依次查找 `content/draft/proposal-draft.md` 和 `content/feishu/proposal-draft.md`。
+- **母稿**：`content/draft/proposal-draft.md`。章节和页序登记在 `project-state.json` 的 `chapters[].slides` 里，母稿的页序必须一致。
+- **确认本章**：Owner 在每章标题下点"确认"。
+  - 这一章的页面必须先通过格式检查。
+  - 确认会写入 `content/draft/confirmations.json`，记录确认人、时间、版本，以及每一页的内容指纹。
+  - 同时会更新这一章的 `manuscript_confirmed` 和 `confirmation_record_id`。
+  - 章节确认只能由 Owner 在页面上操作，Agent 不代为确认。
+- **登记当前版本**：把当前母稿记为已核验版本，写入 `proposal_draft`（版本号、SHA256、页序、日志路径）。
+  - 前提是格式检查 PASS，并且母稿页序和登记的页序一致。
+  - 确认章节后会自动登记；有修改时，用页面顶部的按钮或 `python3 scripts/draft_studio.py register <项目目录>` 重新登记。
+- **修改后自动失效**：已确认的页面一旦被修改（无论是在页面上改，还是 Agent 直接改文件），这一章就退回待确认，`proposal_draft.status` 变为 `editing`。门禁会逐页核对内容指纹，指出哪些页在确认后改过。
+- **页面顶部的权威源栏**：显示登记状态和章节确认进度。全部章节都已确认、而且登记的就是最新版本时，会提示"可以进入全稿审查"。
+
+## 阅读页与导出
+
+- 阅读页的数据来源是项目登记的母稿：`project-state.json.proposal_draft.verified_snapshot_path`。没有登记时，依次查找 `content/draft/proposal-draft.md` 和 `content/feishu/proposal-draft.md`。
 - 阅读页和导出的 Markdown 都是派生物。不能把它们登记为确认凭证，也不能反向覆盖母稿。
 - 页面状态读取自 `project-state.json`：章节 `manuscript_confirmed` 显示为"已确认"，在 `verified_slide_ids` 中的页面显示为"已回读"，其余显示为"待确认"。
 
@@ -87,7 +105,7 @@ python3 scripts/draft_studio.py normalize <项目目录> --write # 替换原稿�
 - **安全**：
   - 服务默认只监听本机。
   - 页面内嵌一次性令牌，所有接口都要校验令牌和 Host，防止其他网页借浏览器改母稿。
-- **边界**：工作台的版本日志是本地记录。在 M4 之前，飞书仍是 `full_deck` 的正式权威源。所以 Owner 在工作台里的修改要回写飞书、重新回读后，才能登记确认。
+- **边界**：项目选用飞书为权威源时，工作台只是阅读和编辑工具，修改要回写飞书、重新回读后才能登记确认；选用工作台（默认）时，工作台本身就是权威源。
 
 ## 评论（serve）
 

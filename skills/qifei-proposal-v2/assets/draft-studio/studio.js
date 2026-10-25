@@ -210,6 +210,41 @@
     return `<section class="field field-${field.key}">${label}${box}</section>`;
   }
 
+  // ---------- Studio authority: chapter confirmation and registration ----------
+  function authorityBar(reg) {
+    const fresh = reg.status === "verified" && reg.revision === reg.current;
+    const state = fresh
+      ? `<span class="chip st-confirmed">已登记 rev ${reg.revision}</span>`
+      : `<span class="chip st-pending">${reg.revision ? `已登记 rev ${reg.revision}，之后有修改` : "尚未登记"}</span>`;
+    const action = live && !fresh ? `<button type="button" class="btn" data-register>登记当前版本（rev ${reg.current}）</button>` : "";
+    const chapters = model.chapters.filter((c) => c.studio && c.studio.chapter_id);
+    const done = chapters.filter((c) => c.studio.confirmed).length;
+    return `<div class="authority-bar"><span class="ab-label">权威源：工作台</span>${state}<span class="ab-sep">·</span><span>章节确认 ${done}/${chapters.length}</span>${reg.all_confirmed && fresh ? '<span class="ab-ok">可以进入全稿审查</span>' : ""}${action}</div>`;
+  }
+
+  function chapterConfirm(ch) {
+    const s = ch.studio;
+    if (!s) return "";
+    if (!s.chapter_id) return `<div class="confirm-row muted">${esc(s.reason)}</div>`;
+    if (s.confirmed && s.record) {
+      return `<div class="confirm-row"><span class="chip st-confirmed">${esc(s.chapter_id)} 已确认</span><span class="muted">${esc(s.record.by)} · ${String(s.record.at).replace("T", " ").slice(0, 16)} · rev ${s.record.revision}</span></div>`;
+    }
+    const again = s.record ? '<span class="chip st-modified">确认后有修改，需要重新确认</span>' : "";
+    if (!live) return `<div class="confirm-row">${again || `<span class="chip st-pending">${esc(s.chapter_id)} 待确认</span>`}</div>`;
+    return `<div class="confirm-row">${again}<button type="button" class="btn primary" data-confirm-chapter="${esc(s.chapter_id)}" ${s.reason ? "disabled" : ""}>确认 ${esc(s.chapter_id)}</button>${s.reason ? `<span class="muted">${esc(s.reason)}</span>` : ""}</div>`;
+  }
+
+  async function authorityPost(path, body, okText) {
+    try {
+      const res = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json", "X-Studio-Token": live.token }, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!res.ok) { toast(data.error || "没有成功"); return; }
+      model = data.model;
+      rerender();
+      toast(data.registration_pending ? `${okText}；尚未登记：${data.registration_pending}` : okText, "ok");
+    } catch (_) { toast("连接不到工作台服务"); }
+  }
+
   // ---------- Page assembly ----------
   const chip = (st) => `<span class="chip st-${st}">${STATUS[st] || st}</span>`;
   const anchor = (id) => `slide-${id}`;
@@ -239,6 +274,7 @@
       const list = issues.slice(0, 40).map((i) => `<li><code>${esc(i.page)}</code> ${inline(i.message)}</li>`).join("");
       doc.push(`<details class="format-warn"><summary><b>这份母稿不是标准格式</b>：${issues.length} 处问题，涉及 ${pages.size} 页。先运行 <code>draft_studio.py normalize</code> 转换；转换前，认不出的内容按正文显示。</summary><ul>${list}</ul>${issues.length > 40 ? `<p>还有 ${issues.length - 40} 处，运行 <code>draft_studio.py check</code> 查看全部。</p>` : ""}</details>`);
     }
+    if (model.registration) doc.push(authorityBar(model.registration));
     if (model.preface_md) doc.push(`<div class="preface md">${block(model.preface_md)}</div>`);
 
     model.chapters.forEach((ch, ci) => {
@@ -246,7 +282,7 @@
       const chain = ch.slides.length > 1
         ? `<div class="chain"><div class="chain-label">本章标题链（连起来读，检查论证是否断开）</div><ol>${ch.slides.map((s) => `<li><span class="sid">${s.id}</span><a href="#${anchor(s.id)}">${inline(s.title)}</a></li>`).join("")}</ol></div>`
         : "";
-      doc.push(`<section class="chapter" id="${ch.id}" data-chapter><div class="chapter-head"><div class="chapter-kicker">Chapter ${String(ci + 1).padStart(2, "0")}</div><h2>${inline(ch.title)}</h2><div class="chapter-intro"><div class="field-body md" data-field="intro:${ch.id}">${block(ch.intro_md)}</div>${ch.intro_span ? editBtn(`data-edit="intro" data-chapter="${ch.id}"`, "编辑本章说明") : ""}</div>${chain}</div>`);
+      doc.push(`<section class="chapter" id="${ch.id}" data-chapter><div class="chapter-head"><div class="chapter-kicker">Chapter ${String(ci + 1).padStart(2, "0")}</div><h2>${inline(ch.title)}</h2>${chapterConfirm(ch)}<div class="chapter-intro"><div class="field-body md" data-field="intro:${ch.id}">${block(ch.intro_md)}</div>${ch.intro_span ? editBtn(`data-edit="intro" data-chapter="${ch.id}"`, "编辑本章说明") : ""}</div>${chain}</div>`);
       ch.slides.forEach((s) => {
         const tools = live
           ? `<div class="slide-tools">${editBtn(`data-edit="title" data-slide="${s.id}"`, "改标题")}${s.body_md != null ? editBtn(`data-edit="body" data-slide="${s.id}"`, "编辑本页源文") : ""}</div>`
@@ -509,6 +545,11 @@
     source.addEventListener("error", () => state("重连中…", "off"));
     source.addEventListener("revision", (e) => applyRemote(JSON.parse(e.data)));
     source.addEventListener("comments", () => { if (!composer) loadComments(true); });
+    source.addEventListener("state", async () => {
+      if (editing) return;
+      const res = await fetch("/api/model", { headers: { "X-Studio-Token": live.token } });
+      if (res.ok) { model = await res.json(); rerender(); }
+    });
   }
 
   if (live) {
@@ -935,6 +976,17 @@
       }
     });
     document.addEventListener("click", (e) => {
+      const confirmBtn = e.target.closest("[data-confirm-chapter]");
+      if (confirmBtn) {
+        const id = confirmBtn.dataset.confirmChapter;
+        const ch = model.chapters.find((c) => c.studio && c.studio.chapter_id === id);
+        const n = ch ? ch.slides.length : 0;
+        if (window.confirm(`确认 ${id} 的全部 ${n} 页？\n确认会记录每一页当前的内容；之后再修改，这一章会自动退回待确认。`)) {
+          authorityPost("/api/confirm", { chapter_id: id, author }, `${id} 已确认`);
+        }
+        return;
+      }
+      if (e.target.closest("[data-register]")) { authorityPost("/api/register", {}, "已登记当前版本"); return; }
       const mark = e.target.closest("mark.cmt-mark[data-thread]");
       if (mark) { activate(mark.dataset.thread, false); return; }
       const goto = e.target.closest("[data-goto-slide]");

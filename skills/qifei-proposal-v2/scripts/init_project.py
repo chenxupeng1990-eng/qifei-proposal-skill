@@ -57,7 +57,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--content-authority",
-        choices=("feishu", "local"),
+        choices=("studio", "feishu", "local"),
         help="Override the default content authority for full or standalone work",
     )
     parser.add_argument(
@@ -152,7 +152,8 @@ def main() -> int:
     if args.task_mode == "inherited_module":
         content_authority = "inherit_parent"
     else:
-        content_authority = args.content_authority or ("feishu" if args.task_mode == "full_deck" else "local")
+        # The draft studio is the default authority for full decks; Feishu stays available by choice.
+        content_authority = args.content_authority or ("studio" if args.task_mode == "full_deck" else "local")
     values = {
         "PROJECT_ID": project_id,
         "PROJECT_NAME": args.name,
@@ -175,6 +176,15 @@ def main() -> int:
     })
     if content_authority == "local":
         state["proposal_draft"]["authority"] = "local"
+    if content_authority == "studio":
+        state["proposal_draft"].update({
+            "authority": "studio",
+            "verified_snapshot_path": "content/draft/proposal-draft.md",
+        })
+        draft_file = target / "content" / "draft" / "proposal-draft.md"
+        if not draft_file.exists():
+            draft_file.parent.mkdir(parents=True, exist_ok=True)
+            draft_file.write_text(f"<title>{args.name}</title>\n\n", encoding="utf-8")
     if args.task_mode != "full_deck":
         state["module_context"] = {
             "module_id": project_id,

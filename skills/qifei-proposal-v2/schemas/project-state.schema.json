@@ -25,7 +25,7 @@
     },
     "task_mode": {"enum": ["full_deck", "inherited_module", "standalone_module"]},
     "deliverable_level": {"enum": ["content", "slides", "export"]},
-    "content_authority": {"enum": ["feishu", "local", "inherit_parent"]},
+    "content_authority": {"enum": ["studio", "feishu", "local", "inherit_parent"]},
     "module_context": {
       "type": ["object", "null"],
       "required": [
@@ -108,9 +108,9 @@
       "type": "object",
       "required": ["authority", "status", "format_version", "verified_slide_ids"],
       "properties": {
-        "authority": {"enum": ["feishu", "local"]},
+        "authority": {"enum": ["studio", "feishu", "local"]},
         "status": {
-          "enum": ["not_started", "local_fallback_pending_sync", "verified"]
+          "enum": ["not_started", "local_fallback_pending_sync", "editing", "verified"]
         },
         "format_version": {"type": "string"},
         "feishu_doc_url": {"type": ["string", "null"]},
@@ -120,7 +120,8 @@
         "verified_snapshot_path": {"type": "string"},
         "verified_snapshot_sha256": {"type": ["string", "null"]},
         "verified_slide_ids": {"type": "array", "items": {"type": "string"}},
-        "fallback_reason": {"type": ["string", "null"]}
+        "fallback_reason": {"type": ["string", "null"]},
+        "studio_log_path": {"type": ["string", "null"]}
       },
       "additionalProperties": false
     },

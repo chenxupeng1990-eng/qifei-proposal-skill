@@ -16,7 +16,16 @@
 
 ## 1.1 权威来源与回读凭证
 
-飞书提案文档是内容确认阶段的唯一权威母版。本地 Markdown 只能作为飞书整份回读后的可审计快照，或在飞书暂时不可用时承担待同步草稿。
+母稿的权威源有两种，在项目启动时选定：
+
+- **工作台（`studio`，完整提案默认）**：母稿就是 `content/draft/proposal-draft.md`。
+  - 每次修改都会写入修订日志。
+  - Owner 在工作台上逐章确认，确认记录绑定这一章每一页的内容指纹。
+  - 登记（`draft_studio.py register`，或工作台上的按钮）把当前版本记为已核验版本。
+  - 见 [draft-studio.md](draft-studio.md)。
+- **飞书（`feishu`，可选）**：飞书提案文档是唯一权威母版。本地 Markdown 只能作为飞书整份回读后的可审计快照，或在飞书暂时不可用时承担待同步草稿。
+
+以下回读规则适用于飞书。工作台的对应规则见本节末尾。
 
 每轮写入或评论修改后必须：
 
@@ -39,11 +48,23 @@
 
 飞书不可用时将状态记为 `local_fallback_pending_sync` 并填写 `fallback_reason`。该状态不能进入全稿审查、内容冻结或视觉生产。
 
+**工作台的凭证**：`proposal_draft` 记录以下内容：
+- `authority: "studio"`、`status: "verified"`、`format_version: "proposal-draft-v2"`
+- `revision_id`（修订日志里的版本号）、`verified_snapshot_path: "content/draft/proposal-draft.md"`、SHA256
+- `verified_slide_ids`、`studio_log_path`
+
+门禁会核对以下几点，任一不满足都不能进入全稿审查：
+- 登记的版本和哈希在修订日志里能对上。
+- 登记之后母稿没有再改。
+- 每个已确认章节的页面指纹和确认时一致。
+
+母稿登记后再修改，状态会变为 `editing`；被改到的章节自动退回待确认。
+
 ### 1.2 临时插页与拆页
 
 视觉或评审阶段临时提出的新页、拆页、合页，先登记在 `content/feishu/page-change-proposals.md`，记录来源页、拟议位置、修改理由和受影响的前后过桥。候选页不得进入 `chapters[].slides`、`deck-spec.json`、拼装准备库、最终页序或讲稿。
 
-Owner 接受变更后，先回写飞书并完成整份回读，再更新 `verified_slide_ids`、章节页序和本地快照；只有这些对象完全一致，候选页才转为正式页。Owner 放弃的候选页直接删除，不保留虚假的正式状态。
+Owner 接受变更后，先写入权威源：工作台直接改母稿并重新登记；飞书则回写飞书并完成整份回读。然后更新 `verified_slide_ids`、章节页序和本地快照；只有这些对象完全一致，候选页才转为正式页。Owner 放弃的候选页直接删除，不保留虚假的正式状态。
 
 ## 2. 章节格式
 

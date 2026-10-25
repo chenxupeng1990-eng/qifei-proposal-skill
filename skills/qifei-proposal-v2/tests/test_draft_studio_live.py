@@ -282,7 +282,7 @@ class CommentApiTests(StudioServerCase):
         self.assertEqual(stream.readline().strip(), b": connected")
         status, created = self.request("/api/comments", {"slide": "P03", "field": "P03:core", "quote": "内容即货架", "text": "改成更口语"})
         self.assertEqual(status, 200, created)
-        self.assertEqual(created["thread"]["draft_revision"], 0)
+        self.assertEqual(created["thread"]["draft_revision"], 1)  # first studio revision is 1
         subprocess.run([sys.executable, str(SCRIPTS / "draft_studio.py"), "reply", str(self.project), "C-0001", "已改"], check=True, capture_output=True)
         events = []
         deadline = time.time() + 8

@@ -372,10 +372,13 @@ def attach_status(model: dict[str, Any], state: dict[str, Any] | None) -> None:
     confirmed_chapters: set[str] = set()
     confirmed_by_slide: dict[str, bool] = {}
     verified: set[str] = set()
+    reopened: set[str] = set()
     if state:
         for chapter in state.get("chapters") or []:
             for slide_id in chapter.get("slides") or []:
                 confirmed_by_slide[slide_id] = bool(chapter.get("manuscript_confirmed"))
+                if not chapter.get("manuscript_confirmed") and chapter.get("confirmation_record_id"):
+                    reopened.add(slide_id)
         verified = set((state.get("proposal_draft") or {}).get("verified_slide_ids") or [])
     for chapter in model["chapters"]:
         for slide in chapter["slides"]:
@@ -383,6 +386,8 @@ def attach_status(model: dict[str, Any], state: dict[str, Any] | None) -> None:
                 slide["status"] = "unknown"
             elif confirmed_by_slide.get(slide["id"]):
                 slide["status"] = "confirmed"
+            elif slide["id"] in reopened:
+                slide["status"] = "modified"
             elif slide["id"] in verified:
                 slide["status"] = "verified"
             else:
@@ -527,6 +532,32 @@ def model_from_text(
     if model["title"] == "提案母稿" and model["meta"]["project_name"]:
         model["title"] = model["meta"]["project_name"]
     return model
+
+
+def annotate_studio(model: dict[str, Any], state: dict[str, Any], confirmations: "ConfirmationStore", revision: int) -> None:
+    """Tell the page which registered chapter each drafted chapter is, and where registration stands."""
+    issue_pages = {i["page"] for i in model.get("format_issues", [])}
+    for chapter in model["chapters"]:
+        ids = {s["id"] for s in chapter["slides"]}
+        match = next((c for c in state.get("chapters") or [] if ids and set(c.get("slides") or []) and set(c.get("slides") or []) <= ids), None)
+        if not match:
+            chapter["studio"] = {"chapter_id": None, "reason": "project-state.json 里没有登记这一章的页序"}
+            continue
+        record = confirmations.find(match.get("confirmation_record_id"))
+        blocked = sorted(ids & issue_pages)
+        chapter["studio"] = {
+            "chapter_id": match.get("chapter_id"),
+            "confirmed": bool(match.get("manuscript_confirmed")),
+            "record": {k: record[k] for k in ("by", "at", "revision")} if record else None,
+            "reason": f"格式问题未修正：{'、'.join(blocked)}" if blocked else None,
+        }
+    draft = state.get("proposal_draft") or {}
+    model["registration"] = {
+        "status": draft.get("status"),
+        "revision": draft.get("revision_id"),
+        "current": revision,
+        "all_confirmed": bool(state.get("chapters")) and all(c.get("manuscript_confirmed") for c in state.get("chapters") or []),
+    }
 
 
 def build_model(project: Path, draft_arg: str | None) -> dict[str, Any]:
@@ -872,11 +903,17 @@ class DraftStore:
 
     def model(self) -> dict[str, Any]:
         with self.lock:
-            return model_from_text(self.read(), self.project, self.draft_path, self.state, self.revision, self.edited_slides())
+            if (self.project / STATE_FILE).is_file():
+                self.state = read_state(self.project)  # confirmations and registration change it
+            edited = None if is_studio(self.state) else self.edited_slides()
+            model = model_from_text(self.read(), self.project, self.draft_path, self.state, self.revision, edited)
+            if is_studio(self.state):
+                annotate_studio(model, self.state, ConfirmationStore(self.draft_path), self.revision)
+            return model
 
     def _record(self, text: str, actor: str, slides: list[str], note: str) -> dict[str, Any]:
         entry = {
-            "revision": self.revision + (0 if actor == "baseline" else 1),
+            "revision": max(self.revision, 1) if actor == "baseline" else self.revision + 1,
             "sha256": sha256_text(text),
             "at": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
             "actor": actor,
@@ -887,6 +924,8 @@ class DraftStore:
         (self.revisions_dir / f"rev-{entry['revision']:06d}.md").write_text(text, encoding="utf-8")
         with self.log_path.open("a", encoding="utf-8") as log:
             log.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        if actor != "baseline":
+            entry["reopened"] = invalidate_after_change(self.project, slides)
         return entry
 
     def ensure_baseline(self) -> None:
@@ -926,6 +965,188 @@ class DraftStore:
             previous = self.revisions_dir / f"rev-{self.revision:06d}.md"
             before = previous.read_text(encoding="utf-8") if previous.is_file() else ""
             return self._record(text, "external", changed_slides(before, text), "draft file changed outside the studio")
+
+
+# ---------- Studio as the content authority: chapter confirmation and registration ----------
+
+STATE_FILE = "project-state.json"
+
+
+def read_state(project: Path) -> dict[str, Any] | None:
+    path = project / STATE_FILE
+    return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
+
+
+def write_state(project: Path, state: dict[str, Any]) -> None:
+    fd, tmp = tempfile.mkstemp(prefix=".state-", suffix=".json", dir=project)
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        json.dump(state, handle, ensure_ascii=False, indent=2)
+        handle.write("\n")
+    os.replace(tmp, project / STATE_FILE)
+
+
+def is_studio(state: dict[str, Any] | None) -> bool:
+    return bool(state) and state.get("content_authority") == "studio"
+
+
+def page_digests(text: str) -> dict[str, str]:
+    """A fingerprint per page (title and every field), used to prove a confirmed page did not change."""
+    return {
+        s["id"]: sha256_text(json.dumps([s["title"], [[f["key"], f["md"]] for f in s["fields"]]], ensure_ascii=False))
+        for c in parse_draft(text)["chapters"] for s in c["slides"]
+    }
+
+
+class ConfirmationStore:
+    """Owner confirmations of whole chapters, each bound to the page fingerprints it approved."""
+
+    def __init__(self, draft_path: Path) -> None:
+        self.path = draft_path.parent / "confirmations.json"
+
+    def load(self) -> dict[str, Any]:
+        if not self.path.is_file():
+            return {"records": []}
+        return json.loads(self.path.read_text(encoding="utf-8") or '{"records": []}')
+
+    def find(self, record_id: str | None) -> dict[str, Any] | None:
+        return next((r for r in self.load()["records"] if r["record_id"] == record_id), None)
+
+    def add(self, record: dict[str, Any]) -> None:
+        data = self.load()
+        data["records"].append(record)
+        fd, tmp = tempfile.mkstemp(prefix=".confirmations-", suffix=".json", dir=self.path.parent)
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(data, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+        os.replace(tmp, self.path)
+
+
+def _state_chapter(state: dict[str, Any], chapter_id: str) -> dict[str, Any]:
+    for chapter in state.get("chapters") or []:
+        if chapter.get("chapter_id") == chapter_id:
+            return chapter
+    raise EditError(f"project-state.json 里没有章节 {chapter_id}")
+
+
+def confirm_chapter(project: Path, draft_path: Path, chapter_id: str, by: str) -> dict[str, Any]:
+    """The Owner confirms one chapter as it stands now; the record keeps each page's fingerprint."""
+    state = read_state(project)
+    if not is_studio(state):
+        raise EditError("只有以工作台为权威源（content_authority = studio）的项目可以在这里确认章节")
+    chapter = _state_chapter(state, chapter_id)
+    slides = [str(s) for s in chapter.get("slides") or []]
+    if not slides:
+        raise EditError(f"{chapter_id} 还没有登记页序")
+    store = DraftStore(project, draft_path, state)
+    store.ensure_baseline()
+    store.sync_external()
+    text = store.read()
+    digests = page_digests(text)
+    missing = [s for s in slides if s not in digests]
+    if missing:
+        raise EditError(f"母稿里找不到 {chapter_id} 的页面：{'、'.join(missing)}")
+    issues = [i for i in check_format(text) if i["page"] in slides]
+    if issues:
+        raise EditError(f"{chapter_id} 还有 {len(issues)} 处格式问题，先修正再确认（{issues[0]['page']}：{issues[0]['message']}）")
+    record = {
+        "record_id": f"confirm-{chapter_id}-r{store.revision}-{secrets.token_hex(3)}",
+        "chapter_id": chapter_id,
+        "slides": {s: digests[s] for s in slides},
+        "by": (by or "Owner")[:40],
+        "at": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
+        "revision": store.revision,
+        "sha256": sha256_text(text),
+    }
+    ConfirmationStore(draft_path).add(record)
+    state = read_state(project)
+    chapter = _state_chapter(state, chapter_id)
+    chapter["manuscript_confirmed"] = True
+    chapter["confirmation_record_id"] = record["record_id"]
+    write_state(project, state)
+    return record
+
+
+def register_draft(project: Path, draft_path: Path) -> dict[str, Any]:
+    """Record the current draft as the verified version (the studio's equivalent of a Feishu reread)."""
+    state = read_state(project)
+    if not is_studio(state):
+        raise EditError("只有以工作台为权威源的项目可以在这里登记")
+    store = DraftStore(project, draft_path, state)
+    store.ensure_baseline()
+    store.sync_external()  # may reopen chapters, so read the state again afterwards
+    state = read_state(project)
+    text = store.read()
+    issues = check_format(text)
+    if issues:
+        raise EditError(f"格式检查未通过（{len(issues)} 处），先运行 check / normalize")
+    expected = [str(s) for c in state.get("chapters") or [] for s in c.get("slides") or []]
+    actual = page_ids(text)
+    if not expected:
+        raise EditError("project-state.json 的 chapters 还没有登记页序")
+    if actual != expected:
+        raise EditError(f"母稿页序和 project-state 的章节页序不一致：母稿 {'、'.join(actual)}；登记 {'、'.join(expected)}")
+    draft = state.setdefault("proposal_draft", {})
+    draft.update({
+        "authority": "studio",
+        "status": "verified",
+        "format_version": "proposal-draft-v2",
+        "revision_id": store.revision,
+        "last_verified_at": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
+        "verified_snapshot_path": str(draft_path.relative_to(project)),
+        "verified_snapshot_sha256": sha256_text(text),
+        "verified_slide_ids": actual,
+        "studio_log_path": str(store.log_path.relative_to(project)),
+        "fallback_reason": None,
+    })
+    write_state(project, state)
+    return draft
+
+
+def invalidate_after_change(project: Path, slides: list[str]) -> list[str]:
+    """An edit after confirmation sends the chapter back to unconfirmed and the registration to pending."""
+    state = read_state(project)
+    if not is_studio(state):
+        return []
+    reopened = []
+    for chapter in state.get("chapters") or []:
+        if chapter.get("manuscript_confirmed") and set(chapter.get("slides") or []) & set(slides):
+            chapter["manuscript_confirmed"] = False
+            reopened.append(chapter.get("chapter_id"))
+    draft = state.get("proposal_draft") or {}
+    if draft.get("authority") == "studio" and draft.get("status") == "verified":
+        draft["status"] = "editing"
+    write_state(project, state)
+    return reopened
+
+
+def studio_evidence_errors(project: Path, draft: dict[str, Any], snapshot_path: Path, chapters: list[dict]) -> list[str]:
+    """Gate check for a studio-authority draft: registered revision, no later edits, confirmations still hold."""
+    errors: list[str] = []
+    log_path = snapshot_path.parent / "revisions" / "log.jsonl"
+    entries = [json.loads(l) for l in log_path.read_text(encoding="utf-8").splitlines() if l.strip()] if log_path.is_file() else []
+    revision = draft.get("revision_id")
+    match = next((e for e in entries if e.get("revision") == revision), None)
+    if match is None:
+        errors.append(f"studio revision log has no entry for proposal_draft.revision_id {revision}")
+    elif match.get("sha256") != draft.get("verified_snapshot_sha256"):
+        errors.append("studio revision log hash does not match the registered draft")
+    if entries and isinstance(revision, int) and entries[-1].get("revision", 0) > revision:
+        errors.append(f"the draft changed after registration (rev {revision} → rev {entries[-1]['revision']}); register it again")
+    text = snapshot_path.read_text(encoding="utf-8")
+    digests = page_digests(text)
+    confirmations = ConfirmationStore(snapshot_path)
+    for index, chapter in enumerate(chapters, start=1):
+        chapter_id = chapter.get("chapter_id") or f"chapter-{index}"
+        if not chapter.get("manuscript_confirmed"):
+            continue
+        record = confirmations.find(chapter.get("confirmation_record_id"))
+        if record is None:
+            errors.append(f"{chapter_id}: confirmation {chapter.get('confirmation_record_id')} is not in confirmations.json")
+            continue
+        changed = [s for s in chapter.get("slides") or [] if record["slides"].get(s) != digests.get(s)]
+        if changed:
+            errors.append(f"{chapter_id}: changed after confirmation ({', '.join(changed)}); confirm it again")
+    return errors
 
 
 def field_label(anchor: str) -> str:
@@ -1077,6 +1298,11 @@ class StudioServer(ThreadingHTTPServer):
             }
             self.changed.notify_all()
 
+    def publish_state(self) -> None:
+        with self.changed:
+            self.latest = {**self.latest, "state": (self.latest.get("state") or 0) + 1}
+            self.changed.notify_all()
+
     def publish_comments(self) -> None:
         with self.changed:
             self.comments_digest = self.comments.digest()
@@ -1089,6 +1315,7 @@ class StudioServer(ThreadingHTTPServer):
                 entry = self.store.sync_external()
                 if entry:
                     self.publish(entry)
+                    self.publish_state()
                 if self.comments.digest() != self.comments_digest:
                     self.publish_comments()
             except (OSError, ValueError):
@@ -1155,6 +1382,8 @@ class StudioHandler(BaseHTTPRequestHandler):
             return self._json(403, {"error": "forbidden"})
         if url.path.startswith("/api/comments"):
             return self._comment_post(url.path)
+        if url.path in {"/api/confirm", "/api/register"}:
+            return self._authority_post(url.path)
         if url.path != "/api/save":
             return self._json(404, {"error": "not found"})
         try:
@@ -1167,7 +1396,28 @@ class StudioHandler(BaseHTTPRequestHandler):
             return self._json(400, {"error": str(error)})
         if not entry.get("unchanged"):
             self.server.publish(entry)
+            self.server.publish_state()
         return self._json(200, {"entry": entry, "model": self.server.store.model()})
+
+    def _authority_post(self, path: str) -> None:
+        store = self.server.store
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+            payload = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
+            with store.lock:
+                if path == "/api/confirm":
+                    record = confirm_chapter(store.project, store.draft_path, str(payload["chapter_id"]), str(payload.get("author") or "Owner"))
+                    result: dict[str, Any] = {"confirmed": record}
+                    try:
+                        result["registered"] = register_draft(store.project, store.draft_path)
+                    except EditError as error:
+                        result["registration_pending"] = str(error)
+                else:
+                    result = {"registered": register_draft(store.project, store.draft_path)}
+        except (EditError, KeyError, json.JSONDecodeError, ValueError) as error:
+            return self._json(400, {"error": str(error)})
+        self.server.publish_state()
+        return self._json(200, {**result, "model": store.model()})
 
     def _comment_post(self, path: str) -> None:
         comments = self.server.comments
@@ -1197,6 +1447,7 @@ class StudioHandler(BaseHTTPRequestHandler):
         self.end_headers()
         seen = self.server.latest.get("sha256")
         seen_comments = self.server.comments_digest
+        seen_state = self.server.latest.get("state")
         try:
             self.wfile.write(b": connected\n\n")
             self.wfile.flush()
@@ -1209,6 +1460,10 @@ class StudioHandler(BaseHTTPRequestHandler):
                     seen = latest.get("sha256")
                     data = json.dumps(latest, ensure_ascii=False)
                     self.wfile.write(f"event: revision\ndata: {data}\n\n".encode("utf-8"))
+                    sent = True
+                if latest.get("state") != seen_state:
+                    seen_state = latest.get("state")
+                    self.wfile.write(b"event: state\ndata: {}\n\n")
                     sent = True
                 if latest.get("comments") and latest.get("comments") != seen_comments:
                     seen_comments = latest.get("comments")
@@ -1299,6 +1554,9 @@ def main() -> int:
     studio.add_argument("--host", default="127.0.0.1")
     studio.add_argument("--port", type=int, default=8765)
     studio.add_argument("--open", action="store_true", help="open the studio in the default browser")
+    reg = sub.add_parser("register", help="record the current studio draft as the verified version")
+    reg.add_argument("project")
+    reg.add_argument("--draft")
     check = sub.add_parser("check", help="check the draft against the single draft format")
     check.add_argument("project")
     check.add_argument("--draft")
@@ -1322,6 +1580,18 @@ def main() -> int:
     project = Path(args.project).expanduser().resolve()
     if args.command == "serve":
         return serve(project, args.draft, args.host, args.port, args.open)
+    if args.command == "register":
+        draft_path, _ = load_project(project, args.draft)
+        try:
+            draft = register_draft(project, draft_path)
+        except EditError as error:
+            print(f"FAIL: {error}")
+            return 1
+        unconfirmed = [c.get("chapter_id") for c in (read_state(project) or {}).get("chapters") or [] if not c.get("manuscript_confirmed")]
+        print(f"Registered rev {draft['revision_id']} ({draft['verified_snapshot_sha256'][:12]}), {len(draft['verified_slide_ids'])} pages")
+        if unconfirmed:
+            print(f"Chapters still waiting for the Owner's confirmation: {'、'.join(unconfirmed)}")
+        return 0
     if args.command == "check":
         draft_path, _ = load_project(project, args.draft)
         issues = check_format(draft_path.read_text(encoding="utf-8"))
