@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<style>
+{{CSS}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <button class="toc-toggle" type="button" aria-label="目录" data-action="toggle-toc">☰</button>
+  <div class="topbar-title">
+    <div class="doc-title" id="doc-title"></div>
+    <div class="doc-meta" id="doc-meta"></div>
+  </div>
+  <div class="topbar-tools">
+    <div class="segmented" role="tablist" aria-label="阅读视图">
+      <button type="button" data-view="full" class="active">完整</button>
+      <button type="button" data-view="client">客户视图</button>
+      <button type="button" data-view="chain">标题链</button>
+    </div>
+    <input class="search" id="search" type="search" placeholder="搜索页面…" aria-label="搜索页面">
+    <div class="menu">
+      <button type="button" class="btn" data-action="toggle-menu">导出 ▾</button>
+      <div class="menu-pop" id="export-menu" hidden>
+        <button type="button" data-download="full">下载完整 Markdown</button>
+        <button type="button" data-download="brief">下载简洁 Markdown</button>
+        <button type="button" data-action="print">打印 / 存为 PDF</button>
+      </div>
+    </div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="toc" id="toc" aria-label="章节与页面"></nav>
+  <main class="doc" id="doc"></main>
+</div>
+<script type="application/json" id="model">{{MODEL_JSON}}</script>
+<script type="application/json" id="markdown">{{MD_JSON}}</script>
+<script>
+{{JS}}
+</script>
+</body>
+</html>
