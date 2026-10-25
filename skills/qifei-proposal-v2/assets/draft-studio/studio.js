@@ -1,10 +1,13 @@
 (() => {
   "use strict";
-  const model = JSON.parse(document.getElementById("model").textContent);
+  let model = JSON.parse(document.getElementById("model").textContent);
   const markdown = JSON.parse(document.getElementById("markdown").textContent);
+  const liveNode = document.getElementById("live");
+  const live = liveNode ? JSON.parse(liveNode.textContent) : null;
   const STATUS = {
     confirmed: "已确认",
     verified: "已回读",
+    modified: "已修改·待重新确认",
     pending: "待确认",
     unknown: "无状态",
   };
@@ -174,18 +177,24 @@
     return `<div class="md">${block(md)}</div>`;
   }
 
+  const editBtn = (attrs, label = "编辑") => live ? `<button type="button" class="edit-btn" ${attrs}>${label}</button>` : "";
+
   function fieldHtml(field, slide) {
+    const canEdit = live && field.span;
+    const edit = canEdit ? editBtn(`data-edit="field" data-slide="${slide.id}" data-key="${field.key}"`) : "";
     let body;
     if (field.key === "screen") body = screenHtml(field.md, slide.title);
     else if (field.key === "visual") body = visualHtml(field.md);
     else if (field.key === "logic") body = logicHtml(field.md);
     else if (field.key === "lead") body = `<figure class="preview">${block(field.md)}</figure>`;
     else body = `<div class="md">${block(field.md)}</div>`;
+    const box = `<div class="field-body" data-field="${slide.id}:${field.key}">${body}</div>`;
     if (INTERNAL.has(field.key)) {
-      return `<details class="internal field field-${field.key}"><summary>${field.name}<span class="tag">内部</span></summary>${body}</details>`;
+      return `<details class="internal field field-${field.key}"><summary>${field.name}<span class="tag">内部</span>${edit}</summary>${box}</details>`;
     }
-    const label = field.key === "lead" ? "" : `<div class="field-label">${field.name}${field.key === "visual" ? '<span class="tag">生产</span>' : ""}</div>`;
-    return `<section class="field field-${field.key}">${label}${body}</section>`;
+    const tag = field.key === "visual" ? '<span class="tag">生产</span>' : "";
+    const label = field.key === "lead" ? (edit ? `<div class="field-label">${field.name}${edit}</div>` : "") : `<div class="field-label">${field.name}${tag}${edit}</div>`;
+    return `<section class="field field-${field.key}">${label}${box}</section>`;
   }
 
   // ---------- Page assembly ----------
@@ -202,6 +211,7 @@
       meta.phase ? `阶段 ${meta.phase}` : null,
       meta.generated_at ? `生成于 ${meta.generated_at.replace("T", " ").slice(0, 16)}` : null,
     ].filter(Boolean);
+    if (live) metaBits.unshift(`<span class="live-dot" id="live-state">实时</span>`);
     document.getElementById("doc-meta").innerHTML = metaBits.join(" · ");
 
     const counts = {};
@@ -217,9 +227,12 @@
       const chain = ch.slides.length > 1
         ? `<div class="chain"><div class="chain-label">本章标题链（连起来读，检查论证是否断开）</div><ol>${ch.slides.map((s) => `<li><span class="sid">${s.id}</span><a href="#${anchor(s.id)}">${inline(s.title)}</a></li>`).join("")}</ol></div>`
         : "";
-      doc.push(`<section class="chapter" id="${ch.id}" data-chapter><div class="chapter-head"><div class="chapter-kicker">Chapter ${String(ci + 1).padStart(2, "0")}</div><h2>${inline(ch.title)}</h2><div class="chapter-intro md">${block(ch.intro_md)}</div>${chain}</div>`);
+      doc.push(`<section class="chapter" id="${ch.id}" data-chapter><div class="chapter-head"><div class="chapter-kicker">Chapter ${String(ci + 1).padStart(2, "0")}</div><h2>${inline(ch.title)}</h2><div class="chapter-intro"><div class="field-body md" data-field="intro:${ch.id}">${block(ch.intro_md)}</div>${ch.intro_span ? editBtn(`data-edit="intro" data-chapter="${ch.id}"`, "编辑本章说明") : ""}</div>${chain}</div>`);
       ch.slides.forEach((s) => {
-        doc.push(`<article class="slide" id="${anchor(s.id)}" data-slide-id="${s.id}"><div class="slide-head"><span class="slide-id">${s.id}</span><h3 class="slide-title">${inline(s.title)}</h3>${chip(s.status)}</div><div class="slide-body">${s.fields.map((f) => fieldHtml(f, s)).join("")}</div></article>`);
+        const tools = live
+          ? `<div class="slide-tools">${editBtn(`data-edit="title" data-slide="${s.id}"`, "改标题")}${s.body_md != null ? editBtn(`data-edit="body" data-slide="${s.id}"`, "编辑本页源文") : ""}</div>`
+          : "";
+        doc.push(`<article class="slide" id="${anchor(s.id)}" data-slide-id="${s.id}"><div class="slide-head"><span class="slide-id">${s.id}</span><h3 class="slide-title" data-field="title:${s.id}">${inline(s.title)}</h3>${chip(s.status)}</div>${tools}<div class="slide-body${s.body_md != null ? " field-body" : ""}" data-field="body:${s.id}">${s.fields.map((f) => fieldHtml(f, s)).join("")}</div></article>`);
       });
       doc.push(`</section>`);
     });
@@ -266,8 +279,13 @@
     document.getElementById("empty").hidden = shown > 0;
   }
 
-  function download(profile) {
-    const blob = new Blob([markdown[profile]], { type: "text/markdown;charset=utf-8" });
+  async function download(profile) {
+    let text = markdown[profile];
+    if (live) {
+      const res = await fetch(`/api/markdown?profile=${profile}`, { headers: { "X-Studio-Token": live.token } });
+      if (res.ok) text = await res.text();
+    }
+    const blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = `${model.title.replace(/[\\/:*?"<>|｜]+/g, "-")}${profile === "brief" ? "-简洁版" : ""}.md`;
@@ -276,7 +294,9 @@
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
   }
 
+  let spy = null;
   function scrollSpy() {
+    if (spy) spy.disconnect();
     const links = new Map([...document.querySelectorAll(".toc-slide")].map((a) => [a.dataset.slide, a]));
     const io = new IntersectionObserver((entries) => {
       entries.forEach((e) => {
@@ -287,6 +307,186 @@
       });
     }, { rootMargin: "-80px 0px -70% 0px" });
     document.querySelectorAll(".slide").forEach((el) => io.observe(el));
+    spy = io;
+  }
+
+  // ---------- Live studio: edit in place, save to the draft, refresh on every revision ----------
+  let editing = null;
+  let pendingRemote = null;
+
+  function findSlide(id) {
+    for (const ch of model.chapters) for (const s of ch.slides) if (s.id === id) return s;
+    return null;
+  }
+
+  function currentView() {
+    const b = document.querySelector(".segmented button.active");
+    return b ? b.dataset.view : "full";
+  }
+
+  function rerender(flashIds = []) {
+    const anchorEl = [...document.querySelectorAll(".slide")].find((el) => el.getBoundingClientRect().bottom > 80);
+    const anchorId = anchorEl && anchorEl.id;
+    const offset = anchorEl ? anchorEl.getBoundingClientRect().top : 0;
+    const view = currentView();
+    const query = document.getElementById("search").value;
+    render();
+    setView(view);
+    if (query) filter(query);
+    scrollSpy();
+    if (anchorId) {
+      const el = document.getElementById(anchorId);
+      if (el) window.scrollBy({ top: el.getBoundingClientRect().top - offset, behavior: "instant" });
+    }
+    flashIds.forEach((id) => {
+      const el = document.getElementById(anchor(id));
+      if (el) { el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); }
+    });
+  }
+
+  function toast(text, tone = "") {
+    let el = document.getElementById("toast");
+    if (!el) { el = document.createElement("div"); el.id = "toast"; document.body.appendChild(el); }
+    el.className = `toast show ${tone}`;
+    el.textContent = text;
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => { el.className = "toast"; }, 3200);
+  }
+
+  function sourceFor(kind, ids) {
+    if (kind === "intro") {
+      const ch = model.chapters.find((c) => c.id === ids.chapter);
+      return ch ? (ch.intro_raw != null ? ch.intro_raw : ch.intro_md) : "";
+    }
+    const s = findSlide(ids.slide);
+    if (!s) return "";
+    if (kind === "title") return s.title;
+    if (kind === "body") return s.body_md || "";
+    const f = s.fields.find((x) => x.key === ids.key);
+    return f ? (f.raw != null ? f.raw : f.md) : "";
+  }
+
+  function openEditor(btn) {
+    if (editing) { editing.textarea.focus(); return; }
+    const kind = btn.dataset.edit;
+    const ids = { slide: btn.dataset.slide, key: btn.dataset.key, chapter: btn.dataset.chapter };
+    const slide = ids.slide ? findSlide(ids.slide) : null;
+    if (slide && (slide.status === "confirmed" || slide.status === "verified")) {
+      if (!window.confirm(`${slide.id} 已确认。保存修改后，这一页会标记为“已修改·待重新确认”。继续编辑吗？`)) return;
+    }
+    const fieldKey = kind === "field" ? `${ids.slide}:${ids.key}` : kind === "intro" ? `intro:${ids.chapter}` : `${kind}:${ids.slide}`;
+    const host = document.querySelector(`[data-field="${CSS.escape(fieldKey)}"]`);
+    if (!host) return;
+    const details = host.closest("details");
+    if (details) details.open = true;
+    const original = sourceFor(kind, ids);
+    const form = document.createElement("div");
+    form.className = `editor ${kind === "title" ? "editor-title" : ""}`;
+    form.innerHTML = `
+      <textarea spellcheck="false" aria-label="编辑内容"></textarea>
+      <div class="editor-bar">
+        <span class="editor-hint">${kind === "title" ? "页面标题" : "Markdown 源文"} · ⌘/Ctrl+Enter 保存 · Esc 取消</span>
+        <span class="editor-msg"></span>
+        <button type="button" class="btn" data-editor="cancel">取消</button>
+        <button type="button" class="btn primary" data-editor="save">保存</button>
+      </div>`;
+    const textarea = form.querySelector("textarea");
+    textarea.value = original;
+    host.hidden = true;
+    host.after(form);
+    const autosize = () => { textarea.style.height = "auto"; textarea.style.height = `${Math.min(textarea.scrollHeight + 4, window.innerHeight * 0.7)}px`; };
+    textarea.addEventListener("input", autosize);
+    textarea.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { e.preventDefault(); closeEditor(); }
+      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); save(); }
+      if (kind === "title" && e.key === "Enter" && !e.metaKey && !e.ctrlKey) { e.preventDefault(); save(); }
+    });
+    editing = { kind, ids, host, form, textarea, original, baseSha: model.meta.sha256 };
+    autosize();
+    textarea.focus();
+  }
+
+  function closeEditor() {
+    if (!editing) return;
+    editing.form.remove();
+    editing.host.hidden = false;
+    editing = null;
+    if (pendingRemote) { const next = pendingRemote; pendingRemote = null; applyRemote(next); }
+  }
+
+  async function save() {
+    if (!editing || editing.saving) return;
+    const { kind, ids, textarea, form } = editing;
+    const msg = form.querySelector(".editor-msg");
+    if (textarea.value === editing.original && editing.baseSha === model.meta.sha256) { closeEditor(); return; }
+    editing.saving = true;
+    msg.textContent = "保存中…";
+    msg.className = "editor-msg";
+    try {
+      const res = await fetch("/api/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Studio-Token": live.token },
+        body: JSON.stringify({ target: { kind, slide: ids.slide, key: ids.key, chapter: ids.chapter, md: textarea.value }, base_sha: editing.baseSha }),
+      });
+      const data = await res.json();
+      if (res.status === 409) {
+        model = data.model;
+        editing.baseSha = data.model.meta.sha256;
+        msg.innerHTML = `母稿刚被别处修改（rev ${data.model.meta.revision}）。你的文字还在，<button type="button" class="linkish" data-editor="save">保存到最新版本</button>`;
+        msg.className = "editor-msg warn";
+        return;
+      }
+      if (!res.ok) { msg.textContent = data.error || "保存失败"; msg.className = "editor-msg warn"; return; }
+      model = data.model;
+      const entry = data.entry || {};
+      editing.form.remove();
+      editing.host.hidden = false;
+      editing = null;
+      rerender(entry.slides || []);
+      toast(entry.unchanged ? "内容没有变化" : `已保存 · rev ${entry.revision}`, "ok");
+    } catch (err) {
+      msg.textContent = "连接不到工作台服务，内容未保存";
+      msg.className = "editor-msg warn";
+    } finally {
+      if (editing) editing.saving = false;
+    }
+  }
+
+  async function applyRemote(event) {
+    if (event.sha256 === model.meta.sha256) return;
+    if (editing) {
+      pendingRemote = event;
+      const msg = editing.form.querySelector(".editor-msg");
+      msg.textContent = `母稿有新版本 rev ${event.revision}${event.slides && event.slides.length ? `（${event.slides.join("、")}）` : ""}，保存时会提示`;
+      msg.className = "editor-msg warn";
+      return;
+    }
+    const res = await fetch("/api/model", { headers: { "X-Studio-Token": live.token } });
+    if (!res.ok) return;
+    model = await res.json();
+    rerender(event.slides || []);
+    const who = event.actor === "external" ? "母稿文件被外部修改" : "母稿已更新";
+    toast(`${who} · rev ${event.revision}${event.slides && event.slides.length ? ` · ${event.slides.join("、")}` : ""}`);
+  }
+
+  function connect() {
+    if (!live) return;
+    const source = new EventSource(`/api/events?token=${encodeURIComponent(live.token)}`);
+    const state = (text, cls) => { const el = document.getElementById("live-state"); if (el) { el.textContent = text; el.className = `live-dot ${cls || ""}`; } };
+    source.addEventListener("open", () => state("实时"));
+    source.addEventListener("error", () => state("重连中…", "off"));
+    source.addEventListener("revision", (e) => applyRemote(JSON.parse(e.data)));
+  }
+
+  if (live) {
+    document.body.classList.add("live");
+    document.addEventListener("click", (e) => {
+      const edit = e.target.closest("[data-edit]");
+      if (edit) { e.preventDefault(); e.stopPropagation(); openEditor(edit); return; }
+      const action = e.target.closest("[data-editor]");
+      if (action) action.dataset.editor === "save" ? save() : closeEditor();
+    }, true);
+    window.addEventListener("beforeunload", (e) => { if (editing && editing.textarea.value !== editing.original) e.preventDefault(); });
   }
 
   render();
@@ -294,6 +494,7 @@
   try { saved = localStorage.getItem("draft-studio-view") || "full"; } catch (_) { /* default view */ }
   setView(saved);
   scrollSpy();
+  connect();
 
   document.addEventListener("click", (e) => {
     const t = e.target.closest("button, a");

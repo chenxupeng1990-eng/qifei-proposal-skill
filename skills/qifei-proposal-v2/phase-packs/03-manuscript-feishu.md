@@ -25,7 +25,7 @@
 - 整章生成，逐页确认；不得逐页串行生成正文。
 - `full_deck` 默认飞书是唯一确认母版；`inherited_module` 沿用父项目；`standalone_module` 可在启动时明确选择本地Markdown。
 - 修改评论后重新抓取整份飞书并再次校验。
-- 给 Owner 阅读整章或整份母稿时，用 `python3 scripts/draft_studio.py render <项目目录>` 生成富格式阅读页（`deck/review/draft-studio.html`），需要 Markdown 时用 `export-md --profile full|brief`。阅读页和导出的 Markdown 都是派生物，不改变权威源，见 [../references/draft-studio.md](../references/draft-studio.md)。
+- 给 Owner 阅读整章或整份母稿时，用 `python3 scripts/draft_studio.py render <项目目录>` 生成富格式阅读页（`deck/review/draft-studio.html`），需要 Markdown 时用 `export-md --profile full|brief`；Owner 想直接在页面上改稿时，用 `serve` 启动本地工作台，保存即写盘并记录版本。阅读页和导出的 Markdown 都是派生物，不改变权威源，见 [../references/draft-studio.md](../references/draft-studio.md)。
 - 临时插页、拆页和合页先进入变更候选清单；飞书回写与整份回读完成前，不修改正式页序。
 - 只写讲解方向，不生成完整演讲稿。
 - 数据页必须用判断型标题，并完整表达数据事实、比较关系、品牌含义、策略选择和后续接口；不能写成中立行业报告或数据罗列。
