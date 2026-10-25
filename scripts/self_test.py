@@ -13,6 +13,9 @@ import sys
 import tempfile
 from pathlib import Path
 
+# Checks must never read or write the Owner's real proposal memory.
+os.environ["QIFEI_MEMORY_HOME"] = tempfile.mkdtemp(prefix="qifei-memory-selftest-")
+
 
 ROOT = Path(__file__).resolve().parent.parent
 SKILLS = (

@@ -10,6 +10,7 @@ import re
 from pathlib import Path
 
 from draft_studio import check_format, studio_evidence_errors
+from proposal_memory import memory_for_phase, receipt_problem, write_receipt
 from validate_assembly_ready import validate_assembly_ready
 from validate_deck_spec import png_has_alpha
 from validate_design_loop import validate_chapter_report
@@ -385,6 +386,9 @@ def validate_visual_direction_drafts(
     return errors
 
 
+MEMORY_ERROR = "proposal memory: "
+
+
 def validate_project(project: Path) -> list[str]:
     errors: list[str] = []
     state_path = project / "project-state.json"
@@ -732,6 +736,9 @@ def validate_project(project: Path) -> list[str]:
         for assembly_error in validate_assembly_ready(project, require_final=True):
             errors.append(assembly_error)
 
+    memory = receipt_problem(project, phase)
+    if memory:
+        errors.append(f"{MEMORY_ERROR}{memory}；校验已把当前记忆附在输出末尾，读完再运行一次校验")
     return errors
 
 
@@ -745,6 +752,13 @@ def main() -> int:
         print("Project validation failed:")
         for error in errors:
             print(f"- {error}")
+        if any(error.startswith(MEMORY_ERROR) for error in errors):
+            # Put the memory in front of the agent here, so reading it never depends on remembering a step.
+            phase = load_json(project / "project-state.json")["phase"]
+            text, digest, _ = memory_for_phase(project, phase)
+            print()
+            print(text, end="")
+            write_receipt(project, phase, digest, "validate")
         return 1
     print(f"Project gates valid: {project}")
     return 0

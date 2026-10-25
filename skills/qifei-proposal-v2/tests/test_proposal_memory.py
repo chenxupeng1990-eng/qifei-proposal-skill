@@ -110,10 +110,70 @@ class ProposalMemoryTests(unittest.TestCase):
         self.assertLess(out.index("O-0001"), out.index("PB-0001"))
         self.assertIn("不是事实来源", out)
 
-    def test_phase_maps_to_stage(self) -> None:
+    def test_phase_maps_to_stage_and_keeps_earlier_stages(self) -> None:
         out = self.run_memory("load", "--project", str(self.project), "--phase", "design_calibration").stdout
         self.assertIn("PB-0002", out)
-        self.assertNotIn("PB-0001", out)
+        # A visual-stage session that reopens strategy content still needs strategy memory, marked as earlier.
+        self.assertIn("PB-0001｜美妆比稿第二章先讲消费者问题**（前序阶段 strategy；", out)
+        self.assertLess(out.index("PB-0002"), out.index("PB-0001"))
+        self.assertNotIn("前序阶段", out.split("O-0003", 1)[1].split("\n", 1)[0])
+        later = self.run_memory("load", "--project", str(self.project), "--phase", "strategy").stdout
+        self.assertNotIn("PB-0002", later)  # later-stage memory is not pulled forward
+
+    def test_load_writes_a_receipt_that_goes_stale_when_memory_changes(self) -> None:
+        sys.path.insert(0, str(SKILL_ROOT / "scripts"))
+        import proposal_memory  # noqa: PLC0415
+
+        previous = os.environ.get("QIFEI_MEMORY_HOME")
+        os.environ["QIFEI_MEMORY_HOME"] = str(self.home)
+        try:
+            self.assertIn("还没有读取", proposal_memory.receipt_problem(self.project, "manuscript"))
+            self.run_memory("load", "--project", str(self.project), "--phase", "manuscript", "--tags", "美妆")
+            self.assertIsNone(proposal_memory.receipt_problem(self.project, "manuscript"))
+            self.assertIn("还没有读取", proposal_memory.receipt_problem(self.project, "design_calibration"))
+            owner = self.home / "owner.md"
+            owner.write_text(owner.read_text(encoding="utf-8").replace("数据页标题写判断", "数据页标题必须写判断"),
+                             encoding="utf-8")
+            self.assertIn("有更新", proposal_memory.receipt_problem(self.project, "manuscript"))
+        finally:
+            os.environ["QIFEI_MEMORY_HOME"] = previous or ""
+            if previous is None:
+                del os.environ["QIFEI_MEMORY_HOME"]
+
+    def run_script(self, *args: str) -> subprocess.CompletedProcess[str]:
+        env = os.environ.copy()
+        env["QIFEI_MEMORY_HOME"] = str(self.home)
+        return subprocess.run([sys.executable, *args], capture_output=True, text=True, env=env, check=False)
+
+    def test_validate_hands_over_memory_and_blocks_until_it_is_read(self) -> None:
+        (self.project / "project-state.json").write_text(json.dumps({"phase": "intake", "proposal_owner": "Owner"}),
+                                                       encoding="utf-8")
+        validate = str(SKILL_ROOT / "scripts" / "validate_project.py")
+        first = self.run_script(validate, str(self.project))
+        self.assertEqual(first.returncode, 1)
+        self.assertIn("proposal memory: 本阶段（intake）的", first.stdout)
+        self.assertIn("D-0001｜五年目标写净销售额", first.stdout)  # the memory itself is in the output
+        second = self.run_script(validate, str(self.project))
+        self.assertNotIn("proposal memory:", second.stdout)
+        owner = self.home / "owner.md"
+        owner.write_text(owner.read_text(encoding="utf-8").replace("旧价盘必须清干净", "旧价盘和旧数据必须清干净"),
+                         encoding="utf-8")
+        third = self.run_script(validate, str(self.project))
+        self.assertIn("proposal memory: 提案记忆在上次读取后有更新", third.stdout)
+        self.assertIn("旧价盘和旧数据必须清干净", third.stdout)
+
+    def test_doctor_with_project_carries_the_memory(self) -> None:
+        (self.project / "project-state.json").write_text(json.dumps({"phase": "manuscript", "proposal_owner": "Owner"}),
+                                                       encoding="utf-8")
+        doctor = str(SKILL_ROOT / "scripts" / "doctor.py")
+        result = self.run_script(doctor, "--project", str(self.project), "--json")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        memory = json.loads(result.stdout)["proposal_memory"]
+        self.assertEqual(memory["phase"], "manuscript")
+        self.assertIn("O-0001｜数据页用判断型标题", memory["text"])
+        self.assertIn("O-0001", self.run_script(doctor, "--project", str(self.project)).stdout)
+        validate = self.run_script(str(SKILL_ROOT / "scripts" / "validate_project.py"), str(self.project))
+        self.assertNotIn("proposal memory:", validate.stdout)
 
     def test_scope_tags_narrow_playbook(self) -> None:
         out = self.run_memory("load", "--project", str(self.project), "--phase", "strategy", "--tags", "快消").stdout

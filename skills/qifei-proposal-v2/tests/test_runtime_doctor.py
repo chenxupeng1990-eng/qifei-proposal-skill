@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import json
 import importlib.util
 import subprocess
@@ -19,6 +20,7 @@ def load_doctor_module():
     assert spec and spec.loader
     spec.loader.exec_module(module)
     return module
+os.environ["QIFEI_MEMORY_HOME"] = tempfile.mkdtemp(prefix="qifei-memory-test-")  # never read or write real memory
 
 
 class RuntimeDoctorTests(unittest.TestCase):

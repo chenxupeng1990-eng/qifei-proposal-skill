@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import hashlib
 import subprocess
 import sys
@@ -7,6 +8,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+
+os.environ["QIFEI_MEMORY_HOME"] = tempfile.mkdtemp(prefix="qifei-memory-test-")  # never read or write real memory
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = SKILL_ROOT / "scripts"

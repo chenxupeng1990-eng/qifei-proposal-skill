@@ -1,6 +1,7 @@
 """M4 acceptance: a full deck goes from manuscript to content freeze with the studio as authority, no Feishu."""
 from __future__ import annotations
 
+import os
 import json
 import re
 import socket
@@ -49,6 +50,7 @@ def free_port() -> int:
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
         return sock.getsockname()[1]
+os.environ["QIFEI_MEMORY_HOME"] = tempfile.mkdtemp(prefix="qifei-memory-test-")  # never read or write real memory
 
 
 class StudioAuthorityAcceptance(unittest.TestCase):

@@ -14,7 +14,7 @@
 
 ## 2. 运行档位
 
-运行 `python3 scripts/doctor.py --task-mode <模式> --json`。如当前Agent能力不能由本机命令发现，提供不含密钥的 capability JSON。
+运行 `python3 scripts/doctor.py --task-mode <模式> --project <项目目录> --json`；有项目时，结果里的 `proposal_memory.text` 就是本阶段要用的提案记忆。如当前Agent能力不能由本机命令发现，提供不含密钥的 capability JSON。
 
 | 档位 | 能力边界 |
 |---|---|

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import json
 import hashlib
 import subprocess
@@ -18,6 +19,7 @@ from freeze_deck_spec import content_hash  # noqa: E402
 from validate_deck_spec import png_has_alpha, title_has_terminal_period, valid_local_media, validate_deck, visual_length  # noqa: E402
 from validate_design_loop import validate_presentation_route  # noqa: E402
 from validate_project import FEISHU_PAGE_SECTIONS, validate_project  # noqa: E402
+os.environ["QIFEI_MEMORY_HOME"] = tempfile.mkdtemp(prefix="qifei-memory-test-")  # never read or write real memory
 
 
 class ContractTests(unittest.TestCase):

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import os
 import re
@@ -43,6 +44,9 @@ PHASE_STAGE = {
     "export": "export",
 }
 STAGES = sorted(set(PHASE_STAGE.values()) | {"all"})
+# Work in a later stage often reopens earlier content, so earlier-stage memory is loaded too.
+STAGE_ORDER = ("intake", "strategy", "manuscript", "review", "visual", "production", "export")
+RECEIPT = "receipt.json"
 LAYER_ORDER = ("project", "owner", "playbook")
 LAYER_LABEL = {"project": "项目记忆", "owner": "Owner 偏好", "playbook": "方法论"}
 ID_PREFIX = {"owner": "O", "project": "D", "playbook": "PB"}
@@ -196,19 +200,28 @@ def check(entries: list[Entry]) -> list[str]:
     return errors
 
 
+def stage_distance(entry: Entry, stage: str) -> int | None:
+    """0 for the current stage (or all), n for an entry from n stages earlier, None for later-only entries."""
+    if "all" in entry.stages or stage in entry.stages:
+        return 0
+    here = STAGE_ORDER.index(stage)
+    earlier = [here - STAGE_ORDER.index(s) for s in entry.stages if s in STAGE_ORDER and STAGE_ORDER.index(s) < here]
+    return min(earlier) if earlier else None
+
+
 def select(entries: list[Entry], stage: str, tags: list[str]) -> list[Entry]:
     chosen = []
     for entry in entries:
-        if not entry.active:
-            continue
-        if stage not in entry.stages and "all" not in entry.stages:
+        if not entry.active or stage_distance(entry, stage) is None:
             continue
         if tags and entry.scope and "all" not in entry.scope and not set(entry.scope) & set(tags):
             continue
         chosen.append(entry)
-    # Project decisions first (most specific), then Owner, then playbook; newest first in each.
+    # Project decisions first (most specific), then Owner, then playbook; within a layer the
+    # current stage comes before earlier stages, newest first.
     rank = {layer: index for index, layer in enumerate(LAYER_ORDER)}
-    return sorted(chosen, key=lambda e: (rank[e.layer], -int(re.sub(r"\D", "", e.date) or 0)))
+    return sorted(chosen, key=lambda e: (rank[e.layer], stage_distance(e, stage),
+                                         -int(re.sub(r"\D", "", e.date) or 0)))
 
 
 def render_load(entries: list[Entry], stage: str, max_entries: int, max_chars: int) -> str:
@@ -216,13 +229,15 @@ def render_load(entries: list[Entry], stage: str, max_entries: int, max_chars: i
         f"# 提案记忆｜{stage} 阶段",
         "",
         "以下是 Owner 确认过的偏好与经验，用来校准判断，不是事实来源。"
-        "与本项目已确认的决定、证据台账或 Owner 当下指示冲突时，以后者为准。",
+        "与本项目已确认的决定、证据台账或 Owner 当下指示冲突时，以后者为准。"
+        "标注“前序阶段”的条目来自更早的阶段，本次工作涉及那部分内容时同样适用。",
     ]
     used = sum(len(line) for line in lines)
     shown = 0
     current_layer = None
     for entry in entries:
-        block = [f"- **{entry.id}｜{entry.title}**（{entry.date}，{entry.source}）"]
+        earlier = "" if stage_distance(entry, stage) == 0 else f"前序阶段 {'、'.join(entry.stages)}；"
+        block = [f"- **{entry.id}｜{entry.title}**（{earlier}{entry.date}，{entry.source}）"]
         block += [f"  {line}" for line in entry.body.split("\n") if line.strip()]
         size = sum(len(line) + 1 for line in block)
         if shown >= max_entries or used + size > max_chars:
@@ -239,6 +254,41 @@ def render_load(entries: list[Entry], stage: str, max_entries: int, max_chars: i
     elif omitted:
         lines += ["", f"（另有 {omitted} 条相关记忆超出加载上限未显示；需要时用 `proposal_memory.py list` 查看。）"]
     return "\n".join(lines) + "\n"
+
+
+def memory_for_phase(project: Path, phase: str, tags: list[str] | None = None,
+                     max_entries: int = 30, max_chars: int = 8000) -> tuple[str, str, int]:
+    """(rendered memory, digest, entry count) for a project phase. The digest ignores tags,
+    so a receipt stays valid however the agent narrowed what it printed."""
+    stage = PHASE_STAGE[phase]
+    entries = collect(project_dir(project))
+    everything = select(entries, stage, [])
+    digest = hashlib.sha256(json.dumps([[e.id, e.date, e.status, e.title, e.body] for e in everything],
+                                       ensure_ascii=False).encode("utf-8")).hexdigest()
+    text = render_load(select(entries, stage, tags or []), stage, max_entries, max_chars)
+    return text, digest, len(everything)
+
+
+def write_receipt(project: Path, phase: str, digest: str, by: str) -> None:
+    """Record that the memory for this phase was put in front of the agent."""
+    receipt = {"phase": phase, "digest": digest, "by": by, "at": dt.datetime.now().astimezone().isoformat(timespec="seconds")}
+    (project_dir(project) / RECEIPT).write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def receipt_problem(project: Path, phase: str) -> str | None:
+    """Why the current memory for this phase has not been read yet, or None when it has (or there is none)."""
+    if phase not in PHASE_STAGE:
+        return None
+    _, digest, count = memory_for_phase(project, phase)
+    if not count:
+        return None
+    path = project_dir(project) / RECEIPT
+    receipt = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+    if receipt.get("phase") != phase:
+        return f"本阶段（{phase}）的 {count} 条提案记忆还没有读取"
+    if receipt.get("digest") != digest:
+        return f"提案记忆在上次读取后有更新（{count} 条适用于 {phase}）"
+    return None
 
 
 def init(pdir: Path | None) -> list[Path]:
@@ -571,7 +621,12 @@ def main() -> int:
         print(f"unknown phase '{args.phase}'", file=sys.stderr)
         return 2
     tags = split_list(args.tags)
-    sys.stdout.write(render_load(select(entries, stage, tags), stage, args.max_entries, args.max_chars))
+    if project is None:
+        sys.stdout.write(render_load(select(entries, stage, tags), stage, args.max_entries, args.max_chars))
+        return 0
+    text, digest, _ = memory_for_phase(project, args.phase, tags, args.max_entries, args.max_chars)
+    write_receipt(project, args.phase, digest, "load")
+    sys.stdout.write(text)
     return 0
 
 

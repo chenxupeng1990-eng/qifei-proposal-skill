@@ -55,7 +55,15 @@ python3 scripts/memory_box.py [--port 8770] [--open]
 python3 scripts/proposal_memory.py load --project <项目目录> --phase <project-state 的 phase> [--tags 美妆,比稿]
 ```
 
-- 只加载 `active`、且阶段匹配的条目。顺序是项目记忆、Owner 偏好、方法论，同层内新的在前。
+- 只加载 `active` 的条目，范围是当前阶段和它之前的各阶段（阶段顺序：intake → strategy → manuscript → review → visual → production → export），后面阶段的条目不提前加载。后期回头改前面的内容时，前面阶段的记忆同样要遵守；这类条目会标注"前序阶段"。
+- 顺序是项目记忆、Owner 偏好、方法论；同一层里当前阶段在前，然后是较早的阶段，同阶段内新的在前。
+
+### 不依赖 Agent 记得去读
+
+读取记忆不只靠第 5 条规则，另外有三道保障：
+- **`doctor.py --project <项目目录>`**：开工检查时把本阶段的记忆一起输出（`--json` 时在 `proposal_memory.text` 里）。
+- **读取回执**：`load` 和 `doctor` 会在 `projects/<project_id>/receipt.json` 记下读取时的阶段和记忆指纹。
+- **`validate_project.py`**：本阶段有适用的记忆、但回执缺失、阶段不符或记忆在读取后有更新时，校验报 `proposal memory:` 错误，并把当前记忆附在输出末尾；读完后再运行一次即可通过。
 - 默认上限 30 条、8000 字符，超出的会提示条数。不要为了"多带一点"去提高上限，应该整理记忆。
 - 记忆用来校准判断，不是事实来源。与本项目已确认的决定、证据台账或 Owner 当下的指示冲突时，以后者为准，并把冲突列为候选更新。
 
