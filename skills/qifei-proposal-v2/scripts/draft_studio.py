@@ -1007,12 +1007,18 @@ def is_studio(state: dict[str, Any] | None) -> bool:
     return bool(state) and state.get("content_authority") == "studio"
 
 
-def page_digests(text: str) -> dict[str, str]:
-    """A fingerprint per page (its chapter title and intro, page title and every field), used to prove
-    a confirmed page did not change."""
+DIGEST_VERSION = 2
+
+
+def page_digests(text: str, version: int = DIGEST_VERSION) -> dict[str, str]:
+    """A fingerprint per page, used to prove a confirmed page did not change. Version 2 covers the
+    chapter title and intro, the page title and every field; version 1 (confirmations recorded
+    before chapter intros were covered) only the page title and fields."""
+    def parts(c: dict[str, Any], s: dict[str, Any]) -> list:
+        page = [s["title"], [[f["key"], f["md"]] for f in s["fields"]]]
+        return page if version == 1 else [c["title"], c.get("intro_md", ""), *page]
     return {
-        s["id"]: sha256_text(json.dumps([c["title"], c.get("intro_md", ""), s["title"],
-                                         [[f["key"], f["md"]] for f in s["fields"]]], ensure_ascii=False))
+        s["id"]: sha256_text(json.dumps(parts(c, s), ensure_ascii=False))
         for c in parse_draft(text)["chapters"] for s in c["slides"]
     }
 
@@ -1072,6 +1078,7 @@ def confirm_chapter(project: Path, draft_path: Path, chapter_id: str, by: str) -
         "record_id": f"confirm-{chapter_id}-r{store.revision}-{secrets.token_hex(3)}",
         "chapter_id": chapter_id,
         "slides": {s: digests[s] for s in slides},
+        "digest_version": DIGEST_VERSION,
         "by": (by or "Owner")[:40],
         "at": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
         "revision": store.revision,
@@ -1153,7 +1160,7 @@ def studio_evidence_errors(project: Path, draft: dict[str, Any], snapshot_path: 
     if entries and isinstance(revision, int) and entries[-1].get("revision", 0) > revision:
         errors.append(f"the draft changed after registration (rev {revision} → rev {entries[-1]['revision']}); register it again")
     text = snapshot_path.read_text(encoding="utf-8")
-    digests = page_digests(text)
+    digests = {version: page_digests(text, version) for version in (1, DIGEST_VERSION)}
     confirmations = ConfirmationStore(snapshot_path)
     for index, chapter in enumerate(chapters, start=1):
         chapter_id = chapter.get("chapter_id") or f"chapter-{index}"
@@ -1163,7 +1170,8 @@ def studio_evidence_errors(project: Path, draft: dict[str, Any], snapshot_path: 
         if record is None:
             errors.append(f"{chapter_id}: confirmation {chapter.get('confirmation_record_id')} is not in confirmations.json")
             continue
-        changed = [s for s in chapter.get("slides") or [] if record["slides"].get(s) != digests.get(s)]
+        current = digests[record.get("digest_version", 1)]
+        changed = [s for s in chapter.get("slides") or [] if record["slides"].get(s) != current.get(s)]
         if changed:
             errors.append(f"{chapter_id}: changed after confirmation ({', '.join(changed)}); confirm it again")
     return errors

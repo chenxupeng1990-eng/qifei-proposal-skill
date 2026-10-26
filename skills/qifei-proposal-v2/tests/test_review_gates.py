@@ -128,6 +128,15 @@ class IntroFingerprintTests(unittest.TestCase):
         self.assertEqual(draft_studio.changed_slides(FEISHU_DRAFT, updated), ["P01", "P02"])
 
 
+class ConfirmationDigestVersionTests(unittest.TestCase):
+    def test_confirmations_recorded_before_intros_were_covered_still_match(self) -> None:
+        old = draft_studio.page_digests(FEISHU_DRAFT, 1)
+        self.assertNotEqual(old, draft_studio.page_digests(FEISHU_DRAFT))
+        updated, _ = draft_studio.apply_edit(FEISHU_DRAFT, {"kind": "field", "slide": "P01", "key": "talk", "md": "改过的讲解方向。"})
+        self.assertNotEqual(old["P01"], draft_studio.page_digests(updated, 1)["P01"])
+        self.assertEqual(old["P02"], draft_studio.page_digests(updated, 1)["P02"])
+
+
 class VisualReviewTests(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
