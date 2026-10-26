@@ -94,8 +94,8 @@ function verifyBuildFreshness() {
   if (state.approvals?.content_freeze?.approved !== true || state.approvals.content_freeze.record_id !== state.content_freeze_id) {
     throw new Error('Build guard requires a matching approved content-freeze record.');
   }
-  if (state.approvals?.content_qa?.approved !== true || state.approvals?.visual_qa?.approved !== true) {
-    throw new Error('Build guard requires approved content QA and visual QA.');
+  if (state.final_check?.status !== 'passed') {
+    throw new Error('Build guard requires a passed final low-level check (scripts/final_check.py).');
   }
   const owner = String(state.proposal_owner || '').trim();
   const finalApproval = assembly.final_assembly || {};

@@ -231,7 +231,9 @@
         canvas.append(background);
       }
       const inner = make("div", "slide-inner");
-      inner.append(make("div", "topline", slide.kicker || slide.chapter || ""));
+      const topline = make("div", "topline", slide.kicker || slide.chapter || "");
+      topline.dataset.screenIgnore = "";  // eyebrow/kicker is design chrome, not draft copy
+      inner.append(topline);
       const title = make("h1", "", slide.title || "");
       title.dataset.fit = "title";
       inner.append(title);

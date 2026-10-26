@@ -56,7 +56,9 @@ ENTRY_FIELD = re.compile(r"^-\s*(阶段|状态|日期|来源|适用|建议层级
 COMMENT = re.compile(r"<!--.*?-->", re.S)
 STATUS = re.compile(r"^(active|retired|superseded:([A-Z]{1,2}-\d{3,}))$")
 CANDIDATE_STATUS = re.compile(r"^(candidate|rejected|accepted:([A-Z]{1,2}-\d{3,}))$")
-SIGNAL_REF = re.compile(r"(?<![A-Za-z0-9_-])(C-\d{4,}|R\d+|confirm-[A-Za-z0-9_-]+)")
+SIGNAL_REF = re.compile(r"(?<![A-Za-z0-9_-])(C-\d{4,}|N-\d{4,}|R\d+|confirm-[A-Za-z0-9_-]+)")
+OWNER_NOTES = "owner-notes.jsonl"
+SIGNALS_RECEIPT = "signals-receipt.json"
 
 
 @dataclass
@@ -346,8 +348,16 @@ def studio_signals(project: Path) -> list[dict]:
     """Decided comment threads, Owner edits and chapter confirmations, oldest first, each with a ref id."""
     import draft_studio
 
-    draft_path, _ = draft_studio.load_project(project, None)
     signals: list[dict] = []
+    notes = project_dir(project) / OWNER_NOTES
+    for line in notes.read_text(encoding="utf-8").splitlines() if notes.is_file() else []:
+        note = json.loads(line)
+        signals.append({"ref": note["id"], "kind": "note", "head": f"Owner 原话（{note.get('phase') or '未注明阶段'}，{note['at'][:10]}）",
+                        "lines": [f"> {note['text']}"] + ([f"- 场景：{note['context']}"] if note.get("context") else [])})
+    try:
+        draft_path, _ = draft_studio.load_project(project, None)
+    except SystemExit:  # no draft yet (before the manuscript): only Owner notes count
+        return signals
     for thread in draft_studio.CommentStore(draft_path).load()["threads"]:
         if thread.get("status") != "resolved":
             continue
@@ -390,7 +400,31 @@ def studio_signals(project: Path) -> list[dict]:
     return signals
 
 
-SIGNAL_SECTIONS = (("comment", "已决定的评论"), ("edit", "Owner 的修改"), ("confirm", "章节确认"))
+SIGNAL_SECTIONS = (("note", "Owner 在对话里的更正"), ("comment", "已决定的评论"), ("edit", "Owner 的修改"), ("confirm", "章节确认"))
+
+
+def project_phase(project: Path) -> str | None:
+    state_path = project / "project-state.json"
+    return json.loads(state_path.read_text(encoding="utf-8")).get("phase") if state_path.is_file() else None
+
+
+def add_note(project: Path, text: str, context: str = "") -> str:
+    """Record an Owner correction given in conversation, so it can become a memory candidate."""
+    text = " ".join(text.split())
+    if not text:
+        raise ValueError("note text cannot be empty")
+    path = project_dir(project) / OWNER_NOTES
+    count = len(path.read_text(encoding="utf-8").splitlines()) if path.is_file() else 0
+    note = {"id": f"N-{count + 1:04d}", "text": text, "context": context.strip(), "phase": project_phase(project),
+            "at": dt.datetime.now().astimezone().isoformat(timespec="seconds")}
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(note, ensure_ascii=False) + "\n")
+    return note["id"]
+
+
+def read_signals_receipt(project: Path) -> dict:
+    path = project_dir(project) / SIGNALS_RECEIPT
+    return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
 
 
 def render_signals(project: Path, show_all: bool) -> str:
@@ -400,8 +434,8 @@ def render_signals(project: Path, show_all: bool) -> str:
     lines = [
         "# 记忆信号",
         "",
-        "从工作台的评论、修改和确认里汇总的素材。只把能在后续页面、阶段或其他项目复用的判断写成候选，"
-        f"一次性的措辞修改不写。每条候选的来源写上信号编号（如 C-0003、R262），写进 `{project_dir(project) / CANDIDATES}`，"
+        "从 Owner 在对话里的更正、工作台的评论、修改和确认里汇总的素材。只把能在后续页面、阶段或其他项目复用的判断写成候选，"
+        f"一次性的措辞修改不写。每条候选的来源写上信号编号（如 N-0002、C-0003、R262），写进 `{project_dir(project) / CANDIDATES}`，"
         "由 Owner 在记忆库（`memory_box.py`）里采纳或丢弃。",
     ]
     hidden = len(signals) - len(fresh)
@@ -416,6 +450,9 @@ def render_signals(project: Path, show_all: bool) -> str:
             lines += ["", f"### {signal['ref']}｜{signal['head']}", *signal["lines"]]
     if not fresh:
         lines += ["", "（没有新的信号）"]
+    receipt = {"phase": project_phase(project), "fresh": len(fresh),
+               "at": dt.datetime.now().astimezone().isoformat(timespec="seconds")}
+    (project_dir(project) / SIGNALS_RECEIPT).write_text(json.dumps(receipt, ensure_ascii=False) + "\n", encoding="utf-8")
     return "\n".join(lines) + "\n"
 
 
@@ -546,7 +583,7 @@ def check_candidates(candidates: list[Entry], ids: set[str]) -> list[str]:
         if not entry.stages or any(stage not in STAGES for stage in entry.stages):
             errors.append(f"{where}: 阶段 must be chosen from {', '.join(STAGES)}")
         if not SIGNAL_REF.search(entry.source):
-            errors.append(f"{where}: 来源 must cite a signal id (C-0001, R12 or a confirmation record)")
+            errors.append(f"{where}: 来源 must cite a signal id (N-0001, C-0001, R12 or a confirmation record)")
         if not entry.body:
             errors.append(f"{where}: body is empty")
     return errors
@@ -555,10 +592,13 @@ def check_candidates(candidates: list[Entry], ids: set[str]) -> list[str]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ("init", "load", "check", "list", "signals", "accept", "reject"):
+    for name in ("init", "load", "check", "list", "signals", "accept", "reject", "note"):
         command = sub.add_parser(name)
-        command.add_argument("--project", required=name in {"signals", "accept", "reject"},
+        command.add_argument("--project", required=name in {"signals", "accept", "reject", "note"},
                              help="proposal project directory")
+        if name == "note":
+            command.add_argument("text", help="the Owner's correction, in the Owner's words")
+            command.add_argument("--context", default="", help="where it came up, e.g. S05 设计校准")
         if name in {"accept", "reject"}:
             command.add_argument("candidate", help="candidate id, e.g. MC-0001 (Owner action)")
         if name == "accept":
@@ -588,6 +628,9 @@ def main() -> int:
     try:
         if args.command == "signals":
             sys.stdout.write(render_signals(project, args.all))
+            return 0
+        if args.command == "note":
+            print(f"recorded {add_note(project, args.text, args.context)}")
             return 0
         if args.command == "accept":
             stages = split_list(args.stages) if args.stages else None

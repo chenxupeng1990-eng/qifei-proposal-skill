@@ -1,0 +1,53 @@
+
+/* Design review */
+.design-review .topbar { position: sticky; }
+.d-layout { display: grid; grid-template-columns: 150px minmax(0, 1fr) 340px; height: calc(100vh - 64px); }
+.d-pages { overflow: auto; border-right: 1px solid var(--line); padding: 10px 8px; }
+.d-page { display: flex; align-items: center; justify-content: space-between; width: 100%; border: 1px solid transparent; background: none; border-radius: 8px; padding: 6px 8px; font-size: 13px; text-align: left; }
+.d-page:hover { background: var(--surface-2); }
+.d-page.active { background: var(--surface); border-color: var(--line-strong); font-weight: 600; }
+.d-badge { min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 11.5px; text-align: center; }
+.d-stage-wrap { overflow: auto; padding: 16px 20px; min-width: 0; }
+.d-stage-head { display: flex; justify-content: space-between; color: var(--muted); font-size: 12.5px; margin-bottom: 8px; }
+.d-stage-head span:first-child { color: var(--ink); font-weight: 600; }
+.d-stage { position: relative; width: 100%; aspect-ratio: 16 / 9; background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; cursor: crosshair; user-select: none; touch-action: none; }
+.d-stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+.d-boxes { position: absolute; inset: 0; pointer-events: none; }
+.d-box { position: absolute; border: 2px solid #f2b632; background: rgb(242 182 50 / .12); border-radius: 3px; pointer-events: auto; cursor: pointer; }
+.d-box.stale { border-style: dashed; border-color: var(--muted); background: transparent; }
+.d-box.resolved { border-color: var(--ok); background: transparent; }
+.d-box.active { box-shadow: 0 0 0 3px rgb(242 182 50 / .45); }
+.d-box b { position: absolute; left: -2px; top: -22px; background: #f2b632; color: #1c1e22; font-size: 11px; padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+.d-box.stale b { background: var(--muted); color: var(--bg); }
+.d-box.resolved b { background: var(--ok); color: #fff; }
+.d-draft { position: absolute; border: 2px solid var(--accent); background: rgb(226 83 59 / .1); border-radius: 3px; }
+.d-empty { color: var(--muted); }
+.d-rail { overflow: auto; border-left: 1px solid var(--line); padding: 12px; background: color-mix(in srgb, var(--bg) 60%, var(--surface)); }
+.d-composer, .dcard { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; font-size: 13px; }
+.d-composer { border-color: var(--accent); }
+.d-crop, .dcard-crop { display: block; max-width: 100%; max-height: 140px; border-radius: 6px; border: 1px solid var(--line); margin-bottom: 6px; }
+.d-anchor, .dcard-anchor { color: var(--muted); border-left: 3px solid var(--line-strong); padding-left: 8px; font-size: 12.5px; margin-bottom: 6px; overflow-wrap: anywhere; }
+.d-rail textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; font: 13px/1.6 var(--font); color: var(--ink); background: var(--surface); resize: vertical; }
+.d-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.dcard { cursor: pointer; }
+.dcard.active { border-color: #f2b632; box-shadow: 0 4px 16px rgb(0 0 0 / .08); }
+.dcard-top { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.dcard-top strong { color: var(--ink); }
+.tag { padding: 0 6px; border-radius: 999px; font-size: 11px; }
+.tag.open { background: var(--warn-soft); color: var(--warn); }
+.tag.resolved { background: var(--ok-soft); color: var(--ok); }
+.tag.stale { background: var(--surface-2); color: var(--muted); border: 1px dashed var(--line-strong); }
+.dmsg { margin: 4px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.dmsg span { color: var(--muted); font-size: 11.5px; margin-right: 6px; }
+.dcard textarea { display: none; margin-top: 6px; }
+.dcard.active textarea { display: block; }
+.dcard .d-actions { display: none; }
+.dcard.active .d-actions { display: flex; }
+.d-none { color: var(--muted); font-size: 13px; padding: 8px 2px; }
+@media (max-width: 900px) {
+  .d-layout { grid-template-columns: 1fr; height: auto; }
+  .d-pages { display: flex; gap: 4px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+  .d-page { width: auto; white-space: nowrap; gap: 6px; }
+  .d-rail { border-left: 0; border-top: 1px solid var(--line); }
+}

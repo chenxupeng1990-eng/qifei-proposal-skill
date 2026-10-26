@@ -12,6 +12,7 @@ import shutil
 import struct
 from pathlib import Path
 
+import design_review
 from validate_assembly_ready import load_json, validate_assembly_ready
 
 
@@ -94,6 +95,25 @@ def sync_status(state: dict, deck: dict, manifest: dict) -> None:
     assembly["status"] = status
 
 
+def screen_text_problems(project: Path, html: Path, slide_id: str, rendered: list | None) -> list[str]:
+    """Line-by-line check of a page against the frozen draft; projects without a draft file skip it.
+
+    Prefer the text the browser actually rendered (recorded at capture); fall back to the static HTML.
+    """
+    import screen_text
+
+    try:
+        if rendered is not None:
+            pages = screen_text.draft_screen(project)
+            if slide_id not in pages:
+                return [f"{slide_id}: slide not in draft"]
+            result = screen_text.compare(pages[slide_id], [str(x) for x in rendered], screen_text.whitelist(project))
+            return screen_text.failures({slide_id: result})
+        return screen_text.failures(screen_text.check_html(project, html, [slide_id]))
+    except SystemExit:
+        return []
+
+
 def approve(args: argparse.Namespace, project: Path) -> int:
     state_path, _deck_path, manifest_path, state, deck, manifest = load_project(project)
     require_owner(state, args.approved_by)
@@ -155,6 +175,10 @@ def approve(args: argparse.Namespace, project: Path) -> int:
     for slide_id in args.slide_id:
         if slide_id not in deck_slides:
             raise SystemExit(f"Unknown slide_id: {slide_id}")
+        open_comments = design_review.open_threads(project, slide_id)
+        if open_comments:
+            ids = "、".join(t["id"] for t in open_comments)
+            raise SystemExit(f"{slide_id} still has open design comments ({ids}); the Owner resolves them in the studio first")
         if review:
             review_page = review_pages.get(slide_id)
             if not review_page:
@@ -164,6 +188,9 @@ def approve(args: argparse.Namespace, project: Path) -> int:
                 raise SystemExit(f"Review PNG hash is stale: {slide_id}")
             source_type = "html"
             source_path = review.get("html_path")
+            text_problems = screen_text_problems(project, review_html, slide_id, review_page.get("text_chunks"))
+            if text_problems:
+                raise SystemExit("On-screen text differs from the frozen draft:\n" + "\n".join(text_problems))
         else:
             source_png = direct_png
             source_type = "direct_png"

@@ -7,6 +7,7 @@
 ## 必须读取
 
 - [../references/feishu-proposal-draft-format.md](../references/feishu-proposal-draft-format.md)
+- [../references/proposal-persuasion-gate.md](../references/proposal-persuasion-gate.md)：成稿时逐页按说服力合同写，内部审慎语言不上屏。
 - [../references/cross-page-semantic-qa.md](../references/cross-page-semantic-qa.md)
 - [../references/writing-style-and-humanization.md](../references/writing-style-and-humanization.md)
 - 选用飞书但飞书不可用或授权失败时读取 [../references/environment-degradation.md](../references/environment-degradation.md)。
@@ -34,6 +35,8 @@
 - 给 Owner 阅读整章或整份母稿时，用 `python3 scripts/draft_studio.py render <项目目录>` 生成富格式阅读页（`deck/review/draft-studio.html`），需要 Markdown 时用 `export-md --profile full|brief`；Owner 想直接在页面上改稿时，用 `serve` 启动本地工作台，保存即写盘并记录版本。阅读页和导出的 Markdown 都是派生物，不改变权威源，见 [../references/draft-studio.md](../references/draft-studio.md)。
 - 临时插页、拆页和合页先进入变更候选清单；写入权威源，并完成登记（工作台）或整份回读（飞书）之前，不修改正式页序。
 - 只写讲解方向，不生成完整演讲稿。
+- `PPT上屏内容` 只放观点、证据和来源，不放内部审慎说明（"不等于""不代表""尚未""仅参考""另行商定""以…为准""非…"这类）。边界写进措辞本身：写"Instagram 搜索热度"，不写"搜索热度，不等于销量"；审慎说明放进讲解方向或证据与来源。`check` 会拦截这些用语；确属客户要求的上屏声明，由 Owner 在评论里确认后改写成正面表述。
+- 不能使用公司真实数据或案例时，用能力证明代替：拆一个品牌自己的公开内容或竞品案例，展示我们的判断方法、执行工作件和预期产出，不写"示意""非已合作"之类的退缩说明。
 - 数据页必须用判断型标题，并完整表达数据事实、比较关系、品牌含义、策略选择和后续接口；不能写成中立行业报告或数据罗列。
 
 ## 放行

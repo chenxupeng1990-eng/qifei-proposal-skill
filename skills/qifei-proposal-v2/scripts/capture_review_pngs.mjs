@@ -125,10 +125,36 @@ try {
     const safeId = slideId.replace(/[^A-Za-z0-9_-]+/g, '-');
     const out = path.join(OUTPUT_DIR, `${safeId}.png`);
     await slides.nth(index).screenshot({path:out, type:'png', animations:'disabled'});
+    // Rendered on-screen text, checked line by line against the frozen draft before a page is confirmed.
+    const textChunks = await slides.nth(index).evaluate(node => {
+      const ignored = new Set([...node.querySelectorAll('[data-screen-ignore]')]
+        .flatMap(el => el.innerText.split('\n').map(line => line.trim())));
+      return node.innerText.split('\n').map(line => line.trim()).filter(line => line && !ignored.has(line));
+    });
+    // Text blocks with their boxes in page pixels, so a design comment can name the text under its box.
+    const textBoxes = await slides.nth(index).evaluate(node => {
+      const canvas = node.getBoundingClientRect();
+      const sx = 1920 / canvas.width, sy = 1080 / canvas.height;
+      const path = el => {
+        const parts = [];
+        for (let e = el; e && e !== node; e = e.parentElement) {
+          parts.unshift(e.id ? `#${e.id}` : e.tagName.toLowerCase() + (e.classList[0] ? `.${e.classList[0]}` : ''));
+        }
+        return parts.join(' > ');
+      };
+      return [...node.querySelectorAll('*')].filter(el => !el.closest('[data-screen-ignore]')
+        && [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())).map(el => {
+        const r = el.getBoundingClientRect();
+        return {text: el.innerText.trim().slice(0, 120), selector: path(el),
+                x: (r.left - canvas.left) * sx, y: (r.top - canvas.top) * sy, w: r.width * sx, h: r.height * sy};
+      }).filter(b => b.w > 0 && b.h > 0);
+    });
     pages.push({
       slide_id: slideId,
       png_path: path.relative(PROJECT, out).replaceAll('\\', '/'),
       png_sha256: sha256(out),
+      text_chunks: textChunks,
+      text_boxes: textBoxes,
     });
   }
   const review = {

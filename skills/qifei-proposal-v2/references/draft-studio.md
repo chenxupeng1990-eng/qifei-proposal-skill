@@ -107,6 +107,10 @@ python3 scripts/draft_studio.py normalize <项目目录> --write # 替换原稿�
   - 页面内嵌一次性令牌，所有接口都要校验令牌和 Host，防止其他网页借浏览器改母稿。
 - **边界**：项目选用飞书为权威源时，工作台只是阅读和编辑工具，修改要回写飞书、重新回读后才能登记确认；选用工作台（默认）时，工作台本身就是权威源。
 
+## 让工作台一直开着
+
+Agent 一轮结束时，很多运行环境会关掉这一轮启动的进程，Owner 打开时链接已经失效。给 Owner 用的工作台用 `python3 scripts/draft_studio.py serve <项目目录> --detach` 启动：它在独立会话里运行，打印地址和停止命令（`kill <pid>`），日志在 `deck/review/studio-server.log`。
+
 ## 评论（serve）
 
 - **框选评论**：在正文里选中一段文字，旁边会出现"评论"按钮，点击后在右侧栏写评论。
@@ -132,4 +136,20 @@ python3 scripts/draft_studio.py normalize <项目目录> --write # 替换原稿�
 - **实时**：网页上新增、回复、解决评论，以及 Agent 写入 `comments.json`，都会实时推送到所有打开的页面，并提示是谁回复了哪一页。
 - **署名**：评论默认署名 Owner，可以在右侧栏顶部修改，署名保存在本机浏览器。
 - **窄屏**：窗口较窄时，评论栏改为右侧抽屉，从顶部的"评论"按钮打开。
+
+## 设计评审（serve 的 /design 页）
+
+页面生产阶段，Owner 在渲染好的页面上直接框选、评论，不再导出 JSON 转交。工作台顶部的"设计评审"打开 `/design`。
+
+- **页面来源**：`deck/review/` 下所有评审清单（`capture_review_pngs.mjs` 生成的 `review-manifest.json`，或逐页的审批清单）里每页最新的评审 PNG，按 deck-spec 页序排列。← → 翻页。
+- **框选评论**：在页面上拖一个框，右侧出现框选区域的截图和框住的文字，写下要怎么改，点"发送给 Agent"。
+- **每条记录**：`D-0001` 编号、页面、评论时那张 PNG 的路径和 SHA256、框在 1920×1080 页面上的坐标、框住的文字块（文字和元素路径，来自截图时记录的 `text_boxes`）、框选区域截图（`deck/review/design-comments/D-0001.png`）、全部回复和状态。存在 `deck/review/design-comments.json`。
+- **页面已更新**：评论之后这页重新截图过（PNG 哈希变了），框改成虚线并标"页面已更新"，提示框的位置可能已经变了。
+- **实时**：网页上新增、回复、解决，以及 Agent 的回复，都实时推送到打开的页面。
+- **Agent 的做法**：
+  1. `python3 scripts/design_review.py list <项目目录>` 列出未解决的设计评论（`--slide S05` 只看一页，`--json` 给程序读），先看截图和框住的文字再动手。
+  2. 改页面源文件，重新截图。
+  3. `python3 scripts/design_review.py reply <项目目录> D-0001 "改了什么、在哪个文件"`。
+- **谁关闭**：只有 Owner 在页面上点"解决"；Agent 只回复。
+- **门禁**：一页还有未解决的设计评论时，`manage_assembly_ready.py approve` 不会把它放进拼装准备库。
 

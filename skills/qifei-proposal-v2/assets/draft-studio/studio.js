@@ -954,6 +954,7 @@
 
   if (live) {
     document.getElementById("rail-toggle").hidden = false;
+    document.getElementById("design-link").hidden = false;
     document.getElementById("rail-author").textContent = `署名：${author} ✎`;
     document.addEventListener("selectionchange", () => requestAnimationFrame(updateSelButton));
     window.addEventListener("scroll", () => { if (!selButton.hidden) updateSelButton(); }, { passive: true });

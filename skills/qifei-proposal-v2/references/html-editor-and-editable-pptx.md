@@ -15,7 +15,7 @@ HTML始终是视觉生产源。浏览器暂存、校稿JSON、评审PNG和PPTX�
 - 单页编辑：`?edit=1&capture=<slide-id>`；
 - 全案文字校稿：`?edit=all`；
 - 干净截图：`?capture=<slide-id>`，不得出现编辑器DOM；
-- 编辑状态导出为JSON后，由Agent回写HTML/CSS和正式图片文件，再重新渲染。
+- 编辑状态导出为JSON后，由Agent回写HTML/CSS和正式图片文件，再重新渲染。Owner 的修改意见不走导出 JSON，走工作台设计评审页的框选评论（见 draft-studio.md「设计评审」）。
 
 浏览器本地保存只用于修改循环，不是生产源，也不等于页面确认。页面进入拼装准备库前，必须以回写后的HTML重新通过1920×1080检查。
 

@@ -72,7 +72,10 @@ python3 scripts/proposal_memory.py load --project <项目目录> --phase <projec
 - 只有 Owner 确认过的条目才能写入。Agent 只能提出候选，不能自行认定"这是规律"。
 - 候选条目要写明：原话或证据、适用范围（只对本项目，还是通用）、建议放进哪一层、是否取代某条旧记忆。
 
-### 从母稿工作台提炼候选（每个阶段放行时）
+### 从工作台和对话提炼候选（每个阶段放行时）
+
+- **对话里的更正**：Owner 在对话里给出能复用的更正（例如"不允许白底产品图"），当场运行 `python3 scripts/proposal_memory.py note --project <项目目录> "<Owner 原话>" [--context S05 设计校准]` 记下，编号 `N-0001`。这类更正不在工作台里，不记就会丢。
+- **门禁**：`signals` 每次运行都会留下回执。进入母稿之后的阶段时，`validate_project.py` 要求回执来自上一阶段或更晚，否则报 `proposal memory:` 错误。
 
 1. 运行 `python3 scripts/proposal_memory.py signals --project <项目目录>`。它汇总工作台里已决定的评论（`C-0001`）、Owner 的修改及改前改后（`R262`，即修订号）和章节确认记录；已被候选或记忆引用过的信号默认不再显示，`--all` 显示全部。
 2. Agent 从中挑出能在后续页面、阶段或其他项目复用的判断，写进 `signals` 输出里给出的项目候选文件（`projects/<project_id>/candidates.md`），每次最多 8 条。一次性的措辞修改、测试评论不写。

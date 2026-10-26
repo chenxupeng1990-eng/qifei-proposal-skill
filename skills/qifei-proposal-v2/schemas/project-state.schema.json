@@ -89,7 +89,18 @@
     "reopen_log": {
       "type": "array",
       "items": {"$ref": "#/$defs/reopenEvent"}
-    }
+    },
+    "validation_waivers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["error", "reason", "record_id"],
+        "properties": {"error": {"type": "string"}, "reason": {"type": "string"}, "record_id": {"type": "string"}},
+        "additionalProperties": false
+      }
+    },
+    "visual_review": {"type": "object"},
+    "final_check": {"type": "object"}
   },
   "additionalProperties": false,
   "$defs": {

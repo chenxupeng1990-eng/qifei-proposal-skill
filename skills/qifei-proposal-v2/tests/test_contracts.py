@@ -18,7 +18,17 @@ sys.path.insert(0, str(SCRIPTS))
 from freeze_deck_spec import content_hash  # noqa: E402
 from validate_deck_spec import png_has_alpha, title_has_terminal_period, valid_local_media, validate_deck, visual_length  # noqa: E402
 from validate_design_loop import validate_presentation_route  # noqa: E402
-from validate_project import FEISHU_PAGE_SECTIONS, validate_project  # noqa: E402
+from validate_project import FEISHU_PAGE_SECTIONS, validate_project as _validate_project  # noqa: E402
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from memory_fixtures import mark_signals_run  # noqa: E402
+
+
+def validate_project(project):
+    """Gate checks in these tests assume memory signals were distilled for the current phase."""
+    mark_signals_run(project)
+    return _validate_project(project)
+
 os.environ["QIFEI_MEMORY_HOME"] = tempfile.mkdtemp(prefix="qifei-memory-test-")  # never read or write real memory
 
 
@@ -319,7 +329,7 @@ class ContractTests(unittest.TestCase):
             errors = validate_deck(project)
             self.assertTrue(any("P01: presentation_route is required" in error for error in errors))
 
-    def test_export_phase_requires_both_qa_gates(self) -> None:
+    def test_export_phase_requires_the_final_low_level_check(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             project = Path(temp)
             state = {
@@ -333,8 +343,8 @@ class ContractTests(unittest.TestCase):
             }
             (project / "project-state.json").write_text(json.dumps(state), encoding="utf-8")
             errors = validate_project(project)
-            self.assertTrue(any("content_qa" in error for error in errors))
-            self.assertTrue(any("visual_qa" in error for error in errors))
+            self.assertTrue(any("final_check.report_path" in error for error in errors), errors)
+            self.assertFalse(any("content_qa" in error or "visual_qa" in error for error in errors))
 
     def test_full_redteam_rejects_empty_chapters(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

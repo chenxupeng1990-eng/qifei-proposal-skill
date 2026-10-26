@@ -23,7 +23,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import draft_studio  # noqa: E402
 from test_draft_format import page  # noqa: E402
 from validate_feishu_draft import validate_feishu_draft_evidence  # noqa: E402
-from validate_project import validate_project  # noqa: E402
+from validate_project import validate_project as _validate_project  # noqa: E402
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from memory_fixtures import mark_signals_run  # noqa: E402
+
+
+def validate_project(project):
+    """Gate checks in these tests assume memory signals were distilled for the current phase."""
+    mark_signals_run(project)
+    return _validate_project(project)
+
 
 DRAFT = "\n".join([
     "<title>示例长期合作提案</title>",

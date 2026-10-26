@@ -58,6 +58,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .segmented button.active { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / .08); font-weight: 600; }
 .search { width: 180px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 9px; padding: 6px 10px; font: inherit; font-size: 13px; }
 .btn { border: 1px solid var(--line); background: var(--surface); border-radius: 9px; padding: 6px 12px; font-size: 13px; }
+.design-link { color: var(--ink); text-decoration: none; white-space: nowrap; }
 .menu { position: relative; }
 .menu-pop { position: absolute; right: 0; top: 40px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 6px; min-width: 190px; box-shadow: 0 10px 30px rgb(0 0 0 / .12); }
 .menu-pop button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 8px 10px; border-radius: 7px; font-size: 13px; }

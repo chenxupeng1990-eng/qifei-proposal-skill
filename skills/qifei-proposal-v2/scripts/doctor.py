@@ -124,8 +124,8 @@ def build_report(capabilities: dict, task_mode: str) -> dict:
             "a registered image generation adapter is required for formal visual approval"
         )
     if not capabilities.get("visual_understanding"):
-        stage_blockers.setdefault("visual_qa", []).append(
-            "visual understanding or a registered human visual reviewer is required for visual QA"
+        stage_blockers.setdefault("visual_review", []).append(
+            "visual understanding or a registered human visual reviewer is required for the independent visual review"
         )
     if not local_runtime:
         stage_blockers.setdefault("review_and_export", []).append(

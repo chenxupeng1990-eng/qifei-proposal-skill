@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>设计评审 · {{TITLE}}</title>
+<style>
+{{CSS}}
+</style>
+</head>
+<body class="design-review">
+<header class="topbar">
+  <div class="topbar-title">
+    <div class="doc-title">设计评审 · {{TITLE}}</div>
+    <div class="doc-meta" id="d-meta">在页面上拖一个框，写下要改的地方；Agent 会收到并回复，由你决定是否解决。</div>
+  </div>
+  <div class="topbar-tools">
+    <div class="segmented" role="tablist" aria-label="评论筛选">
+      <button type="button" data-filter="open" class="active">未解决</button>
+      <button type="button" data-filter="all">全部</button>
+    </div>
+    <button type="button" class="btn" id="d-author" title="修改署名"></button>
+    <a class="btn design-link" href="/">回到母稿</a>
+  </div>
+</header>
+<div class="d-layout">
+  <nav class="d-pages" id="d-pages" aria-label="页面"></nav>
+  <main class="d-stage-wrap">
+    <div class="d-stage-head"><span id="d-slide"></span><span class="d-hint">← → 翻页 · 拖动画框评论</span></div>
+    <div class="d-stage" id="d-stage">
+      <img id="d-img" alt="" draggable="false">
+      <div class="d-boxes" id="d-boxes"></div>
+      <div class="d-draft" id="d-draft" hidden></div>
+    </div>
+    <p class="d-empty" id="d-empty" hidden>还没有评审截图。先运行 capture_review_pngs.mjs 生成本章或全稿的评审 PNG。</p>
+  </main>
+  <aside class="d-rail" aria-label="评论">
+    <div class="d-composer" id="d-composer" hidden>
+      <img class="d-crop" id="d-crop" alt="框选区域">
+      <div class="d-anchor" id="d-anchor"></div>
+      <textarea id="d-text" rows="4" placeholder="这里要怎么改？例如：标题和正文左缘没对齐；数字压在纹理上。"></textarea>
+      <div class="d-actions"><button type="button" class="btn" id="d-cancel">取消</button><button type="button" class="btn primary" id="d-send">发送给 Agent</button></div>
+    </div>
+    <div id="d-threads"></div>
+  </aside>
+</div>
+<div class="toast" id="d-toast"></div>
+<script type="application/json" id="live">{{LIVE_JSON}}</script>
+<script>
+{{JS}}
+</script>
+</body>
+</html>

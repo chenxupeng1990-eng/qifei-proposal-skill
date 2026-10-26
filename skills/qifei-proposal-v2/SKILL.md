@@ -13,7 +13,7 @@ V1 `$qifei-proposal` 已弃用并从仓库移除，一律使用 V2。V2 沿用 V
 2. 先按 [references/task-modes-and-runtime.md](references/task-modes-and-runtime.md) 确定 `task_mode`，运行 `doctor.py --project <项目目录>`（同时输出本阶段的提案记忆），向用户声明本次可交付能力和边界（最低可用配置见 [references/environment-degradation.md](references/environment-degradation.md)）；能力缺失只阻塞实际依赖它的阶段。
 3. Python可用后运行 `python3 scripts/check_suite_dependencies.py`；完整套件缺失时停止，环境能力缺失按Doctor结果路由。
 4. 读取项目 `AGENTS.md` 与 `project-state.json`，以 `phase` 选择且只选择一个当前阶段包。
-5. 完整读取当前阶段包；只读取该阶段包明确列出的 reference，不预读未来阶段。随后运行 `python3 scripts/proposal_memory.py load --project <项目目录> --phase <当前阶段>`，按 [references/proposal-memory.md](references/proposal-memory.md) 使用记忆：`doctor.py` 和 `validate_project.py` 也会带出记忆；记忆有更新而未读取时，`validate_project.py` 不放行。记忆校准判断，不是事实；候选记忆经 Owner 确认后才写入。阶段放行前运行 `proposal_memory.py signals`，把可复用的判断写成候选（最多 8 条），交 Owner 在记忆库（`memory_box.py`）采纳。
+5. 完整读取当前阶段包；只读取该阶段包明确列出的 reference，不预读未来阶段。随后运行 `python3 scripts/proposal_memory.py load --project <项目目录> --phase <当前阶段>`，按 [references/proposal-memory.md](references/proposal-memory.md) 使用记忆：`doctor.py` 和 `validate_project.py` 也会带出记忆；记忆有更新而未读取时，`validate_project.py` 不放行。记忆校准判断，不是事实；候选记忆经 Owner 确认后才写入。Owner 在对话里给出可复用的更正时，当场用 `proposal_memory.py note` 记下；改 `phase` 前运行 `proposal_memory.py signals`，把可复用的判断写成候选（最多 8 条），交 Owner 在记忆库（`memory_box.py`）采纳，`validate_project.py` 会检查；改完 `phase` 立即运行 `doctor.py --project` 读取新阶段记忆。
 6. 当前阶段产物必须通过 `python3 scripts/validate_project.py <项目目录>`；机器通过不等于 Owner 批准。
 7. Proposal Owner 是唯一阶段批准者。口头确认、评论关闭、写入成功或 Agent 自检不能替代客观门禁。
 8. 用户已确认的项目事实、策略与场外决定是只读权威；不得在后续审查中重新审判。
