@@ -236,7 +236,9 @@ class ProposalMemoryTests(unittest.TestCase):
 
     def test_controller_loads_memory_every_phase(self) -> None:
         skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("scripts/proposal_memory.py load", skill)
+        # Start of work: doctor --project prints this phase's memory; phase change: advance loads the next one.
+        self.assertIn("doctor.py --project", skill)
+        self.assertIn("proposal_memory.py advance", skill)
         self.assertIn("references/proposal-memory.md", skill)
 
 

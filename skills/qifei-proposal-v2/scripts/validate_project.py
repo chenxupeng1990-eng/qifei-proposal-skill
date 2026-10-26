@@ -872,8 +872,8 @@ def validate_project(project: Path) -> list[str]:
         receipt_phase = read_signals_receipt(project).get("phase")
         if receipt_phase not in PHASES or PHASES.index(receipt_phase) < phase_index - 1:
             errors.append(
-                f"proposal memory: 离开 {PHASES[phase_index - 1]} 阶段前没有运行 `proposal_memory.py signals`；"
-                "先汇总信号，把可复用的判断写成候选（Owner 在对话里的更正先用 `proposal_memory.py note` 记下）"
+                f"proposal memory: 离开 {PHASES[phase_index - 1]} 阶段前没有汇总记忆信号；"
+                f"运行 `proposal_memory.py advance --project <项目目录> --to {phase}`，按输出把可复用的判断写成候选"
             )
     memory = receipt_problem(project, phase)
     if memory:
