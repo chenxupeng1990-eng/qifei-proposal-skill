@@ -23,6 +23,18 @@
   - 读取记忆不再只靠提示词：`doctor.py --project` 开工时一并输出记忆；`load` 和 `doctor` 留下读取回执；`validate_project.py` 发现记忆未读或读后有更新时不放行，并把当前记忆附在输出里。
   - 加载范围改为当前阶段加上之前的各阶段，后期回头改前面的内容时不再漏掉记忆。
 
+- 全流程模拟测试后的门禁加固（Agent 全程执行、人扮演 Owner，按测试暴露的问题逐条修）：
+  - 门禁批准人必须是 Owner；`validation_waivers` 只认 Owner 的批准记录，Agent 不能自己豁免校验错误。
+  - 离开阶段前没有运行 `proposal_memory.py signals` 不放行；`proposal_memory.py note` 记下 Owner 在对话里的更正，进入候选。
+  - `DESIGN.md` 做内容级校验：网格与安全区、字号表、字号下限与拆页、文字区比例、文字层组件、分批规则、母版清单、视觉 QA 清单都要有具体值。
+  - 设计路线默认"整页 Image2 底图 + HTML 文字层"，每页按内容选最佳载体、按母版生图；其他路线只能由 Owner 针对具体页面批准。
+  - 新增 `check_page_layout.mjs`：在真实渲染上测孤字尾行、溢出越界、文字压纹理、左缘差 3–14px；新增 `visual_review` 门禁，要求独立 Agent 逐页审查并绑定截图哈希。
+  - 新增 `screen_text.py`：页面和 PPTX 的上屏文字与冻结母稿逐行比对，进拼装准备库前和导出后各查一次。
+  - 新增 `final_check.py`：导出前只查低级错误，替代讲稿后的全面内容/视觉 QA 批准。
+  - `draft_studio.py check` 拦截上屏内部审慎用语；写母稿阶段加载说服力门禁；全稿审查新增审慎语言外露、必答题证据、关键数字推导和能力证明。
+  - 工作台 `serve --detach` 常驻；章节说明计入确认指纹（旧确认记录仍按原指纹核对）。
+  - 新增设计评审页（工作台 `/design`）和 `design_review.py`：在渲染页面上框选评论，Agent 读取和回复，Owner 解决；未解决的设计评论挡住该页进入拼装准备库。
+
 ## 0.2.0-rc.2
 
 - 统一 Python 与 JavaScript 的跨语言构建身份协议，支持中文路径、全量与单章节构建；
