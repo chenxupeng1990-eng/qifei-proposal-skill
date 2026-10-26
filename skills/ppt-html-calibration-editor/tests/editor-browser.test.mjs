@@ -7,13 +7,20 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
+// playwright-core is only a devDependency here, so it is often absent (npm omit=dev, or an installed copy).
+// Fall back to CODEX_NODE_MODULES, then to the copy qifei-proposal-v2 already installs next door.
 let chromium;
-try {
-  ({ chromium } = require('playwright-core'));
-} catch {
-  const bundled = process.env.CODEX_NODE_MODULES;
-  if (!bundled) throw new Error('Install playwright-core or set CODEX_NODE_MODULES to its package directory');
-  ({ chromium } = require(join(bundled, 'playwright-core')));
+const sibling = fileURLToPath(new URL('../../qifei-proposal-v2/node_modules/', import.meta.url));
+for (const where of [null, process.env.CODEX_NODE_MODULES, sibling]) {
+  if (where === undefined || (where !== null && !existsSync(join(where, 'playwright-core')))) continue;
+  try {
+    ({ chromium } = require(where === null ? 'playwright-core' : join(where, 'playwright-core')));
+    break;
+  } catch { /* try the next location */ }
+}
+if (!chromium) {
+  throw new Error('playwright-core not found. Run `python3 scripts/bootstrap.py --suite v2` from the repository root, '
+    + 'or set CODEX_NODE_MODULES to a node_modules folder that contains it.');
 }
 const root = fileURLToPath(new URL('../assets/browser-editor/', import.meta.url));
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.ttf': 'font/ttf' };

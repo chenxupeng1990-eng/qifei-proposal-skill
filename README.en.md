@@ -14,8 +14,8 @@
 </p>
 
 <p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.3%20preview-ff5f4d">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-184%20passing-1f8b4c">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.3.0-ff5f4d">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-185%20passing-1f8b4c">
   <img alt="Python" src="https://img.shields.io/badge/Python-3.9%2B-3776ab">
   <img alt="Node" src="https://img.shields.io/badge/Node.js-18%2B-339933">
   <img alt="Platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-111827">
@@ -141,7 +141,7 @@ The Owner's judgement carries across projects in three layers: Owner preferences
   <img src="docs/readme-assets/v03/memory-box.webp" alt="Memory box: pending candidates and three memory layers" width="100%">
 </p>
 
-- Corrections the Owner gives in conversation are captured on the spot with `proposal_memory.py note`.
+- The agent needs two commands: `proposal_memory.py note` captures a correction the Owner gives in conversation, and `proposal_memory.py advance --to <phase>` handles a phase change in one step (distil signals, prompt for candidates, load the next phase's memory).
 - Loading memory does not depend on the prompt. `doctor.py` and `validate_project.py` deliver the memory and check a read receipt, and leaving a phase without distilling its signals fails validation.
 
 ### Stricter gates
@@ -333,7 +333,7 @@ Phase details are in [`SKILL.md`](skills/qifei-proposal-v2/SKILL.md); release no
 
 ## Status
 
-The v0.3 preview is merged into [`codex/qifei-proposal-base`](https://github.com/chenxupeng1990-eng/qifei-proposal-skill/tree/codex/qifei-proposal-base). All 184 Python tests and the release self-test (`python3 scripts/self_test.py`) pass, and the draft studio, design review and memory box have been walked through end to end in a browser on a mock project. Feedback from real projects is welcome.
+v0.3.0 is released on [`codex/qifei-proposal-base`](https://github.com/chenxupeng1990-eng/qifei-proposal-skill/tree/codex/qifei-proposal-base). All 185 Python tests and the release self-test (`python3 scripts/self_test.py`) pass, and the draft studio, design review and memory box have been walked through end to end in a browser on a mock project. Feedback from real projects is welcome.
 
 <a id="license"></a>
 

@@ -175,6 +175,11 @@ def main() -> int:
     editor = ROOT / "skills" / "ppt-html-calibration-editor"
     production = ROOT / "skills" / "proposal-ppt-production"
 
+    if not (qifei / "node_modules").is_dir():
+        raise SystemExit(
+            "FAIL Node packages are not installed. On a fresh clone run `python3 scripts/bootstrap.py --suite v2`; "
+            "it installs them and then runs this self-test."
+        )
     run("Environment", [npm, "run", "check:env"], cwd=qifei)
     run(
         "Python tests",

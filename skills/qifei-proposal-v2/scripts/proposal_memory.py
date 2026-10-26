@@ -589,12 +589,33 @@ def check_candidates(candidates: list[Entry], ids: set[str]) -> list[str]:
     return errors
 
 
+def render_advance(project: Path, target: str) -> str:
+    """Everything memory needs at a phase change, in one step: distil the phase being left, then load the next."""
+    if target not in PHASE_STAGE:
+        raise ValueError(f"unknown phase '{target}'")
+    current = project_phase(project) or "（未设置）"
+    signals = render_signals(project, False)
+    text, digest, _ = memory_for_phase(project, target)
+    write_receipt(project, target, digest, "advance")
+    steps = [
+        f"# 换阶段：{current} → {target}",
+        "",
+        "1. 下面第一部分是离开本阶段的记忆信号。把能复用的判断写成候选（最多 8 条，来源写信号编号）；没有就不写。",
+        "2. 第二部分是新阶段的记忆，开工前读完。",
+        f"3. 两步做完后，再把 project-state.json 的 phase 改成 {target}，并运行 validate_project.py。",
+        "",
+        "---",
+        "",
+    ]
+    return "\n".join(steps) + signals + "\n---\n\n" + text
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ("init", "load", "check", "list", "signals", "accept", "reject", "note"):
+    for name in ("init", "load", "check", "list", "signals", "advance", "accept", "reject", "note"):
         command = sub.add_parser(name)
-        command.add_argument("--project", required=name in {"signals", "accept", "reject", "note"},
+        command.add_argument("--project", required=name in {"signals", "advance", "accept", "reject", "note"},
                              help="proposal project directory")
         if name == "note":
             command.add_argument("text", help="the Owner's correction, in the Owner's words")
@@ -609,6 +630,8 @@ def main() -> int:
             command.add_argument("--by", default="Owner")
         if name == "signals":
             command.add_argument("--all", action="store_true", help="include signals already cited")
+        if name == "advance":
+            command.add_argument("--to", required=True, help="the phase being entered")
         if name == "load":
             command.add_argument("--phase", required=True, help="project-state.json phase")
             command.add_argument("--tags", default="", help="comma-separated scope tags, e.g. 美妆,比稿")
@@ -628,6 +651,9 @@ def main() -> int:
     try:
         if args.command == "signals":
             sys.stdout.write(render_signals(project, args.all))
+            return 0
+        if args.command == "advance":
+            sys.stdout.write(render_advance(project, args.to))
             return 0
         if args.command == "note":
             print(f"recorded {add_note(project, args.text, args.context)}")

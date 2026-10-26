@@ -68,12 +68,22 @@ class SignalsGateTests(unittest.TestCase):
         self.tmp.cleanup()
 
     def signals_errors(self) -> list[str]:
-        return [e for e in vp.validate_project(self.project) if "没有运行 `proposal_memory.py signals`" in e]
+        return [e for e in vp.validate_project(self.project) if "没有汇总记忆信号" in e]
 
     def test_leaving_a_phase_without_signals_is_blocked(self) -> None:
         self.assertTrue(self.signals_errors())
         mark_signals_run(self.project)
         self.assertEqual(self.signals_errors(), [])
+
+    def test_advance_distils_the_old_phase_and_loads_the_new_one(self) -> None:
+        nxt = vp.PHASES[vp.PHASES.index("full_redteam") + 1]
+        out = proposal_memory.render_advance(self.project, nxt)
+        self.assertIn(f"full_redteam → {nxt}", out)
+        self.assertEqual(proposal_memory.read_signals_receipt(self.project)["phase"], "full_redteam")
+        write_json(self.project / "project-state.json", {"project_id": f"gate-{id(self)}", "phase": nxt})
+        self.assertEqual(self.signals_errors(), [])
+        with self.assertRaises(ValueError):
+            proposal_memory.render_advance(self.project, "nowhere")
 
     def test_owner_note_becomes_a_signal(self) -> None:
         note_id = proposal_memory.add_note(self.project, "竞品对标只用同档国际线", "S07")

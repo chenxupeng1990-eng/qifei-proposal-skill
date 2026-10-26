@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased（v0.3 进行中）
+## 0.3.0（2026-10-26）
+
+- 记忆流程收成一个命令：换阶段时运行 `proposal_memory.py advance --project <项目目录> --to <新阶段>`，一次完成汇总离开阶段的信号、提示写候选、读取新阶段记忆并留下回执；总控规则里 Agent 只需记住 `note` 和 `advance` 两个命令。
+- 新拉下来的仓库：自检发现没装 Node 依赖时，直接提示先运行 `bootstrap.py`；HTML 编辑器的浏览器测试在自身没有 `playwright-core` 时，自动使用 qifei-proposal-v2 已安装的那份，不再必须设置 `CODEX_NODE_MODULES`。
 
 - 新增提案母稿工作台 M1：`draft_studio.py render` 把母稿渲染成可离线打开的富格式阅读页（章节目录与状态、标题链、上屏画面示意、流程、视觉网格、内部字段折叠，以及完整、客户、标题链三种视图），`export-md` 导出完整版或简洁版 Markdown；同时兼容飞书回读快照和章节文件两种写法；
 - 新增三层提案记忆 R1：项目记忆、Owner 偏好、方法论共用一套条目格式，`proposal_memory.py load` 按阶段加载、有条数和字数上限，`check` 校验格式与取代关系，只有 Owner 确认的条目才能写入；
