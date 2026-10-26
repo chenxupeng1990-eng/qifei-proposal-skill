@@ -272,7 +272,12 @@
     if (issues.length) {
       const pages = new Set(issues.map((i) => i.page).filter((p) => p !== "-"));
       const list = issues.slice(0, 40).map((i) => `<li><code>${esc(i.page)}</code> ${inline(i.message)}</li>`).join("");
-      doc.push(`<details class="format-warn"><summary><b>这份母稿不是标准格式</b>：${issues.length} 处问题，涉及 ${pages.size} 页。先运行 <code>draft_studio.py normalize</code> 转换；转换前，认不出的内容按正文显示。</summary><ul>${list}</ul>${issues.length > 40 ? `<p>还有 ${issues.length - 40} 处，运行 <code>draft_studio.py check</code> 查看全部。</p>` : ""}</details>`);
+      // Caution phrases on screen are a content problem, not a format one: normalize cannot fix them.
+      const formatCount = issues.filter((i) => !i.message.includes("内部审慎用语")).length;
+      const summary = formatCount
+        ? `<b>这份母稿不是标准格式</b>：${issues.length} 处问题，涉及 ${pages.size} 页。先运行 <code>draft_studio.py normalize</code> 转换；转换前，认不出的内容按正文显示。`
+        : `<b>上屏内容有内部审慎用语</b>：${issues.length} 处，涉及 ${pages.size} 页。上屏只保留来源，边界写进措辞，审慎说明放进讲解方向或证据与来源；改完这些页所在的章才能确认。`;
+      doc.push(`<details class="format-warn"><summary>${summary}</summary><ul>${list}</ul>${issues.length > 40 ? `<p>还有 ${issues.length - 40} 处，运行 <code>draft_studio.py check</code> 查看全部。</p>` : ""}</details>`);
     }
     if (model.registration) doc.push(authorityBar(model.registration));
     if (model.preface_md) doc.push(`<div class="preface md">${block(model.preface_md)}</div>`);
