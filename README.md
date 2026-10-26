@@ -44,9 +44,11 @@ Proposal Skill V2 管的是整条链路：理解资料、建立观点、写成�
 
 > **策略系统决定作品上限，质量门禁守住交付下限。**
 
-### 30 秒看完整流程
+### 80 秒看完整流程
 
-https://github.com/user-attachments/assets/387f188c-4cf7-4e04-9ebd-a69e80e639fa
+[![观看 80 秒功能演示](docs/readme-assets/intro-github-poster.jpg)](docs/readme-assets/intro-github.mp4)
+
+[点击封面或这里播放视频](docs/readme-assets/intro-github.mp4) · 80 秒 · 1080p
 
 ### 先看成品
 

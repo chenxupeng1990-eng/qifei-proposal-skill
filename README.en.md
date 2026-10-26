@@ -46,9 +46,11 @@ Proposal Skill V2 governs the whole chain: understanding the material, forming a
 
 > **Strategy sets the ceiling. Quality gates protect the floor.**
 
-### The whole flow in 30 seconds
+### The whole flow in 80 seconds
 
-https://github.com/user-attachments/assets/387f188c-4cf7-4e04-9ebd-a69e80e639fa
+[![Watch the 80-second walkthrough](docs/readme-assets/intro-github-poster.jpg)](docs/readme-assets/intro-github.mp4)
+
+[Click the cover or play the video here](docs/readme-assets/intro-github.mp4) · 80 seconds · 1080p
 
 ### Recent work
 
