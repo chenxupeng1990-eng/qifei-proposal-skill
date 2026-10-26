@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import json
 import hashlib
 import subprocess
@@ -14,6 +15,7 @@ SCRIPTS = SKILL_ROOT / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 from validate_project import validate_project  # noqa: E402
+os.environ["QIFEI_MEMORY_HOME"] = tempfile.mkdtemp(prefix="qifei-memory-test-")  # never read or write real memory
 
 
 class ProjectStateSchemaTests(unittest.TestCase):

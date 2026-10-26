@@ -91,8 +91,6 @@
     "design_loop": {"approved": false, "by": null, "at": null, "record_id": null},
     "final_page_order": {"approved": false, "by": null, "at": null, "record_id": null},
     "speaker_notes": {"approved": false, "by": null, "at": null, "record_id": null},
-    "content_qa": {"approved": false, "by": null, "at": null, "record_id": null},
-    "visual_qa": {"approved": false, "by": null, "at": null, "record_id": null},
     "final_assembly": {"approved": false, "by": null, "at": null, "record_id": null}
   },
   "chapters": [],

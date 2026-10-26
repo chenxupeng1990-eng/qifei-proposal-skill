@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import json
 import hashlib
 import subprocess
@@ -17,7 +18,18 @@ sys.path.insert(0, str(SCRIPTS))
 from freeze_deck_spec import content_hash  # noqa: E402
 from validate_deck_spec import png_has_alpha, title_has_terminal_period, valid_local_media, validate_deck, visual_length  # noqa: E402
 from validate_design_loop import validate_presentation_route  # noqa: E402
-from validate_project import FEISHU_PAGE_SECTIONS, validate_project  # noqa: E402
+from validate_project import FEISHU_PAGE_SECTIONS, validate_project as _validate_project  # noqa: E402
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from memory_fixtures import mark_signals_run  # noqa: E402
+
+
+def validate_project(project):
+    """Gate checks in these tests assume memory signals were distilled for the current phase."""
+    mark_signals_run(project)
+    return _validate_project(project)
+
+os.environ["QIFEI_MEMORY_HOME"] = tempfile.mkdtemp(prefix="qifei-memory-test-")  # never read or write real memory
 
 
 class ContractTests(unittest.TestCase):
@@ -162,7 +174,7 @@ class ContractTests(unittest.TestCase):
         errors = validate_presentation_route(page, "S01")
         self.assertTrue(any("every formal page requires an Image2 asset" in error for error in errors))
 
-    def test_semantic_icon_allows_image2_when_it_has_a_real_role(self) -> None:
+    def icon_route(self) -> dict:
         route = self.presentation_route(expression_object="system", anchor_kind="hybrid")
         route["image2_decision"] = {
             "decision": "generate",
@@ -173,8 +185,40 @@ class ContractTests(unittest.TestCase):
             "text_forbidden": True,
             "html_protected_content": "对象名称、指标与关系标注。",
         }
-        page = {"visual_mode": "opaque-module", "presentation_route": route}
-        self.assertEqual(validate_presentation_route(page, "S01"), [])
+        return route
+
+    def test_full_page_design_base_is_the_default_route(self) -> None:
+        route = self.presentation_route(expression_object="statement", anchor_kind="hybrid")
+        route["image2_decision"] = {
+            "decision": "generate", "semantic_role": "scene", "visual_family_id": "yili-retention-v1",
+            "reason": "整页设计底图，左侧预留标题区。", "html_protected_content": "标题与精确数字。",
+        }
+        self.assertEqual(validate_presentation_route({"visual_mode": "background", "presentation_route": route}, "S01"), [])
+        route["image2_decision"]["semantic_role"] = "mechanism"
+        errors = validate_presentation_route({"visual_mode": "background", "presentation_route": route}, "S01")
+        self.assertTrue(any("design base is a scene or hero" in error for error in errors))
+
+    def test_boxed_illustration_does_not_meet_the_visual_floor(self) -> None:
+        errors = validate_presentation_route({"visual_mode": "opaque-module", "presentation_route": self.icon_route()}, "S01")
+        self.assertTrue(any("boxed or inset illustration does not count" in error for error in errors))
+
+    def test_only_an_owner_record_can_grant_another_route(self) -> None:
+        page = {"visual_mode": "opaque-module", "presentation_route": self.icon_route(),
+                "route_exception": {"record_id": "DESIGN-MD-SECTION-9", "reason": "设计合同允许图表页用HTML"}}
+        approvals = {"design": {"approved": True, "record_id": "APR-DESIGN-1"}}
+        self.assertTrue(any("Owner approval record_id" in e for e in validate_presentation_route(page, "S01", approvals)))
+        approvals["route_exception_s01"] = {"approved": True, "record_id": "DESIGN-MD-SECTION-9"}
+        self.assertEqual(validate_presentation_route(page, "S01", approvals), [])
+
+    def test_design_base_must_cover_the_canvas(self) -> None:
+        from validate_design_loop import validate_base_image  # noqa: PLC0415
+
+        with tempfile.TemporaryDirectory() as tmp:
+            for (width, height), ok in (((1920, 1080), True), ((2400, 1350), True), ((1200, 900), False)):
+                path = Path(tmp) / f"base-{width}.png"
+                ihdr = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+                path.write_bytes(b"\x89PNG\r\n\x1a\n" + struct.pack(">I", 13) + b"IHDR" + ihdr + b"\x00" * 4)
+                self.assertEqual(validate_base_image(path, "S01") == [], ok, (width, height))
 
     def test_image2_asset_requires_visual_family_id(self) -> None:
         route = self.presentation_route(expression_object="statement", anchor_kind="hybrid")
@@ -185,7 +229,7 @@ class ContractTests(unittest.TestCase):
             "html_protected_content": "标题与精确数字。",
         }
         errors = validate_presentation_route(
-            {"visual_mode": "opaque-module", "presentation_route": route},
+            {"visual_mode": "background", "presentation_route": route},
             "S01",
         )
         self.assertTrue(any("visual_family_id is required" in error for error in errors))
@@ -285,7 +329,7 @@ class ContractTests(unittest.TestCase):
             errors = validate_deck(project)
             self.assertTrue(any("P01: presentation_route is required" in error for error in errors))
 
-    def test_export_phase_requires_both_qa_gates(self) -> None:
+    def test_export_phase_requires_the_final_low_level_check(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             project = Path(temp)
             state = {
@@ -299,8 +343,8 @@ class ContractTests(unittest.TestCase):
             }
             (project / "project-state.json").write_text(json.dumps(state), encoding="utf-8")
             errors = validate_project(project)
-            self.assertTrue(any("content_qa" in error for error in errors))
-            self.assertTrue(any("visual_qa" in error for error in errors))
+            self.assertTrue(any("final_check.report_path" in error for error in errors), errors)
+            self.assertFalse(any("content_qa" in error or "visual_qa" in error for error in errors))
 
     def test_full_redteam_rejects_empty_chapters(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

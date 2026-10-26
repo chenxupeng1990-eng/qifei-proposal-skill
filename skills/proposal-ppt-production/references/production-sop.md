@@ -326,9 +326,11 @@ HTML职责：
 
 | 内容模式 | 默认路线 | 允许例外 |
 |---|---|---|
-| 信息主导 | Route A 或 Route C | 只有信息单元极少时才可使用 Route B |
-| 设计主导 | Route B | 需要少量解释时可使用 Route C |
-| 混合主导 | Route C | 关系非常简单时可退回 Route A |
+| 信息主导 | Route C（底图更克制，为数据和图表留出大块干净区域） | 只有信息单元极少时才可使用 Route B |
+| 设计主导 | Route B 或 Route C | — |
+| 混合主导 | Route C | — |
+
+正式提案页默认是“整页 Image2 设计底图＋HTML 文字层”（Route C）。Route A 和 Route A-T 没有整页底图，只有 Owner 针对具体页面批准时才能使用；由 `qifei-proposal-v2` 调用时，以它的 `route_exception` 记录为准。图片放进方框、卡片或缩略图里当配图，不算整页底图。
 
 ### Route A：HTML 主导
 

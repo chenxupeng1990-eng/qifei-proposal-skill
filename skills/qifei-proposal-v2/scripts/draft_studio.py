@@ -15,6 +15,7 @@ import json
 import os
 import re
 import secrets
+import subprocess
 import sys
 import tempfile
 import threading
@@ -23,7 +24,10 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import design_review  # noqa: E402
 
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
@@ -622,6 +626,13 @@ def _page_spans(lines: list[str]) -> list[tuple[int, int, int, str, str]]:
     return spans
 
 
+# Internal caution that belongs in speaker notes or the evidence ledger, not on the client's screen.
+SCREEN_CAUTION = re.compile(
+    r"不等于|不代表|不构成|并非|尚未|仅参考|仅作|仅供|不作为|另行商定|不承诺|以[^。；，\n]{0,12}为准"
+    r"|非(?:已|消费者|实拍|保证|承诺|授权|销售|调研|门店|人民币)[^\s，。；]{0,6}"
+)
+
+
 def check_format(text: str) -> list[dict[str, str]]:
     """Every deviation from the single draft format, as {page, message}."""
     lines = from_feishu_markup(text.replace("\r\n", "\n"))[0].split("\n")
@@ -679,6 +690,10 @@ def check_format(text: str) -> list[dict[str, str]]:
             body = [l.strip() for l in lines[at + 1:stop] if l.strip() and l.strip() != "---"]
             if not body or (len(body) == 1 and PLACEHOLDER.match(body[0])):
                 add(page_id, f"`### {name}` 是空的")
+            if name == "PPT上屏内容":
+                for phrase in sorted({m.group(0) for line in body for m in SCREEN_CAUTION.finditer(line)}):
+                    add(page_id, f"`### PPT上屏内容` 有内部审慎用语「{phrase}」：上屏只保留来源，边界写进措辞本身，"
+                                 "审慎说明放进讲稿方向或证据与来源")
     return issues
 
 
@@ -856,8 +871,9 @@ def changed_slides(before: str, after: str) -> list[str]:
             model = parse_draft(text)
         except ValueError:
             return {}
+        # The chapter title and intro count as part of every page in that chapter.
         return {
-            s["id"]: json.dumps([s["title"], s["fields"]], ensure_ascii=False, sort_keys=True)
+            s["id"]: json.dumps([c["title"], c.get("intro_md", ""), s["title"], s["fields"]], ensure_ascii=False, sort_keys=True)
             for c in model["chapters"] for s in c["slides"]
         }
     old, new = digest(before), digest(after)
@@ -953,7 +969,9 @@ class DraftStore:
             self._write(updated)
             label = target.get("kind")
             note = f"{label}:{target.get('key')}" if label == "field" else str(label)
-            return self._record(updated, actor, [slide_id] if slide_id else [], note)
+            # A chapter-intro edit has no single page; every page of that chapter changed.
+            slides = [slide_id] if slide_id else changed_slides(current, updated)
+            return self._record(updated, actor, slides, note)
 
     def sync_external(self) -> dict[str, Any] | None:
         """Record a change made to the draft outside the studio (for example by an agent)."""
@@ -989,10 +1007,18 @@ def is_studio(state: dict[str, Any] | None) -> bool:
     return bool(state) and state.get("content_authority") == "studio"
 
 
-def page_digests(text: str) -> dict[str, str]:
-    """A fingerprint per page (title and every field), used to prove a confirmed page did not change."""
+DIGEST_VERSION = 2
+
+
+def page_digests(text: str, version: int = DIGEST_VERSION) -> dict[str, str]:
+    """A fingerprint per page, used to prove a confirmed page did not change. Version 2 covers the
+    chapter title and intro, the page title and every field; version 1 (confirmations recorded
+    before chapter intros were covered) only the page title and fields."""
+    def parts(c: dict[str, Any], s: dict[str, Any]) -> list:
+        page = [s["title"], [[f["key"], f["md"]] for f in s["fields"]]]
+        return page if version == 1 else [c["title"], c.get("intro_md", ""), *page]
     return {
-        s["id"]: sha256_text(json.dumps([s["title"], [[f["key"], f["md"]] for f in s["fields"]]], ensure_ascii=False))
+        s["id"]: sha256_text(json.dumps(parts(c, s), ensure_ascii=False))
         for c in parse_draft(text)["chapters"] for s in c["slides"]
     }
 
@@ -1052,6 +1078,7 @@ def confirm_chapter(project: Path, draft_path: Path, chapter_id: str, by: str) -
         "record_id": f"confirm-{chapter_id}-r{store.revision}-{secrets.token_hex(3)}",
         "chapter_id": chapter_id,
         "slides": {s: digests[s] for s in slides},
+        "digest_version": DIGEST_VERSION,
         "by": (by or "Owner")[:40],
         "at": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
         "revision": store.revision,
@@ -1133,7 +1160,7 @@ def studio_evidence_errors(project: Path, draft: dict[str, Any], snapshot_path: 
     if entries and isinstance(revision, int) and entries[-1].get("revision", 0) > revision:
         errors.append(f"the draft changed after registration (rev {revision} → rev {entries[-1]['revision']}); register it again")
     text = snapshot_path.read_text(encoding="utf-8")
-    digests = page_digests(text)
+    digests = {version: page_digests(text, version) for version in (1, DIGEST_VERSION)}
     confirmations = ConfirmationStore(snapshot_path)
     for index, chapter in enumerate(chapters, start=1):
         chapter_id = chapter.get("chapter_id") or f"chapter-{index}"
@@ -1143,7 +1170,8 @@ def studio_evidence_errors(project: Path, draft: dict[str, Any], snapshot_path: 
         if record is None:
             errors.append(f"{chapter_id}: confirmation {chapter.get('confirmation_record_id')} is not in confirmations.json")
             continue
-        changed = [s for s in chapter.get("slides") or [] if record["slides"].get(s) != digests.get(s)]
+        current = digests[record.get("digest_version", 1)]
+        changed = [s for s in chapter.get("slides") or [] if record["slides"].get(s) != current.get(s)]
         if changed:
             errors.append(f"{chapter_id}: changed after confirmation ({', '.join(changed)}); confirm it again")
     return errors
@@ -1275,6 +1303,19 @@ def render_html(model: dict[str, Any], live: dict[str, Any] | None = None, threa
     return template
 
 
+def render_design_html(title: str, live: dict[str, Any]) -> str:
+    template = (ASSET_ROOT / "design.html").read_text(encoding="utf-8")
+    replacements = {
+        "{{TITLE}}": title.replace("<", "&lt;"),
+        "{{CSS}}": (ASSET_ROOT / "studio.css").read_text(encoding="utf-8") + (ASSET_ROOT / "design.css").read_text(encoding="utf-8"),
+        "{{JS}}": (ASSET_ROOT / "design.js").read_text(encoding="utf-8").replace("</script", "<\\/script"),
+        "{{LIVE_JSON}}": script_json(live),
+    }
+    for key, value in replacements.items():
+        template = template.replace(key, value)
+    return template
+
+
 # ---------- Local studio server ----------
 
 class StudioServer(ThreadingHTTPServer):
@@ -1285,6 +1326,8 @@ class StudioServer(ThreadingHTTPServer):
         self.store = store
         self.comments = CommentStore(store.draft_path)
         self.comments_digest = self.comments.digest()
+        self.design = design_review.DesignCommentStore(store.project)
+        self.design_digest = self.design.digest()
         self.token = secrets.token_urlsafe(18)
         self.changed = threading.Condition()
         self.latest: dict[str, Any] = {"revision": store.revision, "sha256": store.last_sha(), "slides": []}
@@ -1309,6 +1352,12 @@ class StudioServer(ThreadingHTTPServer):
             self.latest = {**self.latest, "comments": self.comments_digest}
             self.changed.notify_all()
 
+    def publish_design(self) -> None:
+        with self.changed:
+            self.design_digest = self.design.digest()
+            self.latest = {**self.latest, "design": self.design_digest}
+            self.changed.notify_all()
+
     def watch(self, interval: float = 0.5) -> None:
         while not self.stopping.wait(interval):
             try:
@@ -1318,6 +1367,8 @@ class StudioServer(ThreadingHTTPServer):
                     self.publish_state()
                 if self.comments.digest() != self.comments_digest:
                     self.publish_comments()
+                if self.design.digest() != self.design_digest:
+                    self.publish_design()
             except (OSError, ValueError):
                 continue
 
@@ -1358,8 +1409,16 @@ class StudioHandler(BaseHTTPRequestHandler):
             live = {"token": self.server.token}
             html = render_html(self.server.store.model(), live, self.server.comments.load()["threads"])
             return self._send(200, html.encode("utf-8"), "text/html; charset=utf-8")
+        if url.path == "/design":
+            html = render_design_html(self.server.store.model()["title"], {"token": self.server.token})
+            return self._send(200, html.encode("utf-8"), "text/html; charset=utf-8")
         if not self._token_ok(query):
             return self._json(403, {"error": "missing studio token"})
+        if url.path == "/api/design":
+            project = self.server.store.project
+            return self._json(200, {"pages": design_review.review_pages(project), "threads": self.server.design.threads()})
+        if url.path.startswith("/files/"):
+            return self._review_file(unquote(url.path[len("/files/"):]))
         if url.path == "/api/model":
             return self._json(200, self.server.store.model())
         if url.path == "/api/markdown":
@@ -1382,6 +1441,8 @@ class StudioHandler(BaseHTTPRequestHandler):
             return self._json(403, {"error": "forbidden"})
         if url.path.startswith("/api/comments"):
             return self._comment_post(url.path)
+        if url.path.startswith("/api/design/"):
+            return self._design_post(url.path)
         if url.path in {"/api/confirm", "/api/register"}:
             return self._authority_post(url.path)
         if url.path != "/api/save":
@@ -1439,6 +1500,32 @@ class StudioHandler(BaseHTTPRequestHandler):
         self.server.publish_comments()
         return self._json(200, {"thread": thread, "comments": comments.load()})
 
+    def _review_file(self, relative: str) -> None:
+        """Review PNGs and design-comment crops only; nothing else in the project is served."""
+        root = (self.server.store.project / "deck" / "review").resolve()
+        path = (self.server.store.project / relative).resolve()
+        if not path.is_relative_to(root) or path.suffix.lower() != ".png" or not path.is_file():
+            return self._json(404, {"error": "not found"})
+        return self._send(200, path.read_bytes(), "image/png")
+
+    def _design_post(self, path: str) -> None:
+        design = self.server.design
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+            payload = json.loads(self.rfile.read(length).decode("utf-8"))
+            if path == "/api/design/comments":
+                thread = design.create(payload)
+            elif path == "/api/design/reply":
+                thread = design.reply(str(payload["id"]), payload.get("text", ""), payload.get("author", ""))
+            elif path == "/api/design/status":
+                thread = design.set_status(str(payload["id"]), str(payload.get("status")), payload.get("author", ""))
+            else:
+                return self._json(404, {"error": "not found"})
+        except (design_review.ReviewError, KeyError, json.JSONDecodeError, ValueError) as error:
+            return self._json(400, {"error": str(error)})
+        self.server.publish_design()
+        return self._json(200, {"thread": thread, "threads": design.threads()})
+
     def _events(self) -> None:
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream; charset=utf-8")
@@ -1448,6 +1535,7 @@ class StudioHandler(BaseHTTPRequestHandler):
         seen = self.server.latest.get("sha256")
         seen_comments = self.server.comments_digest
         seen_state = self.server.latest.get("state")
+        seen_design = self.server.design_digest
         try:
             self.wfile.write(b": connected\n\n")
             self.wfile.flush()
@@ -1468,6 +1556,10 @@ class StudioHandler(BaseHTTPRequestHandler):
                 if latest.get("comments") and latest.get("comments") != seen_comments:
                     seen_comments = latest.get("comments")
                     self.wfile.write(f"event: comments\ndata: {json.dumps({'digest': seen_comments})}\n\n".encode("utf-8"))
+                    sent = True
+                if latest.get("design") and latest.get("design") != seen_design:
+                    seen_design = latest.get("design")
+                    self.wfile.write(b"event: design\ndata: {}\n\n")
                     sent = True
                 if not sent:
                     self.wfile.write(b": ping\n\n")
@@ -1507,6 +1599,36 @@ def serve(project: Path, draft_arg: str | None, host: str, port: int, open_brows
             server.changed.notify_all()
         server.server_close()
     return 0
+
+
+def serve_detached(project: Path, draft_arg: str | None, host: str, port: int) -> int:
+    """Start the studio in its own session so it outlives the agent turn that started it.
+
+    Agent hosts often end every process of a turn when the turn ends; the Owner then opens
+    a dead link. A detached studio keeps running until it is stopped.
+    """
+    log_dir = project / "deck" / "review"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_path = log_dir / "studio-server.log"
+    command = [sys.executable, str(Path(__file__).resolve()), "serve", str(project), "--host", host, "--port", str(port)]
+    if draft_arg:
+        command += ["--draft", draft_arg]
+    with log_path.open("w", encoding="utf-8") as log:
+        child = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                                 start_new_session=True)
+    for _ in range(100):
+        text = log_path.read_text(encoding="utf-8") if log_path.is_file() else ""
+        match = re.search(r"Draft studio: (\S+)", text)
+        if match:
+            (log_dir / "studio-server.pid").write_text(str(child.pid), encoding="utf-8")
+            print(f"Draft studio: {match.group(1)}  (pid {child.pid}, runs until stopped)")
+            print(f"Stop: kill {child.pid}")
+            return 0
+        if child.poll() is not None:
+            break
+        time.sleep(0.1)
+    print(f"Studio did not start; see {log_path}", file=sys.stderr)
+    return 1
 
 
 def run_normalize(project: Path, draft_arg: str | None, write: bool) -> int:
@@ -1554,6 +1676,8 @@ def main() -> int:
     studio.add_argument("--host", default="127.0.0.1")
     studio.add_argument("--port", type=int, default=8765)
     studio.add_argument("--open", action="store_true", help="open the studio in the default browser")
+    studio.add_argument("--detach", action="store_true",
+                        help="keep running after the agent's turn ends; prints the address and the stop command")
     reg = sub.add_parser("register", help="record the current studio draft as the verified version")
     reg.add_argument("project")
     reg.add_argument("--draft")
@@ -1579,6 +1703,8 @@ def main() -> int:
 
     project = Path(args.project).expanduser().resolve()
     if args.command == "serve":
+        if args.detach:
+            return serve_detached(project, args.draft, args.host, args.port)
         return serve(project, args.draft, args.host, args.port, args.open)
     if args.command == "register":
         draft_path, _ = load_project(project, args.draft)

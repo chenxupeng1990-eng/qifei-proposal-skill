@@ -124,8 +124,8 @@ def build_report(capabilities: dict, task_mode: str) -> dict:
             "a registered image generation adapter is required for formal visual approval"
         )
     if not capabilities.get("visual_understanding"):
-        stage_blockers.setdefault("visual_qa", []).append(
-            "visual understanding or a registered human visual reviewer is required for visual QA"
+        stage_blockers.setdefault("visual_review", []).append(
+            "visual understanding or a registered human visual reviewer is required for the independent visual review"
         )
     if not local_runtime:
         stage_blockers.setdefault("review_and_export", []).append(
@@ -174,6 +174,7 @@ def main() -> int:
     parser.add_argument("--capabilities", help="Optional JSON capability override")
     parser.add_argument("--write", help="Write the report to this path")
     parser.add_argument("--json", action="store_true", help="Print JSON only")
+    parser.add_argument("--project", help="Proposal project directory; also prints the proposal memory for its phase")
     args = parser.parse_args()
 
     try:
@@ -182,6 +183,9 @@ def main() -> int:
         print(f"Runtime doctor failed: {exc}", file=sys.stderr)
         return 2
 
+    memory = project_memory(Path(args.project).expanduser().resolve()) if args.project else None
+    if memory is not None:
+        report["proposal_memory"] = memory
     rendered = json.dumps(report, ensure_ascii=False, indent=2)
     if args.write:
         output = Path(args.write).expanduser()
@@ -196,7 +200,23 @@ def main() -> int:
             print(f"BOUNDARY {item}")
         for item in report["blockers"]:
             print(f"BLOCKER {item}")
+        if memory is not None:
+            print()
+            print(memory["text"], end="")
     return 0
+
+
+def project_memory(project: Path) -> dict | None:
+    """The proposal memory for the project's phase, handed to the agent as part of the start-up check."""
+    from proposal_memory import PHASE_STAGE, memory_for_phase, write_receipt
+
+    state_path = project / "project-state.json"
+    phase = json.loads(state_path.read_text(encoding="utf-8")).get("phase") if state_path.is_file() else None
+    if phase not in PHASE_STAGE:
+        return None
+    text, digest, count = memory_for_phase(project, phase)
+    write_receipt(project, phase, digest, "doctor")
+    return {"phase": phase, "entries": count, "text": text}
 
 
 if __name__ == "__main__":

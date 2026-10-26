@@ -14,7 +14,7 @@
 
 ## 2. 运行档位
 
-运行 `python3 scripts/doctor.py --task-mode <模式> --json`。如当前Agent能力不能由本机命令发现，提供不含密钥的 capability JSON。
+运行 `python3 scripts/doctor.py --task-mode <模式> --project <项目目录> --json`；有项目时，结果里的 `proposal_memory.text` 就是本阶段要用的提案记忆。如当前Agent能力不能由本机命令发现，提供不含密钥的 capability JSON。
 
 | 档位 | 能力边界 |
 |---|---|
@@ -34,7 +34,7 @@
 ## 4. 不可替代边界
 
 - 没有图像生成能力时，不批准正式视觉方向和正式页面。
-- 没有视觉识别或人工视觉复核时，不批准视觉QA。
+- 没有视觉识别或人工视觉复核时，不能完成独立视觉审查。
 - 没有Node、浏览器或等价导出服务时，不承诺本地PNG/PDF/PPTX。
 - 没有飞书能力时，不提供飞书revision、回读和协作证明；用工作台的修订日志、登记和章节确认记录作为凭证。
 - 不同图像模型不保证产生完全相同的审美结果。

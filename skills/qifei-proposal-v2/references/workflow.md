@@ -17,7 +17,7 @@
 | generation | 冻结内容与设计系统 | HTML＋PNG，或 Image2直出PNG | 页面合同校验与对应路线预检通过 |
 | review | HTML＋PNG，或直出PNG＋Codex浏览器原生评论 | 设计循环、原生评论、修订记录、页面明确确认记录 | 在本阶段完成 design loop；确认页进入拼装准备库 |
 | speaker_notes | 全部正式PPT页面已确认、最终页序已锁定 | 与最终页码和 `slide_id` 一致的飞书全案讲稿 | 全案连续朗读、逐页映射与 Owner 确认通过 |
-| qa | 全部正式页面已确认、批准源文件 | 内容 QA、视觉 QA、拼装准备清单 | 两轴分别通过且版本一致 |
+| qa | 全部正式页面已确认、讲稿已确认 | 低级错误核对报告（`final_check.py`）、拼装准备清单 | 页数页序、上屏文字逐行一致、版面测量、错别字通读全部通过 |
 | export | QA 通过的批准PNG、完整拼装准备库、全案拼装批准 | 最终 PNG、PDF、图片型 PPT 预览；按需增加原生可编辑文字层 PPTX | 页数、顺序、哈希和版本一致；可编辑模式额外通过字段、坐标、备注和渲染对照 |
 
 ## 项目状态
@@ -25,7 +25,7 @@
 `project-state.json` 必须记录：
 
 - 当前阶段、Proposal Owner、项目 ID。
-- 资料审计、Grill Me、提案策划书、需求、策略、目录、`AGENTS.md`、品牌官方视觉资料、品牌视觉审计、内容冻结、初始样张、设计语言校准集、`DESIGN.md`、内容 QA、视觉 QA 的批准人、时间和确认记录 ID。
+- 资料审计、Grill Me、提案策划书、需求、策略、目录、`AGENTS.md`、品牌官方视觉资料、品牌视觉审计、内容冻结、初始样张、设计语言校准集、`DESIGN.md` 的批准人、时间和确认记录 ID；独立视觉审查与最终低级错误核对的报告路径。
 - 每章页面列表与逐页确认状态；一次性全稿审查报告、独立审查 Agent ID 和确认记录。
 - 页面重开记录；`reopened_by` 必须等于 Proposal Owner。
 - 当前内容冻结 ID 和设计版本。
@@ -60,7 +60,7 @@
 
 ## 页面确认与拼装准备库
 
-1. 评论解决、视觉 QA 通过或 Agent 判断可用，都不能自动确认页面。
+1. 评论解决、独立视觉审查通过或 Agent 判断可用，都不能自动确认页面。
 2. 只有 Proposal Owner 明确下达“确认本页”“确认这些页面”或同等含义命令，Agent 才运行 `manage_assembly_ready.py approve`。
 3. 批准记录写入 `deck/assembly-ready/manifest.json`，至少包含 `slide_id`、批准内容哈希、`content_freeze_id`、`design_version`、`source_type`、源文件、批准 PNG、文件哈希、确认人、时间与确认记录 ID。
 4. 批准 PNG 复制到 `deck/assembly-ready/pages/`，作为最终拼装的页面快照；后续修改回到该页记录的 HTML 或 direct PNG 源。

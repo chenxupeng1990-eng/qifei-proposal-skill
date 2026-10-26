@@ -81,26 +81,24 @@ class EndToEndExportTests(unittest.TestCase):
             },
             "image2_decision": {
                 "decision": "generate",
-                "semantic_role": "semantic_icon",
-                "reason": "使用同一视觉家族的无文字语义资产验证混合导出链路",
+                "semantic_role": "scene",
+                "reason": "整页设计底图验证“底图＋文字层”的导出链路",
                 "visual_family_id": "e2e-visual-family",
-                "semantic_nodes": ["冻结内容"],
-                "text_forbidden": True,
                 "html_protected_content": "冻结文字与页面顺序",
             },
-            "image2_task": "提供无文字语义视觉资产",
+            "image2_task": "整页设计底图，预留文字区",
             "html_task": "承载冻结文字与页面顺序",
             "visual_balance_plan": "主标题优先",
         }
 
     @staticmethod
-    def write_alpha_png(path: Path) -> None:
+    def write_alpha_png(path: Path, width: int = 1, height: int = 1) -> None:
         def chunk(name: bytes, data: bytes) -> bytes:
             checksum = zlib.crc32(name + data) & 0xFFFFFFFF
             return struct.pack(">I", len(data)) + name + data + struct.pack(">I", checksum)
 
-        ihdr = struct.pack(">IIBBBBB", 1, 1, 8, 6, 0, 0, 0)
-        raw = b"\x00\x00\x00\x00\x00"
+        ihdr = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+        raw = (b"\x00" + b"\x00\x00\x00\x00" * width) * height
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(
             b"\x89PNG\r\n\x1a\n"
@@ -119,14 +117,15 @@ class EndToEndExportTests(unittest.TestCase):
         deck = read_json(DEMO / "deck" / "deck-spec.json")
         deck["project_name"] = "中文路径端到端测试"
         deck["slides"] = deck["slides"][:2]
+        deck["slides"][0]["subtitle"] = "Image2 负责主视觉，HTML 负责可校验的提案表达。"  # one line, no orphan
         deck["content_freeze_id"] = None
         for slide in deck["slides"]:
             slide["presentation_route"] = self.presentation_route()
-            slide["visual_mode"] = "opaque-module"
+            slide["visual_mode"] = "background"
             slide["visual"] = {"src": "assets/approved/e2e-visual.png"}
         write_json(project / "deck" / "deck-spec.json", deck)
         e2e_visual = "assets/approved/e2e-visual.png"
-        self.write_alpha_png(project / e2e_visual)
+        self.write_alpha_png(project / e2e_visual, 1920, 1080)
         prompt_record = "assets/image2/e2e-visual-prompt.md"
         (project / prompt_record).parent.mkdir(parents=True, exist_ok=True)
         (project / prompt_record).write_text("无文字语义视觉测试资产。", encoding="utf-8")
@@ -137,7 +136,7 @@ class EndToEndExportTests(unittest.TestCase):
                 "path": e2e_visual,
                 "status": "approved",
                 "visual_family_id": "e2e-visual-family",
-                "semantic_role": "semantic_icon",
+                "semantic_role": "scene",
                 "prompt_record": prompt_record,
             }],
         })
@@ -157,6 +156,25 @@ class EndToEndExportTests(unittest.TestCase):
             encoding="utf-8",
         )
 
+    def independent_visual_review(self, project: Path) -> None:
+        """Stand-in for the independent review agent: every ready page, every checklist item."""
+        manifest = read_json(project / "deck" / "assembly-ready" / "manifest.json")
+        checks = {item: "pass" for item in ("single_focus", "orphans", "alignment", "text_on_texture", "overflow", "hierarchy")}
+        report = {
+            "status": "passed", "independent_agent": True, "review_agent_id": "visual-reviewer-1",
+            "layout_check_report": "reviews/visual/LAYOUT-CHECK.json",
+            "pages": [{"slide_id": p["slide_id"], "png_sha256": p["ready_png_sha256"], "checks": checks} for p in manifest["pages"]],
+        }
+        write_json(project / "reviews" / "visual" / "INDEPENDENT-REVIEW.json", report)
+        state = read_json(project / "project-state.json")
+        state["visual_review"] = {"report_path": "reviews/visual/INDEPENDENT-REVIEW.json",
+                                  "review_agent_id": "visual-reviewer-1", "independent_agent": True}
+        write_json(project / "project-state.json", state)
+
+    def distil_signals(self, project: Path) -> None:
+        """Each phase change: summarise memory signals first, as the gate requires."""
+        self.run_command([sys.executable, str(SCRIPTS / "proposal_memory.py"), "signals", "--project", str(project)])
+
     def prepare_pre_freeze_state(self, project: Path) -> None:
         initial = read_json(project / "project-state.json")
         demo = read_json(DEMO / "project-state.json")
@@ -169,6 +187,9 @@ class EndToEndExportTests(unittest.TestCase):
             "assembly": initial["assembly"],
             "reopen_log": [],
         })
+        for item in demo["approvals"].values():  # the demo's approvals carry its own owner's name
+            if isinstance(item, dict) and item.get("approved"):
+                item["by"] = "测试负责人"
         demo["approvals"]["full_redteam"] = approved("full-redteam-1")
         demo["full_redteam"] = {
             "report_path": "reviews/redteam/FULL.json",
@@ -209,12 +230,6 @@ class EndToEndExportTests(unittest.TestCase):
         demo["approvals"]["content_freeze"] = {
             "approved": False, "by": None, "at": None, "record_id": None,
         }
-        demo["approvals"]["content_qa"] = {
-            "approved": False, "by": None, "at": None, "record_id": None,
-        }
-        demo["approvals"]["visual_qa"] = {
-            "approved": False, "by": None, "at": None, "record_id": None,
-        }
         demo["approvals"]["final_assembly"] = {
             "approved": False, "by": None, "at": None, "record_id": None,
         }
@@ -230,18 +245,22 @@ class EndToEndExportTests(unittest.TestCase):
             "**本章回答：** 验证导出链路。\n\n"
             "**逻辑路径：** 输入 → 渲染 → 导出。\n\n"
             "**情绪方向：** 确认链路稳定。\n\n"
-            "## D01｜第一页\n\n"
+            "## D01｜把复杂营养价值，变成每天都能理解的选择\n\n"
             "### 核心内容\n验证第一页。\n\n"
             "### 逻辑展开\n输入到输出。\n\n"
-            "### PPT上屏内容\n第一页。\n\n"
+            "### PPT上屏内容\n把复杂营养价值，变成每天都能理解的选择\n\n"
+            "Image2 负责主视觉，HTML 负责可校验的提案表达。\n\n"
             "### 讲解方向\n说明第一页。\n\n"
             "### 策略与过桥\n进入第二页。\n\n"
             "### 视觉生成建议\n使用HTML与视觉资产。\n\n"
             "### 证据与来源\n端到端夹具。\n\n"
-            "## D02｜第二页\n\n"
+            "## D02｜从被看见，到被理解，再到被选择\n\n"
             "### 核心内容\n验证第二页。\n\n"
             "### 逻辑展开\n承接第一页。\n\n"
-            "### PPT上屏内容\n第二页。\n\n"
+            "### PPT上屏内容\n同一套内容必须连续解决注意、理解和行动三个问题。\n\n"
+            "- 先让问题相关：用真实生活任务建立注意，不从成分堆砌开始。\n"
+            "- 再让价值可懂：把专业证据转成消费者语言、画面和选择标准。\n"
+            "- 最后让行动简单：用场景、商品和权益把理解推进为每天的选择。\n\n"
             "### 讲解方向\n说明第二页。\n\n"
             "### 策略与过桥\n完成验证。\n\n"
             "### 视觉生成建议\n使用HTML与视觉资产。\n\n"
@@ -292,7 +311,7 @@ class EndToEndExportTests(unittest.TestCase):
                 "template_id": template_id,
                 "core_expression": "验证冻结内容、浏览器渲染与批准页面一致",
                 "presentation_route": self.presentation_route(),
-                "visual_mode": "opaque-module",
+                "visual_mode": "background",
                 "visual": {
                     "asset_id": "e2e-visual",
                     "asset_path": "assets/approved/e2e-visual.png",
@@ -319,8 +338,6 @@ class EndToEndExportTests(unittest.TestCase):
         state["approvals"]["design_loop"] = approved("design-loop-all")
         state["approvals"]["final_page_order"] = approved("final-order-1")
         state["approvals"]["speaker_notes"] = approved("speaker-notes-1")
-        state["approvals"]["content_qa"] = approved("content-qa-1")
-        state["approvals"]["visual_qa"] = approved("visual-qa-1")
         notes_path = project / "content" / "speaker-notes.md"
         notes_path.write_text("# 最终讲稿\n\nD01\n\nD02\n", encoding="utf-8")
         state["speaker_notes"] = {
@@ -348,6 +365,7 @@ class EndToEndExportTests(unittest.TestCase):
             ])
             self.copy_fixture_sources(project)
             self.prepare_pre_freeze_state(project)
+            self.distil_signals(project)  # leaving the manuscript
             self.run_command([
                 sys.executable, str(SCRIPTS / "freeze_deck_spec.py"), str(project),
                 "--approved-by", "测试负责人", "--approval-id", "freeze-中文-1",
@@ -356,12 +374,14 @@ class EndToEndExportTests(unittest.TestCase):
             state = read_json(project / "project-state.json")
             state["phase"] = "generation"
             write_json(project / "project-state.json", state)
+            self.distil_signals(project)
             self.run_command([sys.executable, str(SCRIPTS / "render_deck.py"), str(project), "--chapter-id", "C1"])
             self.run_command([sys.executable, str(SCRIPTS / "render_deck.py"), str(project)])
             self.run_command(["node", str(SCRIPTS / "capture_review_pngs.mjs"), str(project)])
             state = read_json(project / "project-state.json")
             state["phase"] = "review"
             write_json(project / "project-state.json", state)
+            self.distil_signals(project)
 
             review_relative = "deck/review/full/review-manifest.json"
             for index, slide_id in enumerate(("D01", "D02"), start=1):
@@ -375,6 +395,17 @@ class EndToEndExportTests(unittest.TestCase):
                 "finalize", "--approved-by", "测试负责人", "--approval-id", "final-1",
             ])
             self.design_loop_report(project)
+            self.distil_signals(project)
+            from validate_design_loop import validate_chapter_report  # noqa: PLC0415
+
+            loop_errors = validate_chapter_report(project, "C1")
+            # Both fixture pages reuse one base and name no master page: the loop must say so.
+            self.assertTrue(any("D02: shares its design base with D01" in e for e in loop_errors), loop_errors)
+            self.assertTrue(any("master_reference" in e for e in loop_errors), loop_errors)
+            review_html = read_json(project / "deck" / "review" / "full" / "review-manifest.json")["html_path"]
+            self.run_command(["node", str(SCRIPTS / "check_page_layout.mjs"), str(project), review_html])
+            self.independent_visual_review(project)
+            self.run_command([sys.executable, str(SCRIPTS / "final_check.py"), str(project), "--proofread", "两页通读，无错别字"])
             self.run_command(["node", str(SCRIPTS / "export_deck.mjs"), str(project)])
 
             pngs = sorted((project / "exports" / "png").glob("*.png"))

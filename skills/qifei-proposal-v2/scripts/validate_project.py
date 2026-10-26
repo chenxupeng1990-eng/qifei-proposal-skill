@@ -10,6 +10,7 @@ import re
 from pathlib import Path
 
 from draft_studio import check_format, studio_evidence_errors
+from proposal_memory import memory_for_phase, read_signals_receipt, receipt_problem, write_receipt
 from validate_assembly_ready import validate_assembly_ready
 from validate_deck_spec import png_has_alpha
 from validate_design_loop import validate_chapter_report
@@ -50,7 +51,7 @@ GATES = {
     "review": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "design_calibration", "design", "generation_ready"],
     "speaker_notes": ["content_freeze", "design", "final_page_order"],
     "qa": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "design_calibration", "design", "generation_ready", "design_loop", "final_page_order", "speaker_notes"],
-    "export": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "design_calibration", "design", "generation_ready", "design_loop", "final_page_order", "speaker_notes", "content_qa", "visual_qa", "final_assembly"],
+    "export": ["content_freeze", "brand_visual_sources", "brand_visual_audit", "brand_visual_incorporation", "design_calibration", "design", "generation_ready", "design_loop", "final_page_order", "speaker_notes", "final_assembly"],
 }
 
 MODULE_GATES = {
@@ -70,7 +71,7 @@ MODULE_GATES = {
     "qa": ["content_freeze", "generation_ready", "design_loop", "final_page_order"],
     "export": [
         "content_freeze", "generation_ready", "design_loop", "final_page_order",
-        "content_qa", "visual_qa", "final_assembly",
+        "final_assembly",
     ],
 }
 
@@ -163,6 +164,33 @@ def is_approved(approvals: dict, key: str) -> bool:
     )
 
 
+def approved_by_owner(item: dict, owner: str) -> bool:
+    by = str(item.get("by") or "").strip()
+    return bool(by) and (owner in by or by in owner)
+
+
+def apply_waivers(state: dict, errors: list[str]) -> list[str]:
+    """Drop errors the Proposal Owner explicitly waived; an agent cannot waive a validator error itself."""
+    owner = str(state.get("proposal_owner") or "").strip()
+    approvals = state.get("approvals") if isinstance(state.get("approvals"), dict) else {}
+    owner_records = {
+        str(item.get("record_id")) for item in approvals.values()
+        if isinstance(item, dict) and item.get("approved") is True and owner and approved_by_owner(item, owner)
+    }
+    waived = set()
+    problems = []
+    for index, waiver in enumerate(state.get("validation_waivers") or [], start=1):
+        error = str((waiver or {}).get("error") or "").strip()
+        record_id = str((waiver or {}).get("record_id") or "").strip()
+        if not error or not str((waiver or {}).get("reason") or "").strip():
+            problems.append(f"validation_waivers[{index}] needs error, reason and record_id")
+        elif record_id not in owner_records:
+            problems.append(f"validation_waivers[{index}] record_id {record_id!r} is not an Owner approval; agents cannot waive validator errors")
+        else:
+            waived.add(error)
+    return [e for e in errors if e not in waived] + problems
+
+
 def final_order_hash(slide_ids: list[str]) -> str:
     return hashlib.sha256("\n".join(slide_ids).encode("utf-8")).hexdigest()
 
@@ -183,11 +211,108 @@ def validate_speaker_notes(project: Path, state: dict) -> list[str]:
         errors.append("speaker_notes.final_slide_count must match the final deck")
     if notes.get("final_order_hash") != final_order_hash(slide_ids):
         errors.append("speaker_notes.final_order_hash must match the final slide order")
-    if not str(notes.get("feishu_doc_url") or "").strip():
-        errors.append("speaker_notes.feishu_doc_url is required")
+    if state.get("content_authority") == "feishu" and not str(notes.get("feishu_doc_url") or "").strip():
+        errors.append("speaker_notes.feishu_doc_url is required when Feishu is the content authority")
     _, backup_error = registered_project_file(project, notes.get("local_backup_path"), "content")
     if backup_error:
         errors.append(f"speaker_notes.local_backup_path: {backup_error}")
+    return errors
+
+
+TEXT_LAYER_COMPONENTS = ("标题组", "编号列表", "数据行", "信息带", "卡片", "章节标记", "来源")
+
+
+def design_content_errors(text: str) -> list[str]:
+    """DESIGN.md must fix the layout system with real values, not just carry the section headings."""
+    checks = [
+        (re.search(r"\d+\s*列", text) and re.search(r"安全区[^\n]*\d+\s*px", text),
+         "网格与安全区（列数、列距和安全区的具体 px）"),
+        (re.search(r"正文[^\n]*\d+\s*px", text) and re.search(r"标题[^\n]*\d+\s*px", text),
+         "字号表（标题、正文等各层级的具体 px）"),
+        (re.search(r"(小于|低于|下限)[^\n]*\d+\s*px[^\n]*(拆页|改写)", text),
+         "字号下限与拆页触发（小于多少 px 必须改写或拆页）"),
+        (re.search(r"(文字区|文案区|信息区)[^\n]*\d+\s*(%|％)", text), "受保护文字区的位置和画面占比（%）"),
+        (sum(name in text for name in TEXT_LAYER_COMPONENTS) >= 5,
+         "文字层组件（标题组、编号列表、数据行、信息带、卡片、章节标记、来源中至少 5 种）"),
+        (re.search(r"每批[^\n]*\d", text), "分批生成规则（每批几页、先看 montage）"),
+        ("母版清单" in text, "母版清单（每类页面对应哪张已确认校准页）"),
+        ("孤字" in text and "对齐" in text and re.search(r"压(在|纹理)", text),
+         "视觉 QA 清单（孤字、对齐、文字压纹理等逐页检查项）"),
+    ]
+    return [f"Approved DESIGN.md does not fix {label}" for ok, label in checks if not ok]
+
+
+VISUAL_REVIEW_ITEMS = ("single_focus", "orphans", "alignment", "text_on_texture", "overflow", "hierarchy")
+
+
+def validate_visual_review(project: Path, state: dict) -> list[str]:
+    """An independent agent reviewed every final page against the layout checklist, on the exact PNGs
+    in the assembly-ready library, with the script-measured layout check attached."""
+    review = state.get("visual_review") if isinstance(state.get("visual_review"), dict) else {}
+    report_path, report_error = registered_project_file(project, review.get("report_path"), "reviews/visual")
+    if report_error:
+        return [f"visual_review.report_path: {report_error}; an independent agent must review the final pages"]
+    report = load_json(report_path)
+    errors = []
+    if review.get("independent_agent") is not True or report.get("independent_agent") is not True:
+        errors.append("visual_review must be done by an independent review agent")
+    agent_id = str(report.get("review_agent_id") or "").strip()
+    if not agent_id or agent_id != str(review.get("review_agent_id") or ""):
+        errors.append("visual_review review_agent_id must be set and match its report")
+    if report.get("status") != "passed":
+        errors.append("visual_review report status must be passed")
+    layout_path, layout_error = registered_project_file(project, report.get("layout_check_report"), "reviews/visual")
+    if layout_error:
+        errors.append(f"visual_review.layout_check_report: {layout_error}; attach check_page_layout.mjs output")
+    else:
+        layout = load_json(layout_path)
+        measured = sum(len(p.get("problems") or []) for p in (layout.get("pages") or {}).values())
+        if measured:
+            errors.append(f"visual_review: the layout check still reports {measured} problem(s)")
+    try:
+        manifest = load_json(project / "deck" / "assembly-ready" / "manifest.json")
+    except ValueError as exc:
+        return errors + [str(exc)]
+    ready = {str(p.get("slide_id")): p.get("ready_png_sha256") for p in manifest.get("pages") or [] if isinstance(p, dict)}
+    reviewed = {str(p.get("slide_id")): p for p in report.get("pages") or [] if isinstance(p, dict)}
+    for slide_id, png_hash in ready.items():
+        page = reviewed.get(slide_id)
+        if not page:
+            errors.append(f"visual_review: {slide_id} was not reviewed")
+            continue
+        if page.get("png_sha256") != png_hash:
+            errors.append(f"visual_review: {slide_id} changed after the review; review it again")
+        missing = [item for item in VISUAL_REVIEW_ITEMS if item not in (page.get("checks") or {})]
+        if missing:
+            errors.append(f"visual_review: {slide_id} misses checklist items {', '.join(missing)}")
+    return errors
+
+
+def validate_final_check(project: Path, state: dict) -> list[str]:
+    """The low-level final check (final_check.py) must pass for the current page order before export,
+    and again on every exported PPTX."""
+    check = state.get("final_check") if isinstance(state.get("final_check"), dict) else {}
+    report_path, report_error = registered_project_file(project, check.get("report_path"), "reviews/qa")
+    if report_error:
+        return [f"final_check.report_path: {report_error}; run scripts/final_check.py"]
+    report = load_json(report_path)
+    errors = []
+    if report.get("status") != "passed":
+        errors.append("final_check report status must be passed")
+    try:
+        deck = load_json(project / "deck" / "deck-spec.json")
+        order = [str(s.get("slide_id") or "").strip() for s in deck.get("slides") or [] if isinstance(s, dict)]
+        if report.get("final_order_hash") != final_order_hash(order):
+            errors.append("final_check was run for another page order; run it again")
+    except ValueError as exc:
+        errors.append(str(exc))
+    if not str(report.get("proofread") or "").strip():
+        errors.append("final_check must record the proofread for typos")
+    # Editable PPTX files carry a compile report beside them; image-only previews have no text to check.
+    exports = [p for p in sorted((project / "exports").glob("*.pptx")) if p.with_suffix(".report.json").is_file()] \
+        if (project / "exports").is_dir() else []
+    if exports and (report.get("pptx") or {}).get("status") != "passed":
+        errors.append("exported PPTX has not passed the on-screen text check; run final_check.py --pptx")
     return errors
 
 
@@ -385,6 +510,9 @@ def validate_visual_direction_drafts(
     return errors
 
 
+MEMORY_ERROR = "proposal memory: "
+
+
 def validate_project(project: Path) -> list[str]:
     errors: list[str] = []
     state_path = project / "project-state.json"
@@ -418,6 +546,8 @@ def validate_project(project: Path) -> list[str]:
     for gate in required_gates:
         if not is_approved(approvals, gate):
             errors.append(f"Phase {phase} requires approved gate: {gate}")
+        elif owner and not approved_by_owner(approvals[gate], owner):
+            errors.append(f"Approval {gate} was recorded by {approvals[gate].get('by')!r}; only the Proposal Owner ({owner}) approves gates")
 
     phase_index = PHASES.index(phase)
     if phase_index >= PHASES.index("strategy"):
@@ -584,6 +714,7 @@ def validate_project(project: Path) -> list[str]:
                 for marker in DESIGN_REQUIRED_MARKERS:
                     if marker not in design_text:
                         errors.append(f"Approved DESIGN.md is missing required section: {marker}")
+                errors.extend(design_content_errors(design_text))
             tokens_path = project / "deck" / "design-tokens.json"
             if tokens_path.is_file():
                 try:
@@ -609,8 +740,9 @@ def validate_project(project: Path) -> list[str]:
                     if set(page_system.get("density_levels") or []) != {"low", "medium", "high"}:
                         errors.append("design-tokens.json page_system.density_levels must include low, medium, and high")
                     alpha_tokens = tokens.get("transparent_png") if isinstance(tokens.get("transparent_png"), dict) else {}
-                    if alpha_tokens.get("enabled") is not True or alpha_tokens.get("alpha_required") is not True:
-                        errors.append("design-tokens.json transparent_png must enable real alpha-channel modules")
+                    # Transparent modules are optional on top of the full-page base; when used they need real alpha.
+                    if alpha_tokens.get("enabled") is True and alpha_tokens.get("alpha_required") is not True:
+                        errors.append("design-tokens.json transparent_png modules, when enabled, must require real alpha channels")
 
     if full_deck and (phase_index >= PHASES.index("design_calibration") or is_approved(approvals, "visual_direction")):
         errors.extend(validate_visual_direction_drafts(project, state, approvals))
@@ -728,10 +860,24 @@ def validate_project(project: Path) -> list[str]:
     if phase_index >= PHASES.index("design_system") and not state.get("design_version"):
         errors.append("design_version is required after design approval")
 
+    if phase_index >= PHASES.index("speaker_notes") and task_mode != "inherited_module":
+        errors.extend(validate_visual_review(project, state))
     if phase == "export":
         for assembly_error in validate_assembly_ready(project, require_final=True):
             errors.append(assembly_error)
+        errors.extend(validate_final_check(project, state))
 
+    # Leaving a phase means distilling its decisions first: signals must have run in the previous phase or later.
+    if phase_index > PHASES.index("manuscript"):
+        receipt_phase = read_signals_receipt(project).get("phase")
+        if receipt_phase not in PHASES or PHASES.index(receipt_phase) < phase_index - 1:
+            errors.append(
+                f"proposal memory: 离开 {PHASES[phase_index - 1]} 阶段前没有运行 `proposal_memory.py signals`；"
+                "先汇总信号，把可复用的判断写成候选（Owner 在对话里的更正先用 `proposal_memory.py note` 记下）"
+            )
+    memory = receipt_problem(project, phase)
+    if memory:
+        errors.append(f"{MEMORY_ERROR}{memory}；校验已把当前记忆附在输出末尾，读完再运行一次校验")
     return errors
 
 
@@ -741,10 +887,21 @@ def main() -> int:
     args = parser.parse_args()
     project = Path(args.project).expanduser().resolve()
     errors = validate_project(project)
+    try:
+        errors = apply_waivers(load_json(project / "project-state.json"), errors)
+    except ValueError:
+        pass
     if errors:
         print("Project validation failed:")
         for error in errors:
             print(f"- {error}")
+        if any(error.startswith(MEMORY_ERROR) for error in errors):
+            # Put the memory in front of the agent here, so reading it never depends on remembering a step.
+            phase = load_json(project / "project-state.json")["phase"]
+            text, digest, _ = memory_for_phase(project, phase)
+            print()
+            print(text, end="")
+            write_receipt(project, phase, digest, "validate")
         return 1
     print(f"Project gates valid: {project}")
     return 0

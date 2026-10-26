@@ -1,6 +1,7 @@
 """M4 acceptance: a full deck goes from manuscript to content freeze with the studio as authority, no Feishu."""
 from __future__ import annotations
 
+import os
 import json
 import re
 import socket
@@ -22,7 +23,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import draft_studio  # noqa: E402
 from test_draft_format import page  # noqa: E402
 from validate_feishu_draft import validate_feishu_draft_evidence  # noqa: E402
-from validate_project import validate_project  # noqa: E402
+from validate_project import validate_project as _validate_project  # noqa: E402
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from memory_fixtures import mark_signals_run  # noqa: E402
+
+
+def validate_project(project):
+    """Gate checks in these tests assume memory signals were distilled for the current phase."""
+    mark_signals_run(project)
+    return _validate_project(project)
+
 
 DRAFT = "\n".join([
     "<title>示例长期合作提案</title>",
@@ -49,6 +60,7 @@ def free_port() -> int:
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
         return sock.getsockname()[1]
+os.environ["QIFEI_MEMORY_HOME"] = tempfile.mkdtemp(prefix="qifei-memory-test-")  # never read or write real memory
 
 
 class StudioAuthorityAcceptance(unittest.TestCase):

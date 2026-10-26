@@ -43,7 +43,8 @@
         "html_task": "HTML负责的精确中文、数字、时间线、图表或标注。",
         "visual_balance_plan": "主载体、辅助元素与文字如何分配视觉重量。"
       },
-      "visual_mode": "background|opaque-module|transparent-png",
+      "visual_mode": "background",
+      "route_exception": null,
       "visual": {
         "asset_id": null,
         "asset_path": null,

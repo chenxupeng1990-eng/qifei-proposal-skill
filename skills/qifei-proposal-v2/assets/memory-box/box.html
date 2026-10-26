@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>提案记忆库</title>
+<style>
+{{CSS}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-title">提案记忆库</div>
+    <div class="brand-meta" id="home"></div>
+  </div>
+  <div class="tools">
+    <select id="stage" aria-label="按阶段筛选"></select>
+    <label class="toggle"><input type="checkbox" id="show-inactive"> 含已停用</label>
+    <input class="search" id="search" type="search" placeholder="搜索记忆…" aria-label="搜索记忆">
+  </div>
+</header>
+<div class="layout">
+  <nav class="nav" id="nav" aria-label="记忆层级"></nav>
+  <main class="main">
+    <div class="view-head" id="view-head"></div>
+    <div class="cards" id="cards"></div>
+  </main>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<script>
+const TOKEN = {{TOKEN_JSON}};
+{{JS}}
+</script>
+</body>
+</html>
