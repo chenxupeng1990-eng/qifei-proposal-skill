@@ -143,7 +143,16 @@
     $("cards").innerHTML = list.length ? list.map(view === "inbox" ? candidateCard : entryCard).join("") : `<div class="empty">${empty}</div>`;
   }
 
+  function renderSwitch() {
+    const box = $("enabled");
+    box.checked = data.enabled;
+    box.disabled = data.env_override;
+    box.parentElement.title = data.env_override ? "当前由环境变量 QIFEI_MEMORY 决定，这里不能切换" : "关闭后 Agent 不读取、不记录记忆，门禁也不检查";
+    $("off-banner").hidden = data.enabled;
+  }
+
   function render() {
+    renderSwitch();
     renderNav();
     renderHead();
     renderCards();
@@ -213,6 +222,18 @@
     if (item) setView(item.dataset.view);
   });
   [stageFilter, showInactive].forEach((el) => el.addEventListener("change", renderCards));
+  $("enabled").addEventListener("change", async (ev) => {
+    const enabled = ev.target.checked;
+    try {
+      const res = await api("/api/settings", { enabled });
+      data = res.memory;
+      render();
+      toast(enabled ? "提案记忆已启用" : "提案记忆已关闭");
+    } catch (error) {
+      ev.target.checked = !enabled;
+      toast(error.message, true);
+    }
+  });
   searchBox.addEventListener("input", renderCards);
 
   async function reload(announce) {

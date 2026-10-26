@@ -15,11 +15,13 @@
     <div class="brand-meta" id="home"></div>
   </div>
   <div class="tools">
+    <label class="toggle switch" title="关闭后 Agent 不读取、不记录记忆，门禁也不检查"><input type="checkbox" id="enabled"> 启用记忆</label>
     <select id="stage" aria-label="按阶段筛选"></select>
     <label class="toggle"><input type="checkbox" id="show-inactive"> 含已停用</label>
     <input class="search" id="search" type="search" placeholder="搜索记忆…" aria-label="搜索记忆">
   </div>
 </header>
+<div class="off-banner" id="off-banner" hidden>提案记忆已关闭：Agent 不读取、不记录记忆，校验也不检查。这里的内容保留，随时可以重新启用。</div>
 <div class="layout">
   <nav class="nav" id="nav" aria-label="记忆层级"></nav>
   <main class="main">

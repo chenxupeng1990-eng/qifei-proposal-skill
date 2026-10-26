@@ -89,3 +89,5 @@ button { cursor: pointer; }
   .nav-item { width: auto; flex: none; border: 1px solid var(--line); }
   .main { padding: 20px 16px 60px; }
 }
+.switch { color: var(--ink); font-weight: 600; }
+.off-banner { background: var(--warn-soft, #f8eedb); color: var(--warn, #a8701a); border-bottom: 1px solid var(--line); padding: 10px 24px; font-size: 13px; }

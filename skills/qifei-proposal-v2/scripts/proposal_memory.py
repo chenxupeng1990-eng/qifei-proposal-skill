@@ -85,6 +85,38 @@ def memory_home() -> Path:
     return Path(os.environ.get("QIFEI_MEMORY_HOME") or Path.home() / ".qifei-proposal" / "memory")
 
 
+SETTINGS = "settings.json"
+OFF_NOTICE = "提案记忆已关闭：不读取、不记录、不检查。重新打开：python3 scripts/proposal_memory.py on"
+
+
+def memory_enabled() -> bool:
+    """The global memory switch. QIFEI_MEMORY=on|off overrides the setting saved in the memory home."""
+    override = os.environ.get("QIFEI_MEMORY", "").strip().lower()
+    if override in {"off", "0", "false", "no"}:
+        return False
+    if override in {"on", "1", "true", "yes"}:
+        return True
+    path = memory_home() / SETTINGS
+    try:
+        return json.loads(path.read_text(encoding="utf-8")).get("enabled", True) is not False
+    except (OSError, ValueError):
+        return True
+
+
+def set_memory_enabled(enabled: bool) -> Path:
+    path = memory_home() / SETTINGS
+    path.parent.mkdir(parents=True, exist_ok=True)
+    settings = {}
+    if path.is_file():
+        try:
+            settings = json.loads(path.read_text(encoding="utf-8"))
+        except ValueError:
+            settings = {}
+    settings["enabled"] = enabled
+    path.write_text(json.dumps(settings, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return path
+
+
 def split_list(value: str) -> list[str]:
     return [item.strip() for item in re.split(r"[,，、/]", value) if item.strip()]
 
@@ -613,7 +645,7 @@ def render_advance(project: Path, target: str) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ("init", "load", "check", "list", "signals", "advance", "accept", "reject", "note"):
+    for name in ("init", "load", "check", "list", "signals", "advance", "accept", "reject", "note", "on", "off", "status"):
         command = sub.add_parser(name)
         command.add_argument("--project", required=name in {"signals", "advance", "accept", "reject", "note"},
                              help="proposal project directory")
@@ -638,6 +670,20 @@ def main() -> int:
             command.add_argument("--max-entries", type=int, default=30)
             command.add_argument("--max-chars", type=int, default=8000)
     args = parser.parse_args()
+    if args.command in {"on", "off"}:
+        path = set_memory_enabled(args.command == "on")
+        print(f"提案记忆已{'打开' if args.command == 'on' else '关闭'}（{path}）")
+        if os.environ.get("QIFEI_MEMORY"):
+            print(f"注意：当前环境变量 QIFEI_MEMORY={os.environ['QIFEI_MEMORY']} 会覆盖这个设置")
+        return 0
+    if args.command == "status":
+        print(f"提案记忆：{'on' if memory_enabled() else 'off'}（记忆目录 {memory_home()}）")
+        return 0
+    if not memory_enabled() and args.command in {"load", "signals", "advance", "note"}:
+        print(OFF_NOTICE)
+        if args.command == "advance":
+            print(f"换阶段不需要处理记忆：直接把 project-state.json 的 phase 改成 {args.to}，再运行 validate_project.py。")
+        return 0
     project = Path(args.project).expanduser().resolve() if args.project else None
     pdir = project_dir(project) if project is not None else None
 

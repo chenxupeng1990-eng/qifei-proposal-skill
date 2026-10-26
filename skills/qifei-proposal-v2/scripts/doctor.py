@@ -208,15 +208,17 @@ def main() -> int:
 
 def project_memory(project: Path) -> dict | None:
     """The proposal memory for the project's phase, handed to the agent as part of the start-up check."""
-    from proposal_memory import PHASE_STAGE, memory_for_phase, write_receipt
+    from proposal_memory import OFF_NOTICE, PHASE_STAGE, memory_enabled, memory_for_phase, write_receipt
 
+    if not memory_enabled():
+        return {"enabled": False, "text": OFF_NOTICE + "\n"}
     state_path = project / "project-state.json"
     phase = json.loads(state_path.read_text(encoding="utf-8")).get("phase") if state_path.is_file() else None
     if phase not in PHASE_STAGE:
         return None
     text, digest, count = memory_for_phase(project, phase)
     write_receipt(project, phase, digest, "doctor")
-    return {"phase": phase, "entries": count, "text": text}
+    return {"enabled": True, "phase": phase, "entries": count, "text": text}
 
 
 if __name__ == "__main__":

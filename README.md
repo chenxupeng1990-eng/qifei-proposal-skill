@@ -15,7 +15,7 @@
 
 <p align="center">
   <img alt="Version" src="https://img.shields.io/badge/version-0.3.0-ff5f4d">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-185%20passing-1f8b4c">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-186%20passing-1f8b4c">
   <img alt="Python" src="https://img.shields.io/badge/Python-3.9%2B-3776ab">
   <img alt="Node" src="https://img.shields.io/badge/Node.js-18%2B-339933">
   <img alt="Platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-111827">
@@ -140,6 +140,7 @@ Owner 的判断跨项目沉淀，分三层：Owner 偏好、方法论、项目�
 </p>
 
 - Agent 只需两个命令：Owner 在对话里给出更正时用 `proposal_memory.py note` 当场记下；换阶段时用 `proposal_memory.py advance --to <新阶段>`，一次完成汇总信号、提示写候选、读取新阶段记忆。
+- 不需要时可以全局关闭：`proposal_memory.py off`，或在记忆库顶部取消“启用记忆”。
 - 记忆读取不靠提示词：`doctor.py` 和 `validate_project.py` 自动带出记忆并检查读取回执；离开阶段前没有汇总信号，校验不放行。
 
 ### 更硬的门禁
@@ -331,7 +332,7 @@ docs/readme-assets/                  本页图片
 
 ## 当前状态
 
-v0.3.0 已发布在 [`codex/qifei-proposal-base`](https://github.com/chenxupeng1990-eng/qifei-proposal-skill/tree/codex/qifei-proposal-base)。本仓库的 185 个 Python 测试和发布自检（`python3 scripts/self_test.py`）全部通过；母稿工作台、设计评审和记忆库都在模拟项目上用浏览器走过完整流程。欢迎用真实任务测试并反馈。
+v0.3.0 已发布在 [`codex/qifei-proposal-base`](https://github.com/chenxupeng1990-eng/qifei-proposal-skill/tree/codex/qifei-proposal-base)。本仓库的 186 个 Python 测试和发布自检（`python3 scripts/self_test.py`）全部通过；母稿工作台、设计评审和记忆库都在模拟项目上用浏览器走过完整流程。欢迎用真实任务测试并反馈。
 
 <a id="license"></a>
 
