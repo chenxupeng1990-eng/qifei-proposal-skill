@@ -9,6 +9,7 @@ import json
 import re
 from pathlib import Path
 
+from draft_studio import check_format, studio_evidence_errors
 from validate_assembly_ready import validate_assembly_ready
 from validate_deck_spec import png_has_alpha
 from validate_design_loop import validate_chapter_report
@@ -122,7 +123,9 @@ DESIGN_REQUIRED_MARKERS = (
     "## 8. 透明 PNG 表现层",
     "## 9. 章节批量生成规则",
 )
-FEISHU_DRAFT_FORMAT_VERSION = "feishu-proposal-draft-v1"
+FEISHU_DRAFT_FORMAT_VERSION = "proposal-draft-v2"
+# v1 projects predate the single draft format; they keep the looser section check below.
+ACCEPTED_DRAFT_FORMAT_VERSIONS = {"proposal-draft-v2", "feishu-proposal-draft-v1"}
 FEISHU_PAGE_SECTIONS = (
     "核心内容",
     "逻辑展开",
@@ -221,12 +224,16 @@ def validate_verified_feishu_draft(project: Path, state: dict, chapters: list[di
     errors: list[str] = []
     draft = state.get("proposal_draft") if isinstance(state.get("proposal_draft"), dict) else {}
     if not draft:
-        return ["full_redteam requires a verified Feishu proposal draft; local Markdown is only a temporary fallback"]
-    if draft.get("authority") != "feishu" or draft.get("status") != "verified":
-        errors.append("proposal_draft must use authority feishu with status verified before full_redteam")
-    if draft.get("format_version") != FEISHU_DRAFT_FORMAT_VERSION:
+        return ["full_redteam requires a verified Feishu proposal draft or a registered studio draft; local Markdown is only a temporary fallback"]
+    authority = draft.get("authority")
+    if authority not in {"feishu", "studio"} or draft.get("status") != "verified":
+        errors.append("proposal_draft must use authority feishu or studio with status verified before full_redteam")
+    if authority == "studio" and draft.get("format_version") != FEISHU_DRAFT_FORMAT_VERSION:
+        errors.append(f"studio drafts must use format_version {FEISHU_DRAFT_FORMAT_VERSION}")
+    if draft.get("format_version") not in ACCEPTED_DRAFT_FORMAT_VERSIONS:
         errors.append(f"proposal_draft.format_version must be {FEISHU_DRAFT_FORMAT_VERSION}")
-    for field in ("feishu_doc_url", "document_id", "last_verified_at"):
+    required = ("feishu_doc_url", "document_id", "last_verified_at") if authority != "studio" else ("last_verified_at",)
+    for field in required:
         if not str(draft.get(field) or "").strip():
             errors.append(f"proposal_draft.{field} is required")
     revision_id = draft.get("revision_id")
@@ -236,7 +243,7 @@ def validate_verified_feishu_draft(project: Path, state: dict, chapters: list[di
     snapshot_path, snapshot_error = registered_project_file(
         project,
         draft.get("verified_snapshot_path"),
-        "content/feishu",
+        "content/draft" if authority == "studio" else "content/feishu",
     )
     snapshot_text = ""
     if snapshot_error:
@@ -247,6 +254,8 @@ def validate_verified_feishu_draft(project: Path, state: dict, chapters: list[di
         actual_hash = hashlib.sha256(snapshot_bytes).hexdigest()
         if draft.get("verified_snapshot_sha256") != actual_hash:
             errors.append("proposal_draft.verified_snapshot_sha256 does not match the reread snapshot")
+        if authority == "studio":
+            errors.extend(studio_evidence_errors(project, draft, snapshot_path, chapters))
 
     expected_slide_ids = [
         str(slide_id)
@@ -260,6 +269,9 @@ def validate_verified_feishu_draft(project: Path, state: dict, chapters: list[di
     if verified_slide_ids != expected_slide_ids:
         errors.append("proposal_draft.verified_slide_ids must exactly match the confirmed chapter slide order")
 
+    if snapshot_text and draft.get("format_version") == FEISHU_DRAFT_FORMAT_VERSION:
+        for issue in check_format(snapshot_text):
+            errors.append(f"{issue['page']}: draft format: {issue['message']}")
     if snapshot_text:
         for marker in ("**本章回答：**", "**逻辑路径：**", "**情绪方向：**"):
             if marker not in snapshot_text:
@@ -679,8 +691,8 @@ def validate_project(project: Path) -> list[str]:
         module = state.get("module_context") if isinstance(state.get("module_context"), dict) else {}
         if not module:
             errors.append("module task modes require module_context")
-        if task_mode == "standalone_module" and state.get("content_authority") not in {"local", "feishu"}:
-            errors.append("standalone_module content_authority must be local or feishu")
+        if task_mode == "standalone_module" and state.get("content_authority") not in {"local", "feishu", "studio"}:
+            errors.append("standalone_module content_authority must be local, feishu or studio")
         if task_mode == "inherited_module":
             if state.get("content_authority") != "inherit_parent":
                 errors.append("inherited_module content_authority must be inherit_parent")

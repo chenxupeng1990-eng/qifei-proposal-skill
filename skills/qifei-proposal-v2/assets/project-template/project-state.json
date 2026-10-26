@@ -14,7 +14,7 @@
   "proposal_draft": {
     "authority": "feishu",
     "status": "not_started",
-    "format_version": "feishu-proposal-draft-v1",
+    "format_version": "proposal-draft-v2",
     "feishu_doc_url": null,
     "document_id": null,
     "revision_id": null,

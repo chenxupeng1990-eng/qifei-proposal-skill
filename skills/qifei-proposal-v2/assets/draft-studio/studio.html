@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<style>
+{{CSS}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <button class="toc-toggle" type="button" aria-label="目录" data-action="toggle-toc">☰</button>
+  <div class="topbar-title">
+    <div class="doc-title" id="doc-title"></div>
+    <div class="doc-meta" id="doc-meta"></div>
+  </div>
+  <div class="topbar-tools">
+    <div class="segmented" role="tablist" aria-label="阅读视图">
+      <button type="button" data-view="full" class="active">完整</button>
+      <button type="button" data-view="client">客户视图</button>
+      <button type="button" data-view="chain">标题链</button>
+    </div>
+    <button type="button" class="btn rail-toggle" id="rail-toggle" data-action="toggle-rail" hidden>评论</button>
+    <input class="search" id="search" type="search" placeholder="搜索页面…" aria-label="搜索页面">
+    <div class="menu">
+      <button type="button" class="btn" data-action="toggle-menu">导出 ▾</button>
+      <div class="menu-pop" id="export-menu" hidden>
+        <button type="button" data-download="full">下载完整 Markdown</button>
+        <button type="button" data-download="brief">下载简洁 Markdown</button>
+        <button type="button" data-action="print">打印 / 存为 PDF</button>
+      </div>
+    </div>
+  </div>
+</header>
+<div class="layout">
+  <nav class="toc" id="toc" aria-label="章节与页面"></nav>
+  <main class="doc" id="doc"></main>
+  <aside class="rail" id="rail" hidden aria-label="评论">
+    <div class="rail-head">
+      <div class="rail-row">
+        <span class="rail-title" id="rail-title">评论</span>
+        <span class="rail-counts" id="rail-counts"></span>
+        <button type="button" class="rail-author" id="rail-author" title="修改署名"></button>
+        <button type="button" class="rail-close" data-action="toggle-rail" aria-label="收起评论栏">»</button>
+      </div>
+      <div class="rail-filter" id="rail-filter" role="tablist" aria-label="评论筛选">
+        <button type="button" data-filter="all">全部</button><button type="button" data-filter="open">未解决</button><button type="button" data-filter="resolved">已决定</button>
+      </div>
+    </div>
+    <div class="rail-cards" id="rail-cards"></div>
+  </aside>
+</div>
+<button type="button" class="sel-comment" id="sel-comment" hidden>评论</button>
+<button type="button" class="rail-tab" id="rail-tab" data-action="toggle-rail" hidden aria-label="展开评论栏">评论</button>
+<script type="application/json" id="model">{{MODEL_JSON}}</script>
+<script type="application/json" id="markdown">{{MD_JSON}}</script>
+<script type="application/json" id="live">{{LIVE_JSON}}</script>
+<script>
+{{JS}}
+</script>
+</body>
+</html>

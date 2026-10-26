@@ -8,7 +8,8 @@ from pathlib import Path
 from typing import Any
 
 
-FEISHU_DRAFT_FORMAT_VERSION = "feishu-proposal-draft-v1"
+FEISHU_DRAFT_FORMAT_VERSION = "proposal-draft-v2"
+ACCEPTED_DRAFT_FORMAT_VERSIONS = {"proposal-draft-v2", "feishu-proposal-draft-v1"}
 FEISHU_PAGE_SECTIONS = (
     "核心内容",
     "逻辑展开",
@@ -46,13 +47,14 @@ def validate_feishu_draft_evidence(project: Path, state: dict[str, Any]) -> list
     draft = state.get("proposal_draft") if isinstance(state.get("proposal_draft"), dict) else {}
     if not draft:
         return [
-            "full_redteam requires a verified Feishu proposal draft; local Markdown is only a temporary fallback"
+            "full_redteam requires a verified Feishu proposal draft or a registered studio draft; local Markdown is only a temporary fallback"
         ]
-    if draft.get("authority") != "feishu" or draft.get("status") != "verified":
-        errors.append("proposal_draft must use authority feishu with status verified before production")
-    if draft.get("format_version") != FEISHU_DRAFT_FORMAT_VERSION:
+    authority = draft.get("authority")
+    if authority not in {"feishu", "studio"} or draft.get("status") != "verified":
+        errors.append("proposal_draft must use authority feishu or studio with status verified before production")
+    if draft.get("format_version") not in ACCEPTED_DRAFT_FORMAT_VERSIONS:
         errors.append(f"proposal_draft.format_version must be {FEISHU_DRAFT_FORMAT_VERSION}")
-    for field in ("feishu_doc_url", "document_id", "last_verified_at"):
+    for field in (("feishu_doc_url", "document_id", "last_verified_at") if authority != "studio" else ("last_verified_at",)):
         if not str(draft.get(field) or "").strip():
             errors.append(f"proposal_draft.{field} is required")
     revision_id = draft.get("revision_id")
@@ -62,7 +64,7 @@ def validate_feishu_draft_evidence(project: Path, state: dict[str, Any]) -> list
     snapshot_path, snapshot_error = registered_project_file(
         project,
         draft.get("verified_snapshot_path"),
-        "content/feishu",
+        "content/draft" if authority == "studio" else "content/feishu",
     )
     if snapshot_error:
         errors.append(f"proposal_draft.verified_snapshot_path: {snapshot_error}")
@@ -76,4 +78,7 @@ def validate_feishu_draft_evidence(project: Path, state: dict[str, Any]) -> list
             actual_hash = hashlib.sha256(snapshot_bytes).hexdigest()
             if draft.get("verified_snapshot_sha256") != actual_hash:
                 errors.append("proposal_draft.verified_snapshot_sha256 does not match the reread snapshot")
+            elif authority == "studio":
+                from draft_studio import studio_evidence_errors  # local import keeps this module light
+                errors.extend(studio_evidence_errors(project, draft, snapshot_path, state.get("chapters") or []))
     return errors

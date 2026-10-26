@@ -13,12 +13,12 @@ V1 `$qifei-proposal` 已弃用并从仓库移除，一律使用 V2。V2 沿用 V
 2. 先按 [references/task-modes-and-runtime.md](references/task-modes-and-runtime.md) 确定 `task_mode`，运行 `doctor.py`，向用户声明本次可交付能力和边界（最低可用配置见 [references/environment-degradation.md](references/environment-degradation.md)）；能力缺失只阻塞实际依赖它的阶段。
 3. Python可用后运行 `python3 scripts/check_suite_dependencies.py`；完整套件缺失时停止，环境能力缺失按Doctor结果路由。
 4. 读取项目 `AGENTS.md` 与 `project-state.json`，以 `phase` 选择且只选择一个当前阶段包。
-5. 完整读取当前阶段包；只读取该阶段包明确列出的 reference，不预读未来阶段。
+5. 完整读取当前阶段包；只读取该阶段包明确列出的 reference，不预读未来阶段。随后运行 `python3 scripts/proposal_memory.py load --project <项目目录> --phase <当前阶段>`，按 [references/proposal-memory.md](references/proposal-memory.md) 使用记忆：记忆校准判断，不是事实；候选记忆经 Owner 确认后才写入。
 6. 当前阶段产物必须通过 `python3 scripts/validate_project.py <项目目录>`；机器通过不等于 Owner 批准。
 7. Proposal Owner 是唯一阶段批准者。口头确认、评论关闭、写入成功或 Agent 自检不能替代客观门禁。
 8. 用户已确认的项目事实、策略与场外决定是只读权威；不得在后续审查中重新审判。
 9. 对外内容必须有立场、观点和决策推动；中立、保守或只做风险判断不能替代策划。
-10. 内容权威由任务模式决定：完整提案默认飞书，继承模块沿用父项目，独立模块可明确选择飞书或本地Markdown。
+10. 内容权威由任务模式决定：完整提案默认工作台（可选飞书），继承模块沿用父项目，独立模块可选工作台、飞书或本地Markdown。
 11. 不跨阶段执行，不因任务简单、用户连续说“确认”或已有文件而补记批准；视觉、校准、并行生产和讲稿的专门规则只在对应阶段包中生效。
 
 ## 阶段路由

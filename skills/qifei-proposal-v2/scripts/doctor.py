@@ -108,7 +108,8 @@ def build_report(capabilities: dict, task_mode: str) -> dict:
 
     feishu_ready = bool(capabilities.get("feishu_cli") and capabilities.get("feishu_authorized"))
     if task_mode == "full_deck":
-        content_authority = "feishu" if feishu_ready else "feishu_pending"
+        # The local draft studio needs only Python; Feishu remains an optional collaboration adapter.
+        content_authority = "studio"
     elif task_mode == "inherited_module":
         content_authority = "inherit_parent"
     else:
@@ -118,10 +119,6 @@ def build_report(capabilities: dict, task_mode: str) -> dict:
     stage_blockers: dict[str, list[str]] = {}
     if not capabilities.get("filesystem"):
         blockers.append("filesystem access is required to create governed project artifacts")
-    if task_mode == "full_deck" and not feishu_ready:
-        stage_blockers.setdefault("manuscript_confirmation", []).append(
-            "full_deck requires Feishu CLI authorization and reread proof"
-        )
     if not image_ready:
         stage_blockers.setdefault("visual_direction", []).append(
             "a registered image generation adapter is required for formal visual approval"
@@ -143,7 +140,7 @@ def build_report(capabilities: dict, task_mode: str) -> dict:
     if not local_runtime:
         boundaries.append("local HTML review, PNG capture, and PPTX export are unavailable")
     if not feishu_ready:
-        boundaries.append("Feishu writeback, reread revision, and collaboration proof are unavailable")
+        boundaries.append("Feishu collaboration is unavailable; the local draft studio is the content authority")
     if review_adapter != "codex_native_comments":
         boundaries.append("Codex native browser comments are replaced by a hash-bound review record")
 
