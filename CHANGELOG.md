@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- 提案记忆可以全局关闭：`proposal_memory.py off` / `on` / `status`，或在记忆库顶部勾选"启用记忆"；设置存在记忆目录的 `settings.json`，环境变量 `QIFEI_MEMORY=on|off` 可临时覆盖。关闭后 `doctor.py` 不输出记忆，`load`、`signals`、`advance`、`note` 不读不写，`validate_project.py` 跳过信号门禁和读取检查；已有记忆原样保留。
+
 ## 0.3.0（2026-10-26）
 
 - 记忆流程收成一个命令：换阶段时运行 `proposal_memory.py advance --project <项目目录> --to <新阶段>`，一次完成汇总离开阶段的信号、提示写候选、读取新阶段记忆并留下回执；总控规则里 Agent 只需记住 `note` 和 `advance` 两个命令。

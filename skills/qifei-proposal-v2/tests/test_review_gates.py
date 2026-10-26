@@ -85,6 +85,23 @@ class SignalsGateTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             proposal_memory.render_advance(self.project, "nowhere")
 
+    def test_switching_memory_off_drops_both_memory_gates(self) -> None:
+        home = Path(os.environ["QIFEI_MEMORY_HOME"])
+        (home / "owner.md").write_text("# Owner 偏好\n\n## O-0001｜开场先亮判断\n- 阶段：all\n- 状态：active\n"
+                                       "- 日期：2026-10-26\n- 来源：测试\n\n正文。\n", encoding="utf-8")
+        memory_errors = lambda: [e for e in vp.validate_project(self.project) if e.startswith(vp.MEMORY_ERROR)]
+        try:
+            self.assertTrue(memory_errors())
+            proposal_memory.set_memory_enabled(False)
+            self.assertFalse(proposal_memory.memory_enabled())
+            self.assertEqual(memory_errors(), [])
+            os.environ["QIFEI_MEMORY"] = "on"  # the environment overrides the saved setting
+            self.assertTrue(proposal_memory.memory_enabled())
+        finally:
+            os.environ.pop("QIFEI_MEMORY", None)
+            proposal_memory.set_memory_enabled(True)
+            (home / "owner.md").unlink()
+
     def test_owner_note_becomes_a_signal(self) -> None:
         note_id = proposal_memory.add_note(self.project, "竞品对标只用同档国际线", "S07")
         self.assertEqual(note_id, "N-0001")

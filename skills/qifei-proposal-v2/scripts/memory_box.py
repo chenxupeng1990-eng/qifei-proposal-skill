@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import secrets
 import sys
 import threading
@@ -46,6 +47,8 @@ def snapshot() -> dict[str, Any]:
         })
     return {
         "home": str(pm.memory_home()),
+        "enabled": pm.memory_enabled(),
+        "env_override": bool(os.environ.get("QIFEI_MEMORY")),
         "layers": pm.LAYER_LABEL,
         "stages": list(pm.STAGES),
         "owner": [entry_dict(e) for e in shared if e.layer == "owner"],
@@ -162,6 +165,9 @@ class BoxHandler(BaseHTTPRequestHandler):
             elif url.path == "/api/candidate/reject":
                 pm.reject(project_folder(str(payload["project"])), str(payload["id"]))
                 result = {"rejected": payload["id"]}
+            elif url.path == "/api/settings":
+                pm.set_memory_enabled(bool(payload["enabled"]))
+                result = {"enabled": pm.memory_enabled()}
             elif url.path == "/api/entry/update":
                 pm.update_entry(memory_path(str(payload["file"])), str(payload["id"]), str(payload.get("title") or ""),
                                 str(payload.get("body") or ""), stage_list(payload.get("stages")),

@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 
 from draft_studio import check_format, studio_evidence_errors
-from proposal_memory import memory_for_phase, read_signals_receipt, receipt_problem, write_receipt
+from proposal_memory import memory_enabled, memory_for_phase, read_signals_receipt, receipt_problem, write_receipt
 from validate_assembly_ready import validate_assembly_ready
 from validate_deck_spec import png_has_alpha
 from validate_design_loop import validate_chapter_report
@@ -867,6 +867,9 @@ def validate_project(project: Path) -> list[str]:
             errors.append(assembly_error)
         errors.extend(validate_final_check(project, state))
 
+    # With memory switched off globally, neither memory gate applies.
+    if not memory_enabled():
+        return errors
     # Leaving a phase means distilling its decisions first: signals must have run in the previous phase or later.
     if phase_index > PHASES.index("manuscript"):
         receipt_phase = read_signals_receipt(project).get("phase")

@@ -58,6 +58,13 @@ python3 scripts/proposal_memory.py load --project <项目目录> --phase <projec
 - 只加载 `active` 的条目，范围是当前阶段和它之前的各阶段（阶段顺序：intake → strategy → manuscript → review → visual → production → export），后面阶段的条目不提前加载。后期回头改前面的内容时，前面阶段的记忆同样要遵守；这类条目会标注"前序阶段"。
 - 顺序是项目记忆、Owner 偏好、方法论；同一层里当前阶段在前，然后是较早的阶段，同阶段内新的在前。
 
+### 关闭记忆（全局）
+
+- `python3 scripts/proposal_memory.py off` 关闭，`on` 重新打开，`status` 查看当前状态；也可以在记忆库顶部勾选"启用记忆"。设置保存在记忆目录的 `settings.json`，对所有项目生效。
+- 临时覆盖：环境变量 `QIFEI_MEMORY=off` 或 `on` 优先于保存的设置（记忆库里的开关此时不能切换）。
+- 关闭后：`doctor.py` 只提示"提案记忆已关闭"；`load`、`signals`、`advance`、`note` 不读取也不写入；`validate_project.py` 跳过信号门禁和读取检查。Agent 跳过 `note` 和 `advance`，换阶段直接改 `phase`。
+- 已有的记忆和候选原样保留，记忆库照常可以查看和整理；重新打开后从当前阶段继续使用。
+
 ### 不依赖 Agent 记得去读
 
 读取记忆不只靠第 5 条规则，另外有三道保障：
