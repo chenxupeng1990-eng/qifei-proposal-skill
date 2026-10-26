@@ -48,9 +48,9 @@ Proposal Skill V2 governs the whole chain: understanding the material, forming a
 
 ### The whole flow in 80 seconds
 
-[![Watch the 80-second walkthrough](docs/readme-assets/intro-github-poster.jpg)](docs/readme-assets/intro-github.mp4)
+https://github.com/user-attachments/assets/967b7514-1410-44d5-ad18-003d6258f496
 
-[Click the cover or play the video here](docs/readme-assets/intro-github.mp4) · 80 seconds · 1080p
+80 seconds · 1080p · [Download the original MP4](docs/readme-assets/intro-github.mp4)
 
 ### Recent work
 

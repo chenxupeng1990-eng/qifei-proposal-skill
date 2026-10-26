@@ -46,9 +46,9 @@ Proposal Skill V2 管的是整条链路：理解资料、建立观点、写成�
 
 ### 80 秒看完整流程
 
-[![观看 80 秒功能演示](docs/readme-assets/intro-github-poster.jpg)](docs/readme-assets/intro-github.mp4)
+https://github.com/user-attachments/assets/967b7514-1410-44d5-ad18-003d6258f496
 
-[点击封面或这里播放视频](docs/readme-assets/intro-github.mp4) · 80 秒 · 1080p
+80 秒 · 1080p · [下载 MP4 原文件](docs/readme-assets/intro-github.mp4)
 
 ### 先看成品
 
