@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.3.0-ff5f4d">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.3.1-ff5f4d">
   <img alt="Tests" src="https://img.shields.io/badge/tests-186%20passing-1f8b4c">
   <img alt="Python" src="https://img.shields.io/badge/Python-3.9%2B-3776ab">
   <img alt="Node" src="https://img.shields.io/badge/Node.js-18%2B-339933">
@@ -334,7 +334,7 @@ Phase details are in [`SKILL.md`](skills/qifei-proposal-v2/SKILL.md); release no
 
 ## Status
 
-v0.3.0 is released on [`codex/qifei-proposal-base`](https://github.com/chenxupeng1990-eng/qifei-proposal-skill/tree/codex/qifei-proposal-base). All 186 Python tests and the release self-test (`python3 scripts/self_test.py`) pass, and the draft studio, design review and memory box have been walked through end to end in a browser on a mock project. Feedback from real projects is welcome.
+v0.3.1 is released on [`codex/qifei-proposal-base`](https://github.com/chenxupeng1990-eng/qifei-proposal-skill/tree/codex/qifei-proposal-base). All 186 Python tests and the release self-test (`python3 scripts/self_test.py`) pass, and the draft studio, design review and memory box have been walked through end to end in a browser on a mock project. Feedback from real projects is welcome.
 
 <a id="license"></a>
 
