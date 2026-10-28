@@ -43,6 +43,7 @@ python3 scripts/doctor.py --project <项目目录> \
 - 环境变量 `PROPOSAL_IMAGE_PROVIDER`、`PROPOSAL_VISUAL_UNDERSTANDING=1`、`PROPOSAL_CODEX_NATIVE_COMMENTS=1` 仍然有效，优先级在本次声明之后、已保存的声明之前。
 - 只声明真实可用的能力。声明只决定开工时的能力判断，不放松任何门禁：正式出图仍要登记提供方、模型、提示词、参考图和文件哈希；独立视觉审查仍要另一个 Agent 出具绑定截图哈希的报告；没有原生评论时，评审用绑定 PNG 哈希的评审记录，不能把本地检查说成原生评论确认。
 - `doctor` 会自动识别 Agent 宿主（Claude Code、Codex），也可以用 `--agent-host` 指定。
+- 声明之后仍缺的能力，doctor 列为 `GAP`，先问用户能否补齐，不默认降级；流程见 [environment-degradation.md](environment-degradation.md)「先问能否补齐，再降级」。
 
 ### 可替换的适配器
 

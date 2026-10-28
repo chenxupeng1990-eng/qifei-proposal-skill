@@ -200,3 +200,56 @@ class DeclaredCapabilityTests(unittest.TestCase):
         run("--forget")
         self.assertIn("Image generation: none", run().stdout)
 
+
+
+class CapabilityGapTests(unittest.TestCase):
+    """Missing abilities are put to the user before any downgrade, and the Owner's choice is recorded."""
+
+    def setUp(self) -> None:
+        self.doctor = load_doctor_module()
+        sys.path.insert(0, str(SKILL_ROOT / "scripts"))
+        import validate_project  # noqa: PLC0415
+        self.vp = validate_project
+        self.tmp = tempfile.TemporaryDirectory()
+        self.project = Path(self.tmp.name)
+        self.state = {"proposal_owner": "测试负责人", "phase": "strategy"}
+        (self.project / "project-state.json").write_text(json.dumps(self.state, ensure_ascii=False), encoding="utf-8")
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def state_now(self) -> dict:
+        return json.loads((self.project / "project-state.json").read_text(encoding="utf-8"))
+
+    def test_each_missing_ability_becomes_a_question_with_ways_to_fill_it(self) -> None:
+        gaps = self.doctor.capability_gaps({"image_generation": False, "visual_understanding": True,
+                                            "node": True, "npm": True, "browser": False})
+        self.assertEqual([g["id"] for g in gaps], ["image_generation", "local_runtime"])
+        self.assertTrue(all(g["question"] and len(g["options"]) >= 3 for g in gaps))
+        self.assertEqual(self.doctor.capability_gaps({"image_generation": True, "visual_understanding": True,
+                                                      "node": True, "npm": True, "browser": True}), [])
+
+    def test_unasked_gaps_block_leaving_intake_until_filled_or_accepted_by_the_owner(self) -> None:
+        report = self.doctor.build_report({"filesystem": True, "node": True, "npm": True, "browser": True}, "full_deck")
+        self.doctor.record_runtime(self.project, report)
+        state = self.state_now()
+        self.assertEqual(state["runtime"]["gaps"], ["image_generation", "visual_understanding"])
+        self.assertEqual(len(self.vp.runtime_gap_errors(state, self.vp.PHASES.index("strategy"))), 2)
+        self.assertEqual(self.vp.runtime_gap_errors(state, self.vp.PHASES.index("intake")), [])
+        self.doctor.accept_gap(self.project, "image_generation", "测试负责人", "视觉阶段前再配 API")
+        self.doctor.accept_gap(self.project, "visual_understanding", "Agent", "")
+        errors = self.vp.runtime_gap_errors(self.state_now(), self.vp.PHASES.index("strategy"))
+        self.assertEqual(len(errors), 1)
+        self.assertIn("必须来自 Owner", errors[0])
+
+    def test_filling_a_gap_clears_it(self) -> None:
+        caps = {"filesystem": True, "node": True, "npm": True, "browser": True,
+                "image_generation": True, "image_provider": "magpie-image", "visual_understanding": True}
+        self.doctor.record_runtime(self.project, self.doctor.build_report(caps, "full_deck"))
+        self.assertEqual(self.vp.runtime_gap_errors(self.state_now(), self.vp.PHASES.index("strategy")), [])
+
+    def test_accept_gap_rejects_unknown_gaps_and_missing_owner(self) -> None:
+        with self.assertRaises(ValueError):
+            self.doctor.accept_gap(self.project, "feishu", "测试负责人", "")
+        with self.assertRaises(ValueError):
+            self.doctor.accept_gap(self.project, "image_generation", " ", "")
