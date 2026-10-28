@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- 能力缺失不再默认降级：`doctor.py --project` 把可补齐的缺口（图像生成、看图、本地 Node/浏览器）逐项列成 `GAP`，每项带问题和补齐办法，记入 `project-state.json` 的 `runtime`；Agent 先问用户能否补齐，用户明确选择暂不补齐时用 `--accept-gap <缺口> --by <Owner>` 记录。项目离开需求阶段时，`validate_project.py` 要求每个缺口已补齐或有 Owner 的接受记录。飞书和原生浏览器评论有内置等价方案，不算缺口。
 - `doctor.py` 不再把 Agent 自己的能力误判为没有：Python 脚本看不到 Agent 的工具，之前只认环境变量，导致有生图、看图能力的 Agent 也被报"没有已登记的图像生成适配器 / 视觉理解适配器 / Codex 原生评论"。现在由 Agent 声明：`--image-provider <名称>`、`--visual-understanding`、`--native-comments`；`--remember` 保存到本机 `~/.qifei-proposal/runtime.json`，`--forget` 清除；优先级为本次声明、环境变量、已保存的声明。自动识别宿主（Claude Code、Codex），报告里注明每项能力的来源。声明不放松任何门禁。
 
 ## 0.3.1（2026-10-26）

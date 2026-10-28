@@ -245,6 +245,26 @@ def design_content_errors(text: str) -> list[str]:
 VISUAL_REVIEW_ITEMS = ("single_focus", "orphans", "alignment", "text_on_texture", "overflow", "hierarchy")
 
 
+def runtime_gap_errors(state: dict, phase_index: int) -> list[str]:
+    """Every capability gap doctor recorded must be filled (rerun doctor) or explicitly accepted by the Owner."""
+    runtime = state.get("runtime") if isinstance(state.get("runtime"), dict) else None
+    if runtime is None or phase_index < PHASES.index("strategy"):
+        return []
+    owner = str(state.get("proposal_owner") or "").strip()
+    decisions = state.get("runtime_decisions") if isinstance(state.get("runtime_decisions"), dict) else {}
+    errors = []
+    for gap in runtime.get("gaps") or []:
+        decision = decisions.get(gap)
+        if not isinstance(decision, dict):
+            errors.append(
+                f"runtime: 能力缺口 {gap} 还没有问过 Owner；先按 doctor.py 列出的办法问用户能否补齐，补齐后重跑 "
+                f"doctor.py --project，用户明确选择暂不补齐时运行 doctor.py --project <项目目录> --accept-gap {gap} --by <Owner>"
+            )
+        elif owner and not approved_by_owner(decision, owner):
+            errors.append(f"runtime: 接受缺口 {gap} 的决定必须来自 Owner {owner}")
+    return errors
+
+
 def validate_visual_review(project: Path, state: dict) -> list[str]:
     """An independent agent reviewed every final page against the layout checklist, on the exact PNGs
     in the assembly-ready library, with the script-measured layout check attached."""
@@ -866,6 +886,9 @@ def validate_project(project: Path) -> list[str]:
         for assembly_error in validate_assembly_ready(project, require_final=True):
             errors.append(assembly_error)
         errors.extend(validate_final_check(project, state))
+
+    # Missing capabilities are put to the Owner before work goes past intake; never a silent downgrade.
+    errors.extend(runtime_gap_errors(state, phase_index))
 
     # With memory switched off globally, neither memory gate applies.
     if not memory_enabled():

@@ -15,7 +15,7 @@
 
 <p align="center">
   <img alt="Version" src="https://img.shields.io/badge/version-0.3.1-ff5f4d">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-191%20passing-1f8b4c">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-195%20passing-1f8b4c">
   <img alt="Python" src="https://img.shields.io/badge/Python-3.9%2B-3776ab">
   <img alt="Node" src="https://img.shields.io/badge/Node.js-18%2B-339933">
   <img alt="Platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-111827">
@@ -264,7 +264,7 @@ Windows 中把 `python3` 换成 `py -3` 或 `python`；路径含中文或空格�
 
 ## 运行档位：不绑定 Codex 订阅
 
-Doctor 检测本机和 Agent 的真实能力，选择能做到的最高档位，不按 Agent 品牌判断。脚本看不到 Agent 自己的工具，所以生图、看图和原生评论由 Agent 声明：`doctor.py --image-provider <名称> --visual-understanding [--native-comments]`，加 `--remember` 记在本机。
+Doctor 检测本机和 Agent 的真实能力，选择能做到的最高档位，不按 Agent 品牌判断。脚本看不到 Agent 自己的工具，所以生图、看图和原生评论由 Agent 声明：`doctor.py --image-provider <名称> --visual-understanding [--native-comments]`，加 `--remember` 记在本机。仍然缺的能力不会默认降级：doctor 会逐项列出补齐办法，先问用户，用户明确选择暂不补齐时才记录降级。
 
 | 档位 | 可以完成什么 |
 |---|---|
@@ -334,7 +334,7 @@ docs/readme-assets/                  本页图片
 
 ## 当前状态
 
-v0.3.1 已发布在 [`codex/qifei-proposal-base`](https://github.com/chenxupeng1990-eng/qifei-proposal-skill/tree/codex/qifei-proposal-base)。本仓库的 191 个 Python 测试和发布自检（`python3 scripts/self_test.py`）全部通过；母稿工作台、设计评审和记忆库都在模拟项目上用浏览器走过完整流程。欢迎用真实任务测试并反馈。
+v0.3.1 已发布在 [`codex/qifei-proposal-base`](https://github.com/chenxupeng1990-eng/qifei-proposal-skill/tree/codex/qifei-proposal-base)。本仓库的 195 个 Python 测试和发布自检（`python3 scripts/self_test.py`）全部通过；母稿工作台、设计评审和记忆库都在模拟项目上用浏览器走过完整流程。欢迎用真实任务测试并反馈。
 
 <a id="license"></a>
 

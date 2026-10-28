@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import os
 import shutil
@@ -137,6 +138,50 @@ def load_capabilities(path: str | None, declared: dict | None = None) -> dict:
     return value
 
 
+# Capabilities that can usually be filled. When one is missing the agent asks the user before downgrading;
+# Feishu and native comments have built-in equivalents (the studio, hash-bound review records) and are not asked.
+GAP_HELP = {
+    "image_generation": {
+        "blocks": ["visual_direction", "design_calibration", "generation"],
+        "question": "这次没有检测到图像生成能力。视觉方向、设计校准和正式页面都需要真实生图。你能补上吗？",
+        "options": [
+            "我（当前 Agent）其实能生图：重跑 doctor 并加 --image-provider <名称>",
+            "配置一个 OpenAI 兼容的图像 API：设置 PROPOSAL_IMAGE_PROVIDER=openai_api 和对应的 API Key 环境变量",
+            "换一个能生图的 Agent（如 Codex）来做视觉阶段",
+            "暂不补齐：先做到内容冻结，视觉阶段前再处理（记录为 Owner 接受的降级）",
+        ],
+    },
+    "visual_understanding": {
+        "blocks": ["visual_review"],
+        "question": "这次没有检测到看图能力。独立视觉审查需要有人或有 Agent 逐页看图。你能补上吗？",
+        "options": [
+            "我（当前 Agent）其实能看图：重跑 doctor 并加 --visual-understanding",
+            "视觉审查交给另一个能看图的 Agent",
+            "指定一位人工视觉审查者",
+            "暂不补齐：视觉审查阶段前再处理（记录为 Owner 接受的降级）",
+        ],
+    },
+    "local_runtime": {
+        "blocks": ["review", "speaker_notes", "qa", "export"],
+        "question": "这台电脑缺少 Node.js、npm 或可启动的浏览器，页面评审截图和 PNG/PDF/PPTX 导出做不了。你能补上吗？",
+        "options": [
+            "在仓库根目录运行 python3 scripts/bootstrap.py --suite v2（会安装依赖并自检）",
+            "安装 Chrome / Edge，或用 CHROME_PATH 指向已安装的浏览器",
+            "暂不补齐：只交付内容和提示词包（记录为 Owner 接受的降级）",
+        ],
+    },
+}
+
+
+def capability_gaps(capabilities: dict) -> list[dict]:
+    missing = {
+        "image_generation": not capabilities.get("image_generation"),
+        "visual_understanding": not capabilities.get("visual_understanding"),
+        "local_runtime": not all(bool(capabilities.get(key)) for key in ("node", "npm", "browser")),
+    }
+    return [{"id": gap, **GAP_HELP[gap]} for gap, is_missing in missing.items() if is_missing]
+
+
 def build_report(capabilities: dict, task_mode: str) -> dict:
     image_ready = bool(capabilities.get("image_generation"))
     local_runtime = all(bool(capabilities.get(key)) for key in ("node", "npm", "browser"))
@@ -218,7 +263,39 @@ def build_report(capabilities: dict, task_mode: str) -> dict:
         "boundaries": boundaries,
         "blockers": blockers,
         "stage_blockers": stage_blockers,
+        "gaps": capability_gaps(capabilities),
     }
+
+
+def record_runtime(project: Path, report: dict) -> dict:
+    """Write the gaps found into project-state.json, so validation can check each was put to the Owner."""
+    state_path = project / "project-state.json"
+    if not state_path.is_file():
+        return {}
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["runtime"] = {
+        "checked_at": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
+        "agent_host": report["capabilities"].get("agent_host"),
+        "runtime_profile": report["runtime_profile"],
+        "gaps": [gap["id"] for gap in report["gaps"]],
+    }
+    state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return state.get("runtime_decisions") or {}
+
+
+def accept_gap(project: Path, gap: str, by: str, note: str) -> None:
+    """Record that the Owner chose not to fill a capability gap now (a deliberate, recorded downgrade)."""
+    if gap not in GAP_HELP:
+        raise ValueError(f"unknown gap {gap!r}; one of {', '.join(GAP_HELP)}")
+    if not by.strip():
+        raise ValueError("--by is required: the Owner who decided")
+    state_path = project / "project-state.json"
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state.setdefault("runtime_decisions", {})[gap] = {
+        "decision": "accepted_downgrade", "by": by.strip(), "note": note.strip(),
+        "at": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
+    }
+    state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def main() -> int:
@@ -234,7 +311,22 @@ def main() -> int:
     parser.add_argument("--native-comments", action="store_true", help="this agent has Codex native browser comments")
     parser.add_argument("--remember", action="store_true", help="save the declared abilities for this machine")
     parser.add_argument("--forget", action="store_true", help="clear the abilities saved for this machine")
+    parser.add_argument("--accept-gap", choices=sorted(GAP_HELP),
+                        help="record that the Owner chose not to fill this gap now (needs --project and --by)")
+    parser.add_argument("--by", default="", help="the Owner who decided (with --accept-gap)")
+    parser.add_argument("--note", default="", help="why, and when to revisit (with --accept-gap)")
     args = parser.parse_args()
+    project = Path(args.project).expanduser().resolve() if args.project else None
+    if args.accept_gap:
+        if project is None:
+            print("--accept-gap needs --project", file=sys.stderr)
+            return 2
+        try:
+            accept_gap(project, args.accept_gap, args.by, args.note)
+        except (OSError, ValueError) as exc:
+            print(f"ERROR {exc}", file=sys.stderr)
+            return 2
+        print(f"Recorded: {args.by} accepted working without {args.accept_gap} for now")
     declared = {"agent_host": args.agent_host, "image_provider": args.image_provider,
                 "visual_understanding": args.visual_understanding, "codex_native_comments": args.native_comments}
     if args.forget and runtime_file().is_file():
@@ -248,7 +340,10 @@ def main() -> int:
         print(f"Runtime doctor failed: {exc}", file=sys.stderr)
         return 2
 
-    memory = project_memory(Path(args.project).expanduser().resolve()) if args.project else None
+    decisions = record_runtime(project, report) if project is not None else {}
+    for gap in report["gaps"]:
+        gap["decision"] = decisions.get(gap["id"])
+    memory = project_memory(project) if project is not None else None
     if memory is not None:
         report["proposal_memory"] = memory
     rendered = json.dumps(report, ensure_ascii=False, indent=2)
@@ -274,6 +369,19 @@ def main() -> int:
             print(f"BOUNDARY {item}")
         for item in report["blockers"]:
             print(f"BLOCKER {item}")
+        open_gaps = [gap for gap in report["gaps"] if not gap.get("decision")]
+        for gap in report["gaps"]:
+            if gap.get("decision"):
+                d = gap["decision"]
+                print(f"ACCEPTED {gap['id']}: {d.get('by')} {d.get('at', '')[:10]} {d.get('note', '')}".rstrip())
+        if open_gaps:
+            print()
+            print("先问用户，不要默认降级。逐项问用户能否补齐；补齐后重跑 doctor，"
+                  "用户明确选择暂不补齐时运行 doctor.py --project <项目目录> --accept-gap <缺口> --by <Owner> --note <原因>。")
+            for gap in open_gaps:
+                print(f"GAP {gap['id']}（影响：{'、'.join(gap['blocks'])}）：{gap['question']}")
+                for n, option in enumerate(gap["options"], 1):
+                    print(f"    {n}. {option}")
         if memory is not None:
             print()
             print(memory["text"], end="")

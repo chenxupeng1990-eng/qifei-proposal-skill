@@ -90,6 +90,21 @@
       "type": "array",
       "items": {"$ref": "#/$defs/reopenEvent"}
     },
+    "runtime": {
+      "type": "object",
+      "properties": {
+        "checked_at": {"type": "string"}, "agent_host": {"type": ["string", "null"]},
+        "runtime_profile": {"type": "string"}, "gaps": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "runtime_decisions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["decision", "by", "at"],
+        "properties": {"decision": {"enum": ["accepted_downgrade"]}, "by": {"type": "string"}, "at": {"type": "string"}, "note": {"type": "string"}}
+      }
+    },
     "validation_waivers": {
       "type": "array",
       "items": {

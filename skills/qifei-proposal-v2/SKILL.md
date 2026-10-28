@@ -10,7 +10,7 @@ V1 `$qifei-proposal` 已弃用并从仓库移除，一律使用 V2。V2 沿用 V
 ## 永久规则
 
 1. 完整读取本文件与 [agent.md](agent.md)。
-2. 先按 [references/task-modes-and-runtime.md](references/task-modes-and-runtime.md) 确定 `task_mode`，运行 `doctor.py --project <项目目录>`（同时输出本阶段的提案记忆；doctor 看不到 Agent 自己的工具，能生图时加 `--image-provider <名称>`，能看图时加 `--visual-understanding`，有 Codex 原生浏览器评论时加 `--native-comments`，见 runtime 说明第 3 节），向用户声明本次可交付能力和边界（最低可用配置见 [references/environment-degradation.md](references/environment-degradation.md)）；能力缺失只阻塞实际依赖它的阶段。
+2. 先按 [references/task-modes-and-runtime.md](references/task-modes-and-runtime.md) 确定 `task_mode`，运行 `doctor.py --project <项目目录>`（同时输出本阶段的提案记忆；doctor 看不到 Agent 自己的工具，能生图时加 `--image-provider <名称>`，能看图时加 `--visual-understanding`，有 Codex 原生浏览器评论时加 `--native-comments`，见 runtime 说明第 3 节），向用户说明本次能交付到哪一步。doctor 列出能力缺口（`GAP`）时，不得默认降级：先逐项问用户能否按列出的办法补齐，补齐后重跑 doctor；用户明确选择暂不补齐，才运行 `doctor.py --project <项目目录> --accept-gap <缺口> --by <Owner>` 记录，此后缺失的能力只阻塞依赖它的阶段（见 [references/environment-degradation.md](references/environment-degradation.md)）。
 3. Python可用后运行 `python3 scripts/check_suite_dependencies.py`；完整套件缺失时停止，环境能力缺失按Doctor结果路由。
 4. 读取项目 `AGENTS.md` 与 `project-state.json`，以 `phase` 选择且只选择一个当前阶段包。
 5. 完整读取当前阶段包；只读取该阶段包明确列出的 reference，不预读未来阶段。提案记忆按 [references/proposal-memory.md](references/proposal-memory.md) 使用，Agent 只需记住两个命令：Owner 在对话里给出可复用的更正时，当场运行 `proposal_memory.py note`；换阶段时运行 `proposal_memory.py advance --project <项目目录> --to <新阶段>`，按输出写候选、读新阶段记忆，再改 `phase`。记忆校准判断，不是事实；`doctor.py` 和 `validate_project.py` 会带出记忆并检查是否读过。用户要求关闭记忆时运行 `proposal_memory.py off`（全局生效）；`doctor.py` 显示提案记忆已关闭时，跳过 `note` 和 `advance`。
