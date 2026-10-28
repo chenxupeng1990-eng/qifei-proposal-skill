@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- `doctor.py` 不再把 Agent 自己的能力误判为没有：Python 脚本看不到 Agent 的工具，之前只认环境变量，导致有生图、看图能力的 Agent 也被报"没有已登记的图像生成适配器 / 视觉理解适配器 / Codex 原生评论"。现在由 Agent 声明：`--image-provider <名称>`、`--visual-understanding`、`--native-comments`；`--remember` 保存到本机 `~/.qifei-proposal/runtime.json`，`--forget` 清除；优先级为本次声明、环境变量、已保存的声明。自动识别宿主（Claude Code、Codex），报告里注明每项能力的来源。声明不放松任何门禁。
+
 ## 0.3.1（2026-10-26）
 
 - 提案记忆可以全局关闭：`proposal_memory.py off` / `on` / `status`，或在记忆库顶部勾选"启用记忆"；设置存在记忆目录的 `settings.json`，环境变量 `QIFEI_MEMORY=on|off` 可临时覆盖。关闭后 `doctor.py` 不输出记忆，`load`、`signals`、`advance`、`note` 不读不写，`validate_project.py` 跳过信号门禁和读取检查；已有记忆原样保留。

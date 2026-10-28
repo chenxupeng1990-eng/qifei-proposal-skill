@@ -25,6 +25,27 @@
 
 ## 3. 适配器
 
+### 由 Agent 声明自己的能力
+
+`doctor.py` 是 Python 脚本，看不到调用它的 Agent 有哪些工具。图像生成、看图和 Codex 原生浏览器评论要由 Agent 自己声明：
+
+```bash
+python3 scripts/doctor.py --project <项目目录> \
+  --image-provider codex_builtin \
+  --visual-understanding \
+  --native-comments
+```
+
+- `--image-provider`：本 Agent 能调用的生图方式，如 `codex_builtin`、`magpie-image`、`openai_api`。
+- `--visual-understanding`：本 Agent 能读图并判断画面。
+- `--native-comments`：本 Agent 有 Codex 原生浏览器评论。
+- `--remember`：把这次声明保存到 `~/.qifei-proposal/runtime.json`，之后在这台电脑上不传参数也有效；`--forget` 清除。保存的声明对这台电脑上的所有 Agent 生效，只保存每个 Agent 都具备的能力；某个 Agent 独有的能力，每次运行时声明。
+- 环境变量 `PROPOSAL_IMAGE_PROVIDER`、`PROPOSAL_VISUAL_UNDERSTANDING=1`、`PROPOSAL_CODEX_NATIVE_COMMENTS=1` 仍然有效，优先级在本次声明之后、已保存的声明之前。
+- 只声明真实可用的能力。声明只决定开工时的能力判断，不放松任何门禁：正式出图仍要登记提供方、模型、提示词、参考图和文件哈希；独立视觉审查仍要另一个 Agent 出具绑定截图哈希的报告；没有原生评论时，评审用绑定 PNG 哈希的评审记录，不能把本地检查说成原生评论确认。
+- `doctor` 会自动识别 Agent 宿主（Claude Code、Codex），也可以用 `--agent-host` 指定。
+
+### 可替换的适配器
+
 - 图像：Codex内置图像生成、OpenAI兼容API或项目登记的自定义命令均可。不得把模型名称当门禁；必须登记提供方、模型、提示词、参考图、尺寸、文件哈希和 `visual_family_id`。
 - 内容权威：完整提案默认工作台（`studio`，本地即可运行，见 [draft-studio.md](draft-studio.md)）；飞书是可选的协作适配器；继承模块沿用父项目；独立模块可选择工作台、飞书或本地Markdown。
 - 评审：Codex原生评论、本地Review Bundle或外部评论记录均可。Owner批准必须绑定对应PNG哈希。

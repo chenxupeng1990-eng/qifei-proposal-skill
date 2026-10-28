@@ -51,7 +51,55 @@ def detect_lark_authorization(lark_cli: bool) -> bool:
         return False
 
 
-def detect_capabilities() -> dict:
+def runtime_file() -> Path:
+    """Per-machine record of the abilities agents declared (kept beside the memory home)."""
+    return Path(os.environ.get("QIFEI_RUNTIME_FILE") or Path.home() / ".qifei-proposal" / "runtime.json")
+
+
+def load_saved() -> dict:
+    try:
+        value = json.loads(runtime_file().read_text(encoding="utf-8"))
+        return value if isinstance(value, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def save_declared(declared: dict) -> Path:
+    saved = load_saved()
+    saved.update({key: value for key, value in declared.items() if value and key != "agent_host"})
+    path = runtime_file()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(saved, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return path
+
+
+def detect_agent_host() -> str:
+    """Which agent runs this script. A Python script cannot see the agent's tools, but it can see its host."""
+    if os.environ.get("PROPOSAL_AGENT_HOST"):
+        return os.environ["PROPOSAL_AGENT_HOST"]
+    if os.environ.get("CLAUDECODE") or os.environ.get("AI_AGENT", "").startswith("claude-code"):
+        return "claude_code"
+    if any(os.environ.get(name) for name in ("CODEX_SANDBOX", "CODEX_SANDBOX_NETWORK_DISABLED", "CODEX_THREAD_ID")):
+        return "codex"
+    return "unknown"
+
+
+def first_declared(declared: dict, saved: dict, key: str, env_value) -> tuple:
+    """(value, source): what the agent declared now, then the environment, then what was saved on this machine."""
+    for source, value in (("agent", declared.get(key)), ("env", env_value), ("saved", saved.get(key))):
+        if value:
+            return value, source
+    return None, None
+
+
+def detect_capabilities(declared: dict | None = None) -> dict:
+    """The agent's own abilities (image generation, reading images, native browser comments) are invisible to
+    this script, so the agent declares them; the environment and earlier saved declarations also count."""
+    declared = declared or {}
+    saved = load_saved()
+    provider, provider_source = first_declared(declared, saved, "image_provider", os.environ.get("PROPOSAL_IMAGE_PROVIDER"))
+    visual, visual_source = first_declared(declared, saved, "visual_understanding", env_true("PROPOSAL_VISUAL_UNDERSTANDING"))
+    comments, comments_source = first_declared(declared, saved, "codex_native_comments", env_true("PROPOSAL_CODEX_NATIVE_COMMENTS"))
     browser_candidates = (
         os.environ.get("CHROME_PATH"),
         os.environ.get("EDGE_PATH"),
@@ -62,25 +110,27 @@ def detect_capabilities() -> dict:
     browser = any(Path(item).is_file() for item in browser_candidates if item)
     lark_cli = shutil.which("lark-cli") is not None
     return {
-        "agent_host": os.environ.get("PROPOSAL_AGENT_HOST", "unknown"),
+        "agent_host": declared.get("agent_host") or detect_agent_host(),
         "filesystem": True,
         "shell": True,
         "python": sys.version_info >= (3, 9),
         "node": shutil.which("node") is not None,
         "npm": shutil.which("npm") is not None,
         "browser": browser,
-        "image_generation": bool(os.environ.get("PROPOSAL_IMAGE_PROVIDER")),
-        "image_provider": os.environ.get("PROPOSAL_IMAGE_PROVIDER") or None,
-        "visual_understanding": env_true("PROPOSAL_VISUAL_UNDERSTANDING"),
-        "codex_native_comments": env_true("PROPOSAL_CODEX_NATIVE_COMMENTS"),
+        "image_generation": bool(provider),
+        "image_provider": str(provider) if provider else None,
+        "visual_understanding": bool(visual),
+        "codex_native_comments": bool(comments),
+        "capability_sources": {"image_generation": provider_source, "visual_understanding": visual_source,
+                               "codex_native_comments": comments_source},
         "feishu_cli": lark_cli,
         "feishu_authorized": detect_lark_authorization(lark_cli),
     }
 
 
-def load_capabilities(path: str | None) -> dict:
+def load_capabilities(path: str | None, declared: dict | None = None) -> dict:
     if not path:
-        return detect_capabilities()
+        return detect_capabilities(declared)
     value = json.loads(Path(path).expanduser().read_text(encoding="utf-8"))
     if not isinstance(value, dict):
         raise ValueError("capabilities input must be a JSON object")
@@ -121,11 +171,13 @@ def build_report(capabilities: dict, task_mode: str) -> dict:
         blockers.append("filesystem access is required to create governed project artifacts")
     if not image_ready:
         stage_blockers.setdefault("visual_direction", []).append(
-            "a registered image generation adapter is required for formal visual approval"
+            "no image generation declared: if this agent can generate images, rerun doctor with "
+            "--image-provider <name> (add --remember to keep it for this machine)"
         )
     if not capabilities.get("visual_understanding"):
         stage_blockers.setdefault("visual_review", []).append(
-            "visual understanding or a registered human visual reviewer is required for the independent visual review"
+            "no visual understanding declared: if this agent can read images, rerun doctor with --visual-understanding; "
+            "otherwise register a human visual reviewer"
         )
     if not local_runtime:
         stage_blockers.setdefault("review_and_export", []).append(
@@ -142,7 +194,8 @@ def build_report(capabilities: dict, task_mode: str) -> dict:
     if not feishu_ready:
         boundaries.append("Feishu collaboration is unavailable; the local draft studio is the content authority")
     if review_adapter != "codex_native_comments":
-        boundaries.append("Codex native browser comments are replaced by a hash-bound review record")
+        boundaries.append("Codex native browser comments are replaced by a hash-bound review record"
+                          " (declare --native-comments if this agent has them)")
 
     return {
         "schema_version": "1.0",
@@ -175,10 +228,22 @@ def main() -> int:
     parser.add_argument("--write", help="Write the report to this path")
     parser.add_argument("--json", action="store_true", help="Print JSON only")
     parser.add_argument("--project", help="Proposal project directory; also prints the proposal memory for its phase")
+    parser.add_argument("--agent-host", help="the agent running this, e.g. codex or claude_code (detected when omitted)")
+    parser.add_argument("--image-provider", help="this agent's image generation, e.g. codex_builtin, magpie-image, openai_api")
+    parser.add_argument("--visual-understanding", action="store_true", help="this agent can read and judge images")
+    parser.add_argument("--native-comments", action="store_true", help="this agent has Codex native browser comments")
+    parser.add_argument("--remember", action="store_true", help="save the declared abilities for this machine")
+    parser.add_argument("--forget", action="store_true", help="clear the abilities saved for this machine")
     args = parser.parse_args()
+    declared = {"agent_host": args.agent_host, "image_provider": args.image_provider,
+                "visual_understanding": args.visual_understanding, "codex_native_comments": args.native_comments}
+    if args.forget and runtime_file().is_file():
+        runtime_file().unlink()
+    if args.remember:
+        save_declared(declared)
 
     try:
-        report = build_report(load_capabilities(args.capabilities), args.task_mode)
+        report = build_report(load_capabilities(args.capabilities, declared), args.task_mode)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"Runtime doctor failed: {exc}", file=sys.stderr)
         return 2
@@ -196,6 +261,15 @@ def main() -> int:
     else:
         print(f"Runtime profile: {report['runtime_profile']}")
         print(f"Task mode: {report['task_mode']}")
+        caps = report["capabilities"]
+        sources = caps.get("capability_sources") or {}
+        label = {"agent": "agent declared", "env": "environment", "saved": "saved on this machine"}
+        def show(name: str, value: str, key: str) -> None:
+            print(f"{name}: {value}" + (f" ({label[sources[key]]})" if sources.get(key) else ""))
+        print(f"Agent host: {caps.get('agent_host')}")
+        show("Image generation", caps.get("image_provider") or "none", "image_generation")
+        show("Visual understanding", "yes" if caps.get("visual_understanding") else "no", "visual_understanding")
+        show("Native browser comments", "yes" if caps.get("codex_native_comments") else "no", "codex_native_comments")
         for item in report["boundaries"]:
             print(f"BOUNDARY {item}")
         for item in report["blockers"]:

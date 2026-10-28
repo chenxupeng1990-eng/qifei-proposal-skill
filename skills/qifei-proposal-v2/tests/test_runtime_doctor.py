@@ -21,6 +21,7 @@ def load_doctor_module():
     spec.loader.exec_module(module)
     return module
 os.environ["QIFEI_MEMORY_HOME"] = tempfile.mkdtemp(prefix="qifei-memory-test-")  # never read or write real memory
+os.environ["QIFEI_RUNTIME_FILE"] = str(Path(tempfile.mkdtemp(prefix="qifei-runtime-test-")) / "runtime.json")  # never the real one
 
 
 class RuntimeDoctorTests(unittest.TestCase):
@@ -139,3 +140,63 @@ class RuntimeDoctorTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DeclaredCapabilityTests(unittest.TestCase):
+    """doctor cannot see the agent's tools; the agent declares them, and the declaration can be saved."""
+
+    def setUp(self) -> None:
+        self.doctor = load_doctor_module()
+        self.saved_env = {k: os.environ.pop(k, None) for k in (
+            "PROPOSAL_IMAGE_PROVIDER", "PROPOSAL_VISUAL_UNDERSTANDING", "PROPOSAL_CODEX_NATIVE_COMMENTS",
+            "PROPOSAL_AGENT_HOST", "CLAUDECODE", "AI_AGENT", "CODEX_SANDBOX", "CODEX_SANDBOX_NETWORK_DISABLED",
+            "CODEX_THREAD_ID")}
+        runtime = Path(os.environ["QIFEI_RUNTIME_FILE"])
+        if runtime.is_file():
+            runtime.unlink()
+
+    def tearDown(self) -> None:
+        for key, value in self.saved_env.items():
+            if value is not None:
+                os.environ[key] = value
+        Path(os.environ["QIFEI_RUNTIME_FILE"]).unlink(missing_ok=True)
+
+    def test_nothing_declared_means_no_image_vision_or_native_comments(self) -> None:
+        caps = self.doctor.detect_capabilities()
+        self.assertEqual((caps["image_generation"], caps["visual_understanding"], caps["codex_native_comments"]),
+                         (False, False, False))
+        self.assertEqual(caps["agent_host"], "unknown")
+
+    def test_agent_declaration_unblocks_the_visual_stages(self) -> None:
+        caps = self.doctor.detect_capabilities({"image_provider": "magpie-image", "visual_understanding": True})
+        self.assertEqual(caps["capability_sources"]["image_generation"], "agent")
+        report = self.doctor.build_report({**caps, "node": True, "npm": True, "browser": True}, "full_deck")
+        self.assertEqual(report["runtime_profile"], "api_full")
+        self.assertNotIn("visual_direction", report["stage_blockers"])
+        self.assertNotIn("visual_review", report["stage_blockers"])
+
+    def test_saved_declaration_applies_later_and_declaration_beats_environment(self) -> None:
+        self.doctor.save_declared({"image_provider": "codex_builtin", "codex_native_comments": True})
+        caps = self.doctor.detect_capabilities()
+        self.assertEqual((caps["image_provider"], caps["capability_sources"]["image_generation"]), ("codex_builtin", "saved"))
+        self.assertTrue(caps["codex_native_comments"])
+        os.environ["PROPOSAL_IMAGE_PROVIDER"] = "openai_api"
+        self.assertEqual(self.doctor.detect_capabilities()["image_provider"], "openai_api")
+        self.assertEqual(self.doctor.detect_capabilities({"image_provider": "magpie-image"})["image_provider"], "magpie-image")
+
+    def test_host_is_detected_from_the_agent_environment(self) -> None:
+        os.environ["CLAUDECODE"] = "1"
+        self.assertEqual(self.doctor.detect_agent_host(), "claude_code")
+        del os.environ["CLAUDECODE"]
+        os.environ["CODEX_SANDBOX"] = "seatbelt"
+        self.assertEqual(self.doctor.detect_agent_host(), "codex")
+        del os.environ["CODEX_SANDBOX"]
+
+    def test_cli_remember_and_forget(self) -> None:
+        run = lambda *a: subprocess.run([sys.executable, str(DOCTOR), *a], capture_output=True, text=True, env=os.environ)
+        out = run("--image-provider", "magpie-image", "--visual-understanding", "--remember").stdout
+        self.assertIn("Image generation: magpie-image (agent declared)", out)
+        self.assertIn("saved on this machine", run().stdout)
+        run("--forget")
+        self.assertIn("Image generation: none", run().stdout)
+
