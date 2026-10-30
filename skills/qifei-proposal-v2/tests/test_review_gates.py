@@ -125,8 +125,8 @@ class ProductImageRuleTests(unittest.TestCase):
         self.assertTrue(vp.product_image_rule_errors("产品一律后期贴回画面。", "DESIGN.md"))
 
     def test_reference_wording_passes(self) -> None:
-        clear = ("官方产品图作为参考图进入生图，与场景同光、同透视、有接触阴影；不改包装结构、文字和 Logo；"
-                 "Logo 用官方文件，放在 HTML 文字层或后期贴回。")
+        clear = ("官方产品图作为参考图进入生图，与场景同光、同透视、有接触阴影，包装结构、文字和包装上印的 Logo 保持原样；"
+                 "页面上单独出现的品牌 Logo 不交给生图模型画，用官方 Logo 文件叠在成图上。")
         self.assertEqual(vp.product_image_rule_errors(clear, "DESIGN.md"), [])
         self.assertEqual(vp.product_image_rule_errors("禁止生成正文、标签或品牌包装。", "DESIGN.md"), [])
 
@@ -179,6 +179,16 @@ class ImageFullTextTests(unittest.TestCase):
         self.assertTrue(screen_text.image_text_problems(self.project, "P01", self.png))
         self.record(self.lines, sha="0" * 64)
         self.assertIn("不是当前这张图", screen_text.image_text_problems(self.project, "P01", self.png)[0])
+
+
+class ExpressionChoiceTests(unittest.TestCase):
+    def test_brief_choice_must_match_task_nature(self) -> None:
+        brief = "- 表达方式：视觉表现力（Owner 选定，品牌手册）\n"
+        self.assertEqual(vp.expression_choice_errors(brief, "visual_showcase"), [])
+        self.assertIn("set task_nature to visual_showcase", vp.expression_choice_errors(brief, None)[0])
+        self.assertEqual(vp.expression_choice_errors("- 表达方式：强逻辑叙述\n", None), [])
+        self.assertTrue(vp.expression_choice_errors("- 表达方式：都要\n", "persuasive"))
+        self.assertEqual(vp.expression_choice_errors("旧策划书没有这一行", None), [])
 
 
 class ScreenTextTests(unittest.TestCase):

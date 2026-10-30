@@ -257,6 +257,23 @@ def design_content_errors(text: str) -> list[str]:
     return errors
 
 
+def expression_choice_errors(brief_text: str, task_nature: str | None) -> list[str]:
+    """The brief records the user's choice of expression; project-state.json.task_nature must say the same."""
+    line = re.search(r"表达方式[：:]\s*(.+)", brief_text)
+    if not line:
+        return []  # briefs written before the choice was asked
+    chosen = line.group(1)
+    picked = {"visual_showcase"} if "视觉表现" in chosen else set()
+    picked |= {"persuasive"} if "强逻辑" in chosen else set()
+    if len(picked) != 1:
+        return ["proposal brief 表达方式 must name one choice: 强逻辑叙述 or 视觉表现力"]
+    expected = picked.pop()
+    if (task_nature or "persuasive") != expected:
+        return [f"proposal brief chose {chosen.strip()[:20]} but project-state.json task_nature is {task_nature or 'persuasive'}; "
+                f"set task_nature to {expected}"]
+    return []
+
+
 # Draft fields that never go on screen; seeing their label on a sample means the draft was pasted in.
 OFF_SCREEN_LABELS = ("核心内容", "逻辑展开", "讲解方向", "讲解词", "演讲任务", "策略与过桥", "视觉生成建议", "证据与来源")
 VOID_TAGS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
@@ -680,6 +697,7 @@ def validate_project(project: Path) -> list[str]:
             brief_text = brief_path.read_text(encoding="utf-8")
             if any(marker in brief_text for marker in ("待确认", "待填写")):
                 errors.append("Approved proposal brief still contains unresolved placeholder markers")
+            errors.extend(expression_choice_errors(brief_text, state.get("task_nature")))
         for gate in ("brief_grill", "proposal_brief"):
             if not is_approved(approvals, gate):
                 message = f"Phase {phase} requires approved gate: {gate}"
