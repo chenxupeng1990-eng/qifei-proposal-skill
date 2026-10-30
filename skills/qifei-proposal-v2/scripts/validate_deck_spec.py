@@ -174,7 +174,9 @@ def validate_deck(project: Path) -> list[str]:
     except ValueError as exc:
         return [str(exc)]
     state_path = project / "project-state.json"
-    approvals = (json.loads(state_path.read_text(encoding="utf-8")).get("approvals") or {}) if state_path.is_file() else None
+    state = json.loads(state_path.read_text(encoding="utf-8")) if state_path.is_file() else None
+    approvals = (state.get("approvals") or {}) if state is not None else None
+    nature = state.get("task_nature") if state is not None else None
 
     for key in ("deck_id", "project_name", "content_freeze_id", "design_version"):
         if not deck.get(key):
@@ -214,7 +216,7 @@ def validate_deck(project: Path) -> list[str]:
             errors.append(f"{scope}: title must not end with a Chinese or English period")
         if slide.get("status") != "content_frozen":
             errors.append(f"{scope}: status must be content_frozen before generation")
-        errors.extend(validate_presentation_route(slide, scope, approvals))
+        errors.extend(validate_presentation_route(slide, scope, approvals, nature))
         approved_hash = slide.get("approved_content_hash")
         if not approved_hash:
             errors.append(f"{scope}: missing approved_content_hash")

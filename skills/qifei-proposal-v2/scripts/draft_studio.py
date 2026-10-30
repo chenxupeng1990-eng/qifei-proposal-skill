@@ -380,8 +380,11 @@ def attach_status(model: dict[str, Any], state: dict[str, Any] | None) -> None:
     if state:
         for chapter in state.get("chapters") or []:
             for slide_id in chapter.get("slides") or []:
-                confirmed_by_slide[slide_id] = bool(chapter.get("manuscript_confirmed"))
-                if not chapter.get("manuscript_confirmed") and chapter.get("confirmation_record_id"):
+                pages = chapter.get("page_confirmations") or {}
+                confirmed_by_slide[slide_id] = bool(chapter.get("manuscript_confirmed")) or slide_id in pages
+                if not confirmed_by_slide[slide_id] and (
+                    chapter.get("confirmation_record_id") or slide_id in (chapter.get("pages_reopened") or [])
+                ):
                     reopened.add(slide_id)
         verified = set((state.get("proposal_draft") or {}).get("verified_slide_ids") or [])
     for chapter in model["chapters"]:
@@ -435,7 +438,7 @@ def normalize_markdown(md: str) -> str:
 def review_record(threads: list[dict[str, Any]]) -> str:
     """Comment threads of one page as a readable decision record."""
     lines = []
-    for thread in threads:
+    for thread in (t for t in threads if t.get("status") != "deleted"):
         state = "已决定" if thread.get("status") == "resolved" else "未解决"
         lines.append(f"- **{thread['id']}｜{state}**　“{thread['quote']}”（{field_label(thread.get('field', ''))}）")
         for message in thread.get("messages", []):
@@ -506,6 +509,14 @@ def load_project(project: Path, draft_arg: str | None) -> tuple[Path, dict[str, 
 
 def sha256_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def content_form(md: str) -> str:
+    """The text with formatting-only differences removed: bold markers, colon width, spacing and
+    blank lines. Adding "**" around "本章回答：" changes the file, not what the page says."""
+    md = md.replace("**", "").replace("__", "").replace("：", ":")
+    lines = (re.sub(r"\s+", " ", line).strip() for line in md.splitlines())
+    return "\n".join(line for line in lines if line)
 
 
 def model_from_text(
@@ -871,9 +882,14 @@ def changed_slides(before: str, after: str) -> list[str]:
             model = parse_draft(text)
         except ValueError:
             return {}
-        # The chapter title and intro count as part of every page in that chapter.
+        # The chapter title and intro count as part of every page in that chapter; formatting-only
+        # differences (bold markers, colon width) do not count as a change.
         return {
-            s["id"]: json.dumps([c["title"], c.get("intro_md", ""), s["title"], s["fields"]], ensure_ascii=False, sort_keys=True)
+            s["id"]: json.dumps(
+                [content_form(c["title"]), content_form(c.get("intro_md", "")), content_form(s["title"]),
+                 [[f["key"], content_form(f["md"])] for f in s["fields"]]],
+                ensure_ascii=False,
+            )
             for c in model["chapters"] for s in c["slides"]
         }
     old, new = digest(before), digest(after)
@@ -969,8 +985,9 @@ class DraftStore:
             self._write(updated)
             label = target.get("kind")
             note = f"{label}:{target.get('key')}" if label == "field" else str(label)
-            # A chapter-intro edit has no single page; every page of that chapter changed.
-            slides = [slide_id] if slide_id else changed_slides(current, updated)
+            # Compare content rather than trusting the edit target: an intro edit touches every page of
+            # its chapter, and a formatting-only edit touches none, so it reopens no confirmation.
+            slides = changed_slides(current, updated)
             return self._record(updated, actor, slides, note)
 
     def sync_external(self) -> dict[str, Any] | None:
@@ -1007,16 +1024,20 @@ def is_studio(state: dict[str, Any] | None) -> bool:
     return bool(state) and state.get("content_authority") == "studio"
 
 
-DIGEST_VERSION = 2
+DIGEST_VERSION = 3
+DIGEST_VERSIONS = (1, 2, 3)
 
 
 def page_digests(text: str, version: int = DIGEST_VERSION) -> dict[str, str]:
-    """A fingerprint per page, used to prove a confirmed page did not change. Version 2 covers the
-    chapter title and intro, the page title and every field; version 1 (confirmations recorded
-    before chapter intros were covered) only the page title and fields."""
+    """A fingerprint per page, used to prove a confirmed page did not change. Version 3 covers the
+    chapter title and intro, the page title and every field, ignoring formatting-only differences;
+    version 2 is the same over the raw text; version 1 (confirmations recorded before chapter intros
+    were covered) only the page title and fields."""
+    form = content_form if version >= 3 else (lambda md: md)
+
     def parts(c: dict[str, Any], s: dict[str, Any]) -> list:
-        page = [s["title"], [[f["key"], f["md"]] for f in s["fields"]]]
-        return page if version == 1 else [c["title"], c.get("intro_md", ""), *page]
+        page = [form(s["title"]), [[f["key"], form(f["md"])] for f in s["fields"]]]
+        return page if version == 1 else [form(c["title"]), form(c.get("intro_md", "")), *page]
     return {
         s["id"]: sha256_text(json.dumps(parts(c, s), ensure_ascii=False))
         for c in parse_draft(text)["chapters"] for s in c["slides"]
@@ -1089,8 +1110,73 @@ def confirm_chapter(project: Path, draft_path: Path, chapter_id: str, by: str) -
     chapter = _state_chapter(state, chapter_id)
     chapter["manuscript_confirmed"] = True
     chapter["confirmation_record_id"] = record["record_id"]
+    chapter["page_confirmations"] = {s: record["record_id"] for s in slides}
+    chapter["pages_reopened"] = []
     write_state(project, state)
     return record
+
+
+def confirm_page(project: Path, draft_path: Path, slide_id: str, by: str) -> dict[str, Any]:
+    """The Owner confirms one page as it stands now. Once every page of the chapter is confirmed
+    and still unchanged, the chapter is confirmed too, by a chapter record that lists the page records."""
+    state = read_state(project)
+    if not is_studio(state):
+        raise EditError("只有以工作台为权威源（content_authority = studio）的项目可以在这里确认页面")
+    chapter = next((c for c in state.get("chapters") or [] if slide_id in [str(s) for s in c.get("slides") or []]), None)
+    if chapter is None:
+        raise EditError(f"project-state.json 的章节页序里没有 {slide_id}")
+    chapter_id = chapter.get("chapter_id")
+    store = DraftStore(project, draft_path, state)
+    store.ensure_baseline()
+    store.sync_external()
+    text = store.read()
+    digests = page_digests(text)
+    if slide_id not in digests:
+        raise EditError(f"母稿里找不到 {slide_id}")
+    issues = [i for i in check_format(text) if i["page"] == slide_id]
+    if issues:
+        raise EditError(f"{slide_id} 还有 {len(issues)} 处格式问题，先修正再确认（{issues[0]['message']}）")
+    now = dt.datetime.now().astimezone().isoformat(timespec="seconds")
+    record = {
+        "record_id": f"confirm-{slide_id}-r{store.revision}-{secrets.token_hex(3)}",
+        "chapter_id": chapter_id,
+        "scope": "page",
+        "slides": {slide_id: digests[slide_id]},
+        "digest_version": DIGEST_VERSION,
+        "by": (by or "Owner")[:40],
+        "at": now,
+        "revision": store.revision,
+        "sha256": sha256_text(text),
+    }
+    confirmations = ConfirmationStore(draft_path)
+    confirmations.add(record)
+    state = read_state(project)
+    chapter = _state_chapter(state, chapter_id)
+    pages = chapter.setdefault("page_confirmations", {})
+    pages[slide_id] = record["record_id"]
+    chapter["pages_reopened"] = [s for s in chapter.get("pages_reopened") or [] if s != slide_id]
+    slides = [str(s) for s in chapter.get("slides") or []]
+    held = {s: (confirmations.find(pages.get(s)) or {}).get("slides", {}).get(s) for s in slides}
+    result: dict[str, Any] = {"confirmed_page": record}
+    if not chapter.get("manuscript_confirmed") and all(held[s] and held[s] == digests.get(s) for s in slides):
+        chapter_record = {
+            "record_id": f"confirm-{chapter_id}-r{store.revision}-{secrets.token_hex(3)}",
+            "chapter_id": chapter_id,
+            "scope": "chapter",
+            "via_pages": [pages[s] for s in slides],
+            "slides": {s: digests[s] for s in slides},
+            "digest_version": DIGEST_VERSION,
+            "by": record["by"],
+            "at": now,
+            "revision": store.revision,
+            "sha256": record["sha256"],
+        }
+        confirmations.add(chapter_record)
+        chapter["manuscript_confirmed"] = True
+        chapter["confirmation_record_id"] = chapter_record["record_id"]
+        result["confirmed"] = chapter_record
+    write_state(project, state)
+    return result
 
 
 def register_draft(project: Path, draft_path: Path) -> dict[str, Any]:
@@ -1136,7 +1222,14 @@ def invalidate_after_change(project: Path, slides: list[str]) -> list[str]:
         return []
     reopened = []
     for chapter in state.get("chapters") or []:
-        if chapter.get("manuscript_confirmed") and set(chapter.get("slides") or []) & set(slides):
+        touched = set(chapter.get("slides") or []) & set(slides)
+        if not touched:
+            continue
+        pages = chapter.get("page_confirmations") or {}
+        if any(s in pages for s in touched):
+            chapter["page_confirmations"] = {s: r for s, r in pages.items() if s not in touched}
+            chapter["pages_reopened"] = sorted(set(chapter.get("pages_reopened") or []) | (touched & set(pages)))
+        if chapter.get("manuscript_confirmed"):
             chapter["manuscript_confirmed"] = False
             reopened.append(chapter.get("chapter_id"))
     draft = state.get("proposal_draft") or {}
@@ -1160,7 +1253,7 @@ def studio_evidence_errors(project: Path, draft: dict[str, Any], snapshot_path: 
     if entries and isinstance(revision, int) and entries[-1].get("revision", 0) > revision:
         errors.append(f"the draft changed after registration (rev {revision} → rev {entries[-1]['revision']}); register it again")
     text = snapshot_path.read_text(encoding="utf-8")
-    digests = {version: page_digests(text, version) for version in (1, DIGEST_VERSION)}
+    digests = {version: page_digests(text, version) for version in DIGEST_VERSIONS}
     confirmations = ConfirmationStore(snapshot_path)
     for index, chapter in enumerate(chapters, start=1):
         chapter_id = chapter.get("chapter_id") or f"chapter-{index}"
@@ -1173,8 +1266,29 @@ def studio_evidence_errors(project: Path, draft: dict[str, Any], snapshot_path: 
         current = digests[record.get("digest_version", 1)]
         changed = [s for s in chapter.get("slides") or [] if record["slides"].get(s) != current.get(s)]
         if changed:
+            changed = formatting_only_forgiven(snapshot_path, record, changed, digests[DIGEST_VERSION])
+        if changed:
             errors.append(f"{chapter_id}: changed after confirmation ({', '.join(changed)}); confirm it again")
     return errors
+
+
+def formatting_only_forgiven(snapshot_path: Path, record: dict[str, Any], changed: list[str], current: dict[str, str]) -> list[str]:
+    """For a confirmation recorded before version 3: the pages whose content really changed. The
+    revision the Owner confirmed is kept under revisions/; once it is shown to be exactly what the
+    record fingerprinted, its pages are compared with the current ones ignoring formatting."""
+    revision = record.get("revision")
+    confirmed = snapshot_path.parent / "revisions" / f"rev-{revision:06d}.md" if isinstance(revision, int) else None
+    if confirmed is None or not confirmed.is_file():
+        return changed
+    text = confirmed.read_text(encoding="utf-8")
+    try:
+        authentic = page_digests(text, record.get("digest_version", 1))
+        then = page_digests(text, DIGEST_VERSION)
+    except ValueError:
+        return changed
+    if any(authentic.get(s) != record["slides"].get(s) for s in record["slides"]):
+        return changed
+    return [s for s in changed if then.get(s) != current.get(s)]
 
 
 def field_label(anchor: str) -> str:
@@ -1270,8 +1384,9 @@ class CommentStore:
             return thread
 
     def set_status(self, thread_id: str, status: str, author: str) -> dict[str, Any]:
-        if status not in {"open", "resolved"}:
-            raise EditError("status must be open or resolved")
+        """Resolve, reopen or delete. A deleted thread is hidden everywhere but kept in the file."""
+        if status not in {"open", "resolved", "deleted"}:
+            raise EditError("status must be open, resolved or deleted")
         with self.lock:
             data = self.load()
             thread = self._find(data, thread_id)
@@ -1466,9 +1581,16 @@ class StudioHandler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length") or 0)
             payload = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
             with store.lock:
-                if path == "/api/confirm":
+                if path == "/api/confirm" and payload.get("slide_id"):
+                    result: dict[str, Any] = confirm_page(store.project, store.draft_path, str(payload["slide_id"]), str(payload.get("author") or "Owner"))
+                    if "confirmed" in result:
+                        try:
+                            result["registered"] = register_draft(store.project, store.draft_path)
+                        except EditError as error:
+                            result["registration_pending"] = str(error)
+                elif path == "/api/confirm":
                     record = confirm_chapter(store.project, store.draft_path, str(payload["chapter_id"]), str(payload.get("author") or "Owner"))
-                    result: dict[str, Any] = {"confirmed": record}
+                    result = {"confirmed": record}
                     try:
                         result["registered"] = register_draft(store.project, store.draft_path)
                     except EditError as error:

@@ -30,6 +30,7 @@
 .d-rail textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; font: 13px/1.6 var(--font); color: var(--ink); background: var(--surface); resize: vertical; }
 .d-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
 .btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn.ghost { margin-right: auto; border-color: transparent; color: var(--muted); }
 .dcard { cursor: pointer; }
 .dcard.active { border-color: #f2b632; box-shadow: 0 4px 16px rgb(0 0 0 / .08); }
 .dcard-top { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); margin-bottom: 6px; }

@@ -211,6 +211,63 @@ class StudioAuthorityAcceptance(unittest.TestCase):
         errors = validate_project(self.project)
         self.assertTrue(any("C1: changed after confirmation (P01)" in e for e in errors), errors)
 
+    def test_confirming_every_page_confirms_the_chapter(self) -> None:
+        status, data = self.post("/api/confirm", {"slide_id": "P01", "author": "Owner"})
+        self.assertEqual(status, 200, data)
+        self.assertNotIn("confirmed", data)
+        self.assertFalse(self.state()["chapters"][0]["manuscript_confirmed"])
+        slide = {s["id"]: s for c in data["model"]["chapters"] for s in c["slides"]}
+        self.assertEqual((slide["P01"]["status"], slide["P02"]["status"]), ("confirmed", "pending"))
+        # An edit to the confirmed page takes its confirmation back; the other page is unaffected.
+        save = self.post("/api/save", {"target": {"kind": "title", "slide": "P01", "md": "长期经营，而不是一次传播"},
+                                       "base_sha": data["model"]["meta"]["sha256"]})
+        self.assertEqual(save[0], 200, save[1])
+        chapter = self.state()["chapters"][0]
+        self.assertEqual((chapter["page_confirmations"], chapter["pages_reopened"]), ({}, ["P01"]))
+        for slide_id in ("P02", "P01"):
+            status, data = self.post("/api/confirm", {"slide_id": slide_id, "author": "Owner"})
+            self.assertEqual(status, 200, data)
+        self.assertEqual(data["confirmed"]["via_pages"], [self.state()["chapters"][0]["page_confirmations"][s] for s in ("P01", "P02")])
+        self.assertTrue(self.state()["chapters"][0]["manuscript_confirmed"])
+        self.assertEqual(self.post("/api/confirm", {"slide_id": "P03", "author": "Owner"})[0], 200)
+        self.assertIn("registered", self.post("/api/register", {})[1])
+        errors = validate_project(self.project)
+        self.assertFalse([e for e in errors if "confirmation" in e or "confirmed" in e], errors)
+
+    def test_formatting_only_edits_keep_confirmations(self) -> None:
+        for chapter in ("C1", "C2"):
+            self.assertEqual(self.post("/api/confirm", {"chapter_id": chapter, "author": "Owner"})[0], 200)
+        self.server.terminate()
+        self.server.wait(timeout=5)
+        draft = self.project / "content" / "draft" / "proposal-draft.md"
+        draft.write_text(draft.read_text(encoding="utf-8").replace("**本章回答：**", "本章回答:", 1), encoding="utf-8")
+        result = subprocess.run([sys.executable, str(SCRIPTS / "draft_studio.py"), "register", str(self.project)],
+                                capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertTrue(all(c["manuscript_confirmed"] for c in self.state()["chapters"]))
+        errors = validate_project(self.project)
+        self.assertFalse([e for e in errors if "changed after confirmation" in e], errors)
+
+    def test_a_version_2_confirmation_survives_adding_bold_labels(self) -> None:
+        self.assertEqual(self.post("/api/confirm", {"chapter_id": "C1", "author": "Owner"})[0], 200)
+        self.server.terminate()
+        self.server.wait(timeout=5)
+        store = draft_studio.ConfirmationStore(self.project / "content" / "draft" / "proposal-draft.md")
+        data = store.load()
+        record = data["records"][0]
+        confirmed = (self.project / "content" / "draft" / "revisions" / f"rev-{record['revision']:06d}.md").read_text(encoding="utf-8")
+        record["digest_version"] = 2
+        record["slides"] = {s: d for s, d in draft_studio.page_digests(confirmed, 2).items() if s in record["slides"]}
+        store.path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        snapshot = self.project / "content" / "draft" / "proposal-draft.md"
+        snapshot.write_text(confirmed.replace("**逻辑路径：**", "逻辑路径：", 1), encoding="utf-8")
+        draft = {"revision_id": record["revision"]}
+        errors = draft_studio.studio_evidence_errors(self.project, draft, snapshot, self.state()["chapters"])
+        self.assertFalse([e for e in errors if "changed after confirmation" in e], errors)
+        snapshot.write_text(confirmed.replace("为什么需要长期伙伴", "为什么需要短期伙伴", 1), encoding="utf-8")
+        errors = draft_studio.studio_evidence_errors(self.project, draft, snapshot, self.state()["chapters"])
+        self.assertTrue([e for e in errors if "C1: changed after confirmation" in e], errors)
+
     def test_confirm_refuses_pages_that_fail_the_format_check(self) -> None:
         draft = self.project / "content" / "draft" / "proposal-draft.md"
         draft.write_text(DRAFT.replace("### 讲解方向", "### 演讲任务", 1), encoding="utf-8")

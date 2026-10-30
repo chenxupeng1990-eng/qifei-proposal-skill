@@ -9,6 +9,9 @@ import sys
 import tempfile
 import time
 import unittest
+
+os.environ["QIFEI_UPDATE_CHECK"] = "0"  # doctor runs here; keep it off the network
+os.environ["QIFEI_HOME"] = tempfile.mkdtemp(prefix="qifei-home-test-")
 import urllib.error
 import urllib.request
 from pathlib import Path

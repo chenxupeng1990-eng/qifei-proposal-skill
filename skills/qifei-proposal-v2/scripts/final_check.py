@@ -48,6 +48,7 @@ def page_checks(project: Path, order: list[str]) -> tuple[dict, list[str]]:
         problems.append("speaker notes were written for another page order")
     draft = screen_text.draft_screen(project)
     allowed = screen_text.whitelist(project)
+    image_full = screen_text.image_full_slides(project)
     text_results = {}
     for slide_id in order:
         page = pages.get(slide_id)
@@ -62,6 +63,12 @@ def page_checks(project: Path, order: list[str]) -> tuple[dict, list[str]]:
         if chunks is None and page.get("source_type") == "html" and page.get("source_path"):
             found = screen_text.html_chunks(project / page["source_path"])
             chunks = found.get(slide_id) or found.get("") or []
+        if chunks is None and slide_id in image_full:
+            png = project / str(page.get("source_path") or "")
+            found = screen_text.image_text_problems(project, slide_id, png) if png.is_file() else [f"{slide_id}: source PNG is missing"]
+            text_results[slide_id] = {"image_text": "failed" if found else "passed"}
+            problems += found
+            continue
         if chunks is None:
             text_results[slide_id] = {"skipped": "image-native page; check its text by eye"}
             continue

@@ -26,6 +26,7 @@ from typing import Any
 
 STORE = Path("deck") / "review" / "design-comments.json"
 CROPS = Path("deck") / "review" / "design-comments"
+CALIBRATION = Path("deck") / "review" / "calibration"  # capture_calibration_pngs.mjs writes here
 PAGE_W, PAGE_H = 1920, 1080
 MAX_TEXT = 4000
 MAX_CROP_BYTES = 4 * 1024 * 1024
@@ -142,10 +143,13 @@ class DesignCommentStore:
         raise ReviewError(f"unknown design comment {thread_id}")
 
     def threads(self) -> list[dict[str, Any]]:
-        """Threads with `stale` set when the slide's current review PNG differs from the one commented on."""
+        """Threads with `stale` set when the slide's current review PNG differs from the one commented on.
+        Deleted threads stay in the file as a record and are left out here."""
         current = {p["slide_id"]: p["png_sha256"] for p in review_pages(self.project)}
         out = []
         for thread in self.load()["threads"]:
+            if thread["status"] == "deleted":
+                continue
             out.append({**thread, "stale": current.get(thread["slide"]) != thread["png_sha256"]})
         return out
 
@@ -214,9 +218,10 @@ class DesignCommentStore:
             return thread
 
     def set_status(self, thread_id: str, status: str, author: str) -> dict[str, Any]:
-        """Resolve or reopen. Only the studio page calls this: resolving is the Owner's call."""
-        if status not in {"open", "resolved"}:
-            raise ReviewError("status must be open or resolved")
+        """Resolve, reopen or delete. Only the studio page calls this: it is the Owner's call. A
+        deleted thread is hidden everywhere but kept in the file."""
+        if status not in {"open", "resolved", "deleted"}:
+            raise ReviewError("status must be open, resolved or deleted")
         with self.lock:
             data = self.load()
             thread = self._find(data, thread_id)
@@ -228,6 +233,12 @@ class DesignCommentStore:
 def open_threads(project: Path, slide_id: str | None = None) -> list[dict[str, Any]]:
     return [t for t in DesignCommentStore(project).threads()
             if t["status"] == "open" and (slide_id is None or t["slide"] == slide_id)]
+
+
+def open_calibration_threads(project: Path) -> list[dict[str, Any]]:
+    """Open comments on design calibration samples; the calibration cannot be approved over them."""
+    prefix = CALIBRATION.as_posix() + "/"
+    return [t for t in open_threads(project) if str(t.get("manifest") or "").startswith(prefix)]
 
 
 def main() -> int:

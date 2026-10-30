@@ -63,6 +63,9 @@ class InstallSkillsTests(unittest.TestCase):
                 text=True,
             )
             self.assertEqual(check.returncode, 0, check.stdout + check.stderr)
+            record = json.loads((target / "qifei-proposal-v2" / ".install.json").read_text(encoding="utf-8"))
+            self.assertEqual(record["version"], (ROOT / "VERSION").read_text(encoding="utf-8").strip())
+            self.assertEqual(record["source_path"], str(ROOT))
 
     def test_existing_directory_aborts_before_any_partial_install(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

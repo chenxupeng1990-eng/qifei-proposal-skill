@@ -260,6 +260,15 @@ python3 skills/qifei-proposal-v2/scripts/memory_box.py
 
 Windows 中把 `python3` 换成 `py -3` 或 `python`；路径含中文或空格时加引号。
 
+### 5. 更新
+
+不用记命令。有新版本时，Agent 开工时会告诉你（每天最多一次）；你说“更新提案 skill”，它就帮你更新。更新只替换 skill 本身，项目文件和提案记忆不受影响；新版本自检不通过会自动退回旧版本。也可以自己运行：
+
+```bash
+python3 ~/.codex/skills/qifei-proposal-v2/scripts/update_skill.py run   # 更新
+python3 ~/.codex/skills/qifei-proposal-v2/scripts/update_skill.py off   # 不再检查更新
+```
+
 <a id="runtime"></a>
 
 ## 运行档位：不绑定 Codex 订阅

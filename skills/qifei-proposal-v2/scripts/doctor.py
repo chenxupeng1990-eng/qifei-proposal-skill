@@ -101,6 +101,7 @@ def detect_capabilities(declared: dict | None = None) -> dict:
     provider, provider_source = first_declared(declared, saved, "image_provider", os.environ.get("PROPOSAL_IMAGE_PROVIDER"))
     visual, visual_source = first_declared(declared, saved, "visual_understanding", env_true("PROPOSAL_VISUAL_UNDERSTANDING"))
     comments, comments_source = first_declared(declared, saved, "codex_native_comments", env_true("PROPOSAL_CODEX_NATIVE_COMMENTS"))
+    edit, edit_source = first_declared(declared, saved, "image_edit", env_true("PROPOSAL_IMAGE_EDIT"))
     browser_candidates = (
         os.environ.get("CHROME_PATH"),
         os.environ.get("EDGE_PATH"),
@@ -122,8 +123,9 @@ def detect_capabilities(declared: dict | None = None) -> dict:
         "image_provider": str(provider) if provider else None,
         "visual_understanding": bool(visual),
         "codex_native_comments": bool(comments),
+        "image_edit": bool(edit),
         "capability_sources": {"image_generation": provider_source, "visual_understanding": visual_source,
-                               "codex_native_comments": comments_source},
+                               "codex_native_comments": comments_source, "image_edit": edit_source},
         "feishu_cli": lark_cli,
         "feishu_authorized": detect_lark_authorization(lark_cli),
     }
@@ -161,6 +163,15 @@ GAP_HELP = {
             "暂不补齐：视觉审查阶段前再处理（记录为 Owner 接受的降级）",
         ],
     },
+    "image_edit": {
+        "blocks": ["generation"],
+        "question": "这是视觉表现型任务（如品牌手册），整页连文字一起生图。图上文字出错时，要框出出错区域局部重生成。这次没有检测到局部编辑（带蒙版重绘）能力，你能补上吗？",
+        "options": [
+            "我（当前 Agent）的生图工具能局部编辑：重跑 doctor 并加 --image-edit",
+            "配置一个支持蒙版编辑的图像 API，设置 PROPOSAL_IMAGE_EDIT=1",
+            "暂不补齐：文字出错时整页重生成（记录为 Owner 接受的降级）",
+        ],
+    },
     "local_runtime": {
         "blocks": ["review", "speaker_notes", "qa", "export"],
         "question": "这台电脑缺少 Node.js、npm 或可启动的浏览器，页面评审截图和 PNG/PDF/PPTX 导出做不了。你能补上吗？",
@@ -173,16 +184,18 @@ GAP_HELP = {
 }
 
 
-def capability_gaps(capabilities: dict) -> list[dict]:
+def capability_gaps(capabilities: dict, task_nature: str = "persuasive") -> list[dict]:
     missing = {
         "image_generation": not capabilities.get("image_generation"),
         "visual_understanding": not capabilities.get("visual_understanding"),
+        # Only a visual_showcase task draws text into the image and fixes it region by region.
+        "image_edit": task_nature == "visual_showcase" and not capabilities.get("image_edit"),
         "local_runtime": not all(bool(capabilities.get(key)) for key in ("node", "npm", "browser")),
     }
     return [{"id": gap, **GAP_HELP[gap]} for gap, is_missing in missing.items() if is_missing]
 
 
-def build_report(capabilities: dict, task_mode: str) -> dict:
+def build_report(capabilities: dict, task_mode: str, task_nature: str = "persuasive") -> dict:
     image_ready = bool(capabilities.get("image_generation"))
     local_runtime = all(bool(capabilities.get(key)) for key in ("node", "npm", "browser"))
     codex_host = str(capabilities.get("agent_host") or "").startswith("codex")
@@ -245,6 +258,7 @@ def build_report(capabilities: dict, task_mode: str) -> dict:
     return {
         "schema_version": "1.0",
         "task_mode": task_mode,
+        "task_nature": task_nature,
         "runtime_profile": runtime_profile,
         "capabilities": capabilities,
         "adapters": {
@@ -263,8 +277,18 @@ def build_report(capabilities: dict, task_mode: str) -> dict:
         "boundaries": boundaries,
         "blockers": blockers,
         "stage_blockers": stage_blockers,
-        "gaps": capability_gaps(capabilities),
+        "gaps": capability_gaps(capabilities, task_nature),
     }
+
+
+def update_notice() -> dict | None:
+    """A newer release, for the agent to pass on once a day. Never blocks or fails the doctor."""
+    try:
+        import update_skill  # noqa: PLC0415
+
+        return update_skill.check()
+    except Exception:
+        return None
 
 
 def record_runtime(project: Path, report: dict) -> dict:
@@ -309,6 +333,9 @@ def main() -> int:
     parser.add_argument("--image-provider", help="this agent's image generation, e.g. codex_builtin, magpie-image, openai_api")
     parser.add_argument("--visual-understanding", action="store_true", help="this agent can read and judge images")
     parser.add_argument("--native-comments", action="store_true", help="this agent has Codex native browser comments")
+    parser.add_argument("--image-edit", action="store_true", help="this agent's image tool can regenerate a masked region")
+    parser.add_argument("--task-nature", choices=("persuasive", "visual_showcase"),
+                        help="read from project-state.json with --project; persuasive when omitted")
     parser.add_argument("--remember", action="store_true", help="save the declared abilities for this machine")
     parser.add_argument("--forget", action="store_true", help="clear the abilities saved for this machine")
     parser.add_argument("--accept-gap", choices=sorted(GAP_HELP),
@@ -328,14 +355,18 @@ def main() -> int:
             return 2
         print(f"Recorded: {args.by} accepted working without {args.accept_gap} for now")
     declared = {"agent_host": args.agent_host, "image_provider": args.image_provider,
-                "visual_understanding": args.visual_understanding, "codex_native_comments": args.native_comments}
+                "visual_understanding": args.visual_understanding, "codex_native_comments": args.native_comments,
+                "image_edit": args.image_edit}
     if args.forget and runtime_file().is_file():
         runtime_file().unlink()
     if args.remember:
         save_declared(declared)
 
     try:
-        report = build_report(load_capabilities(args.capabilities, declared), args.task_mode)
+        nature = args.task_nature
+        if nature is None and project is not None and (project / "project-state.json").is_file():
+            nature = json.loads((project / "project-state.json").read_text(encoding="utf-8")).get("task_nature")
+        report = build_report(load_capabilities(args.capabilities, declared), args.task_mode, nature or "persuasive")
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"Runtime doctor failed: {exc}", file=sys.stderr)
         return 2
@@ -343,6 +374,9 @@ def main() -> int:
     decisions = record_runtime(project, report) if project is not None else {}
     for gap in report["gaps"]:
         gap["decision"] = decisions.get(gap["id"])
+    update = update_notice()
+    if update is not None:
+        report["update"] = update
     memory = project_memory(project) if project is not None else None
     if memory is not None:
         report["proposal_memory"] = memory
@@ -354,6 +388,8 @@ def main() -> int:
     if args.json:
         print(rendered)
     else:
+        if update and update.get("notify"):
+            print(f"UPDATE {update['message']}（用大白话转告用户；不要自动更新，用户说要更新再运行 update_skill.py run）")
         print(f"Runtime profile: {report['runtime_profile']}")
         print(f"Task mode: {report['task_mode']}")
         caps = report["capabilities"]
@@ -365,6 +401,8 @@ def main() -> int:
         show("Image generation", caps.get("image_provider") or "none", "image_generation")
         show("Visual understanding", "yes" if caps.get("visual_understanding") else "no", "visual_understanding")
         show("Native browser comments", "yes" if caps.get("codex_native_comments") else "no", "codex_native_comments")
+        if report["task_nature"] == "visual_showcase":
+            show("Image region edit", "yes" if caps.get("image_edit") else "no", "image_edit")
         for item in report["boundaries"]:
             print(f"BOUNDARY {item}")
         for item in report["blockers"]:

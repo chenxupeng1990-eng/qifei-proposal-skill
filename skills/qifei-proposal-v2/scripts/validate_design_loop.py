@@ -12,6 +12,9 @@ from validate_deck_spec import png_has_alpha
 
 LOOP_STEPS = ["template", "image2", "html", "validate"]
 VISUAL_MODES = {"none", "background", "opaque-module", "transparent-png"}
+# image_plus_html: a design base with an HTML text layer. image_full: the generator draws the whole page,
+# text included; the default for visual_showcase tasks (brand books), an Owner exception elsewhere.
+RENDER_ROUTES = {"image_plus_html", "image_full"}
 DOMINANT_TYPES = {"information_first", "design_first"}
 EXPRESSION_OBJECTS = {
     "data_evidence",
@@ -140,9 +143,22 @@ def validate_base_image(path: Path, scope: str) -> list[str]:
     return []
 
 
-def validate_presentation_route(page: dict, scope: str, approvals: dict | None = None) -> list[str]:
+def validate_presentation_route(
+    page: dict, scope: str, approvals: dict | None = None, nature: str | None = None
+) -> list[str]:
     """Require a page to justify its visual carrier before it can pass review."""
     errors: list[str] = []
+    render_route = str(page.get("render_route") or "image_plus_html")
+    if render_route not in RENDER_ROUTES:
+        errors.append(f"{scope}: render_route must be one of {sorted(RENDER_ROUTES)}")
+    elif render_route == "image_full":
+        if nature != "visual_showcase" and not owner_exception_ok(page, approvals):
+            errors.append(
+                f"{scope}: render_route image_full is the visual_showcase route; on a persuasive deck it needs "
+                "route_exception with an Owner approval record_id"
+            )
+        if str(page.get("visual_mode") or "") != "background":
+            errors.append(f"{scope}: render_route image_full draws the whole page; visual_mode must be background")
     route = page.get("presentation_route")
     if not isinstance(route, dict):
         return [f"{scope}: presentation_route is required"]
@@ -315,7 +331,7 @@ def validate_chapter_report(project: Path, chapter_id: str) -> list[str]:
             errors.append(f"{scope}: unknown template_id {template_id!r}")
         if not str(page.get("core_expression") or "").strip():
             errors.append(f"{scope}: core_expression is required before Image2")
-        errors.extend(validate_presentation_route(page, scope, state.get("approvals") or {}))
+        errors.extend(validate_presentation_route(page, scope, state.get("approvals") or {}, state.get("task_nature")))
         if not isinstance(page.get("iterations"), int) or page.get("iterations") < 1:
             errors.append(f"{scope}: iterations must be a positive integer")
 

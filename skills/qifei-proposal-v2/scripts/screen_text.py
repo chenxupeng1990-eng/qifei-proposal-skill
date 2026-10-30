@@ -8,6 +8,7 @@ Used before a page enters the assembly-ready library and again after export.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -147,16 +148,49 @@ def check_html(project: Path, html: Path, slide_ids: list[str] | None = None) ->
 
 
 def check_pptx(project: Path, pptx: Path, slide_order: list[str]) -> dict[str, dict]:
+    """image_full pages are pictures in the PPTX; their text was checked on the image itself."""
     pages = draft_screen(project)
+    pictures = image_full_slides(project)
     allowed = whitelist(project)
     slides = pptx_chunks(pptx)
     results = {}
     if len(slides) != len(slide_order):
         results["_deck"] = {"missing": [], "extra": [], "error": f"PPTX has {len(slides)} slides, final order has {len(slide_order)}"}
     for slide_id, chunks in zip(slide_order, slides):
-        if slide_id in pages:
+        if slide_id in pages and slide_id not in pictures:
             results[slide_id] = compare(pages[slide_id], chunks, allowed)
     return results
+
+
+IMAGE_TEXT = Path("deck") / "review" / "image-text"
+
+
+def image_full_slides(project: Path) -> set[str]:
+    """Pages whose text is drawn by the image generator (render_route image_full), not an HTML layer."""
+    deck_path = project / "deck" / "deck-spec.json"
+    deck = json.loads(deck_path.read_text(encoding="utf-8")) if deck_path.is_file() else {}
+    return {str(s.get("slide_id")) for s in deck.get("slides") or [] if isinstance(s, dict) and s.get("render_route") == "image_full"}
+
+
+def image_text_problems(project: Path, slide_id: str, png: Path) -> list[str]:
+    """An image_full page is checked against the draft through its text record: the lines read off the
+    final image (by the agent's vision or OCR), bound to that image's SHA256, plus any regions that
+    were regenerated to fix wrong characters."""
+    record_path = project / IMAGE_TEXT / f"{slide_id}.json"
+    if not record_path.is_file():
+        return [f"{slide_id}: 整页生图页面缺少文字核对记录 {(IMAGE_TEXT / f'{slide_id}.json').as_posix()}"]
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    if record.get("png_sha256") != hashlib.sha256(png.read_bytes()).hexdigest():
+        return [f"{slide_id}: 文字核对记录对应的不是当前这张图；修改或重生成后要重新核对"]
+    lines = record.get("recognized_lines")
+    if not isinstance(lines, list) or not any(str(line).strip() for line in lines):
+        return [f"{slide_id}: 文字核对记录没有逐行写出图上识别到的文字（recognized_lines）"]
+    if not isinstance(record.get("fixes", []), list):
+        return [f"{slide_id}: 文字核对记录的 fixes 必须是列表"]
+    pages = draft_screen(project)
+    if slide_id not in pages:
+        return [f"{slide_id}: slide not in draft"]
+    return failures({slide_id: compare(pages[slide_id], [str(line) for line in lines], whitelist(project))})
 
 
 def failures(results: dict[str, dict]) -> list[str]:

@@ -12,6 +12,24 @@
 
 模块在内容冻结前必须填写 `strategy_input`、`module_claim`、`strategy_output`，并登记稳定 `slide_id`。模块模式不是跳过内容判断。
 
+### 1.1 任务性质：说服型与视觉表现型
+
+任务模式管规模，任务性质管“这份东西靠什么打动人”。两者独立，在任务一开始就定（`init_project.py --task-nature`，写入 `project-state.json.task_nature`），中途不改。
+
+| 性质 | 适用任务 | 默认页面路线 | 门禁差异 |
+|---|---|---|---|
+| `persuasive`（默认） | 提案、比稿、营销方案 | `image_plus_html`：整页生图底图＋HTML 文字层 | 全部现有门禁 |
+| `visual_showcase` | 品牌手册、品牌视觉画册、产品视觉集 | `image_full`：整页直接生图，上屏文字和设计要求一起交给生图模型 | 章节不要求“本章回答 / 逻辑路径 / 情绪方向”；全稿审查看品牌表达是否准确、一致，不审说服链 |
+
+`visual_showcase` 的要点：
+
+- 文字少、看重视觉张力，所以文字由生图模型一并画出，不再用 HTML 文字层“修正”画面。
+- 内容冻结、设计校准、母版和 Owner 逐页确认照常执行；冻结的是上屏文字和视觉要求。
+- 生成后逐页核对图上的文字（见 [page-production-loop.md](page-production-loop.md) 的“整页生图页面”）。出错的字，框出区域局部重生成，不改走 HTML 文字层。这需要生图工具支持带蒙版的局部编辑，doctor 会把它列为 `image_edit` 缺口。
+- 导出的可编辑 PPTX 以整页图片为主，文字不可编辑；这是选择这条路线时就接受的取舍，导出时向 Owner 说明。
+- 个别页面文字多或有数据（色值表、规格表等），在该页登记 `render_route: image_plus_html`，照提案页的方式做。
+- `persuasive` 任务里个别页面想整页生图，按页面路线例外处理：登记 `route_exception` 并附 Owner 批准记录。
+
 ## 2. 运行档位
 
 运行 `python3 scripts/doctor.py --task-mode <模式> --project <项目目录> --json`；有项目时，结果里的 `proposal_memory.text` 就是本阶段要用的提案记忆。如当前Agent能力不能由本机命令发现，提供不含密钥的 capability JSON。
