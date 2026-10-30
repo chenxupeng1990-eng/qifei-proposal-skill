@@ -24,6 +24,7 @@
       "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}"
     },
     "task_mode": {"enum": ["full_deck", "inherited_module", "standalone_module"]},
+    "task_nature": {"enum": ["persuasive", "visual_showcase"]},
     "deliverable_level": {"enum": ["content", "slides", "export"]},
     "content_authority": {"enum": ["studio", "feishu", "local", "inherit_parent"]},
     "module_context": {
@@ -195,6 +196,7 @@
         "profile": {"enum": ["auto", "compact", "standard", "extended"]},
         "planned_slide_count": {"type": ["integer", "null"]},
         "alpha_sample_path": {"type": ["string", "null"]},
+        "production_check_path": {"type": ["string", "null"]},
         "required_sample_types": {"type": "array", "items": {"type": "string"}},
         "approval_record_id": {"type": ["string", "null"]}
       },
@@ -243,6 +245,8 @@
         "source_path": {"type": "string"},
         "manuscript_confirmed": {"type": "boolean"},
         "confirmation_record_id": {"type": ["string", "null"]},
+        "page_confirmations": {"type": "object", "additionalProperties": {"type": "string"}},
+        "pages_reopened": {"type": "array", "items": {"type": "string"}},
         "slides": {"type": "array", "items": {"type": "string"}},
         "design_loop_passed": {"type": "boolean"},
         "design_loop_report": {"type": ["string", "null"]},

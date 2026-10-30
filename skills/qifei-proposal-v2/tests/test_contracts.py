@@ -210,6 +210,21 @@ class ContractTests(unittest.TestCase):
         approvals["route_exception_s01"] = {"approved": True, "record_id": "DESIGN-MD-SECTION-9"}
         self.assertEqual(validate_presentation_route(page, "S01", approvals), [])
 
+    def test_image_full_is_the_visual_showcase_route(self) -> None:
+        route = self.presentation_route(expression_object="statement", anchor_kind="hybrid")
+        route["image2_decision"] = {
+            "decision": "generate", "semantic_role": "hero", "visual_family_id": "brand-book-v1",
+            "reason": "整页由生图完成，文字一并画入。", "html_protected_content": "无",
+        }
+        page = {"visual_mode": "background", "render_route": "image_full", "presentation_route": route}
+        self.assertEqual(validate_presentation_route(page, "S01", {}, "visual_showcase"), [])
+        errors = validate_presentation_route(page, "S01", {}, "persuasive")
+        self.assertTrue(any("visual_showcase route" in e for e in errors), errors)
+        page["visual_mode"] = "opaque-module"
+        self.assertTrue(any("visual_mode must be background" in e for e in validate_presentation_route(page, "S01", {}, "visual_showcase")))
+        page["render_route"] = "html_only"
+        self.assertTrue(any("render_route must be one of" in e for e in validate_presentation_route(page, "S01", {}, "visual_showcase")))
+
     def test_design_base_must_cover_the_canvas(self) -> None:
         from validate_design_loop import validate_base_image  # noqa: PLC0415
 

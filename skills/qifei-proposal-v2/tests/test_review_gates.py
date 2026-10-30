@@ -118,6 +118,79 @@ class DesignContentTests(unittest.TestCase):
         self.assertEqual(vp.design_content_errors(text), [])
 
 
+class ProductImageRuleTests(unittest.TestCase):
+    def test_post_production_only_wording_is_rejected(self) -> None:
+        vague = "官方 Logo 和产品图保留原貌，生成图只承担场景与材质，不重绘包装。"
+        self.assertEqual(len(vp.product_image_rule_errors(vague, "DESIGN.md")), 1)
+        self.assertTrue(vp.product_image_rule_errors("产品一律后期贴回画面。", "DESIGN.md"))
+
+    def test_reference_wording_passes(self) -> None:
+        clear = ("官方产品图作为参考图进入生图，与场景同光、同透视、有接触阴影，包装结构、文字和包装上印的 Logo 保持原样；"
+                 "页面上单独出现的品牌 Logo 不交给生图模型画，用官方 Logo 文件叠在成图上。")
+        self.assertEqual(vp.product_image_rule_errors(clear, "DESIGN.md"), [])
+        self.assertEqual(vp.product_image_rule_errors("禁止生成正文、标签或品牌包装。", "DESIGN.md"), [])
+
+
+class CalibrationScreenTests(unittest.TestCase):
+    def test_draft_fields_and_caution_on_a_sample_are_caught(self) -> None:
+        html = ('<h1>设计校准</h1><p>讲解方向：页面说明不在样张里</p>'
+                '<section data-design-sample="cover"><h2>香气是复购理由</h2><img src="a.png">'
+                '<p>讲解方向：先讲香气</p><p>数据不代表全平台</p>'
+                '<aside data-screen-ignore><p>证据与来源：评审备注</p></aside></section>')
+        errors = vp.calibration_screen_errors(html)
+        self.assertEqual(len(errors), 2, errors)
+        self.assertIn("讲解方向", errors[0])
+        self.assertIn("不代表", errors[1])
+
+    def test_clean_sample_passes(self) -> None:
+        html = '<section data-design-sample="toc"><ol><li>市场</li><li>打法</li></ol><br></section>'
+        self.assertEqual(vp.calibration_screen_errors(html), [])
+
+
+class ImageFullTextTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.project = Path(self.tmp.name)
+        draft = self.project / "content" / "draft" / "proposal-draft.md"
+        draft.parent.mkdir(parents=True)
+        draft.write_text(FEISHU_DRAFT, encoding="utf-8")
+        write_json(self.project / "project-state.json", {"proposal_draft": {"verified_snapshot_path": "content/draft/proposal-draft.md"}})
+        write_json(self.project / "deck" / "deck-spec.json", {"slides": [{"slide_id": "P01", "render_route": "image_full"}, {"slide_id": "P02"}]})
+        self.png = self.project / "deck" / "review" / "P01.png"
+        self.png.parent.mkdir(parents=True, exist_ok=True)
+        self.png.write_bytes(png())
+        self.lines = screen_text.draft_screen(self.project)["P01"]["lines"]
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def record(self, lines: list[str], sha: str | None = None) -> None:
+        write_json(self.project / "deck" / "review" / "image-text" / "P01.json", {
+            "slide_id": "P01", "png_sha256": sha or hashlib.sha256(self.png.read_bytes()).hexdigest(),
+            "recognized_lines": lines, "fixes": [{"region": {"x": 10, "y": 10, "w": 300, "h": 80}, "before": "错字", "after": "正字"}],
+        })
+
+    def test_text_read_off_the_image_is_checked_against_the_draft(self) -> None:
+        self.assertEqual(screen_text.image_full_slides(self.project), {"P01"})
+        self.assertIn("缺少文字核对记录", screen_text.image_text_problems(self.project, "P01", self.png)[0])
+        self.record(self.lines)
+        self.assertEqual(screen_text.image_text_problems(self.project, "P01", self.png), [])
+        self.record(self.lines[1:] + ["多出来的字"])
+        self.assertTrue(screen_text.image_text_problems(self.project, "P01", self.png))
+        self.record(self.lines, sha="0" * 64)
+        self.assertIn("不是当前这张图", screen_text.image_text_problems(self.project, "P01", self.png)[0])
+
+
+class ExpressionChoiceTests(unittest.TestCase):
+    def test_brief_choice_must_match_task_nature(self) -> None:
+        brief = "- 表达方式：视觉表现力（Owner 选定，品牌手册）\n"
+        self.assertEqual(vp.expression_choice_errors(brief, "visual_showcase"), [])
+        self.assertIn("set task_nature to visual_showcase", vp.expression_choice_errors(brief, None)[0])
+        self.assertEqual(vp.expression_choice_errors("- 表达方式：强逻辑叙述\n", None), [])
+        self.assertTrue(vp.expression_choice_errors("- 表达方式：都要\n", "persuasive"))
+        self.assertEqual(vp.expression_choice_errors("旧策划书没有这一行", None), [])
+
+
 class ScreenTextTests(unittest.TestCase):
     expected = {"slide_id": "S03", "title": "香气是复购理由", "lines": ["Instagram 搜索热度 +38%", "来源：Google Trends 2025"]}
 
@@ -153,6 +226,20 @@ class IntroFingerprintTests(unittest.TestCase):
     def test_editing_a_chapter_intro_reopens_its_pages(self) -> None:
         updated, _ = draft_studio.apply_edit(FEISHU_DRAFT, {"kind": "intro", "chapter": "ch01", "md": "**本章回答：** 新的问题。"})
         self.assertEqual(draft_studio.changed_slides(FEISHU_DRAFT, updated), ["P01", "P02"])
+
+
+class FormattingOnlyChangeTests(unittest.TestCase):
+    def test_bold_and_colon_changes_reopen_nothing(self) -> None:
+        plain = FEISHU_DRAFT.replace("**本章回答：**", "本章回答:")
+        self.assertNotEqual(plain, FEISHU_DRAFT)
+        self.assertEqual(draft_studio.changed_slides(FEISHU_DRAFT, plain), [])
+        self.assertEqual(draft_studio.page_digests(FEISHU_DRAFT), draft_studio.page_digests(plain))
+        self.assertNotEqual(draft_studio.page_digests(FEISHU_DRAFT, 2), draft_studio.page_digests(plain, 2))
+
+    def test_plain_chapter_labels_satisfy_the_gate(self) -> None:
+        text = "# 章｜结论\n\n本章回答：问题。\n\n- 逻辑路径: A → B\n\n**情绪方向：** 期待。\n"
+        self.assertEqual(vp.missing_chapter_fields(text), [])
+        self.assertEqual(vp.missing_chapter_fields("# 章\n\n本章回答：问题。\n"), ["逻辑路径", "情绪方向"])
 
 
 class ConfirmationDigestVersionTests(unittest.TestCase):
@@ -221,6 +308,21 @@ class DesignReviewStoreTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.tmp.cleanup()
 
+    def test_open_comments_on_calibration_samples_are_listed_separately(self) -> None:
+        sample = self.project / "deck" / "review" / "calibration" / "CAL-cover.png"
+        sample.parent.mkdir(parents=True)
+        sample.write_bytes(png(shade=90))
+        write_json(sample.parent / "review-manifest.json", {
+            "kind": "design_calibration", "created_at": "2026-10-30T10:00:00Z",
+            "pages": [{"slide_id": "CAL-cover", "png_path": "deck/review/calibration/CAL-cover.png", "text_boxes": []}],
+        })
+        box = {"x": 10, "y": 10, "w": 200, "h": 100}
+        self.store.create({"slide": "S01", "rect": box, "text": "正式页意见"})
+        cal = self.store.create({"slide": "CAL-cover", "rect": box, "text": "讲解词不该上屏"})
+        self.assertEqual([t["id"] for t in design_review.open_calibration_threads(self.project)], [cal["id"]])
+        self.store.set_status(cal["id"], "resolved", "Owner")
+        self.assertEqual(design_review.open_calibration_threads(self.project), [])
+
     def test_comment_records_box_anchor_crop_and_page_hash(self) -> None:
         thread = self.store.create({"slide": "S01", "rect": {"x": 150, "y": 190, "w": 500, "h": 100},
                                     "text": "标题和正文左缘没对齐", "crop": self.crop})
@@ -250,6 +352,25 @@ class DesignReviewStoreTests(unittest.TestCase):
         self.assertEqual([t["id"] for t in design_review.open_threads(self.project, "S01")], ["D-0001"])
         self.store.set_status(thread["id"], "resolved", "Owner")
         self.assertEqual(design_review.open_threads(self.project, "S01"), [])
+        self.store.set_status(thread["id"], "deleted", "Owner")
+        self.assertEqual(self.store.threads(), [])
+        self.assertEqual(self.store.load()["threads"][0]["status"], "deleted")
+
+
+class CommentDeleteTests(unittest.TestCase):
+    def test_deleted_threads_are_kept_but_hidden(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            draft = Path(tmp) / "content" / "draft" / "proposal-draft.md"
+            draft.parent.mkdir(parents=True)
+            draft.write_text(FEISHU_DRAFT, encoding="utf-8")
+            store = draft_studio.CommentStore(draft)
+            thread = store.create({"slide": "P01", "field": "P01:core", "quote": "长期", "text": "这句没有意义"}, 1)
+            store.set_status(thread["id"], "deleted", "Owner")
+            kept = store.load()["threads"][0]
+            self.assertEqual((kept["status"], kept["status_by"]), ("deleted", "Owner"))
+            self.assertEqual(draft_studio.review_record(store.load()["threads"]), "")
+            with self.assertRaises(draft_studio.EditError):
+                store.set_status(thread["id"], "gone", "Owner")
 
 
 class DesignReviewServerTests(StudioServerCase):

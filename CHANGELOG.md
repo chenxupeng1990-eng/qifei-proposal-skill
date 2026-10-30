@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- 只改格式不再让已确认的章节退回待确认：确认指纹升到第 3 版，比对前抹掉加粗、全角半角冒号和空白差异；旧版本的确认记录从 `revisions/` 取出当时的版本按同样规则比较。全稿审查的章节字段同时接受 `本章回答：` 和 `**本章回答：**` 两种写法，与母稿格式说明一致。
+- 工作台可以逐页确认：每页有"确认本页"，一章的页面全部确认后自动生成整章确认；改某一页只撤回这一页。
+- 评论可以删除（母稿工作台和设计评审页）：删除后不再显示、不进导出，但保留在评论文件里作为记录。
+- 设计校准样张可以评论：`capture_calibration_pngs.mjs` 截取样张，在设计评审页拉框评论；校准页有未解决的评论时不能放行。
+- 设计校准加门禁：样张上不能出现母稿字段名和内部审慎用语；放行前要有 `evidence/calibration-production-check.md`，逐张对照正式生产要求；阶段包 06 要求先读正式生产规则再做样张。
+- 产品图规则给出标准写法：官方产品图作为参考图进入生图，包装和包装上的 Logo 保持原样；页面上单独放的品牌 Logo 不让生图模型画，出图后用官方文件叠上去；`DESIGN.md` 和品牌视觉审计里出现"产品图只能后期贴回""生成图只承担场景"这类写法会被拦下。
+- 新增任务性质 `task_nature`：`persuasive`（提案，默认）和 `visual_showcase`（品牌手册、视觉画册）。视觉表现型默认整页直接生图（`render_route: image_full`），文字一并画入，不要求章节说服字段；生成后把图上读出的文字写进 `deck/review/image-text/<页面>.json`，拼装和终检按它逐行比对母稿，出错的字局部重生成；doctor 为它增加 `image_edit`（局部编辑）能力项。
+- 启动时检查更新：`doctor.py` 每天最多一次查看 GitHub 最新版本，有新版本时输出一行大白话提示，由 Agent 转告用户；用户说"更新提案 skill"时运行 `update_skill.py run`。安装时写入版本记录（`.install.json`），安装后自检失败自动恢复旧版本；`update_skill.py off` 关闭检查；由 magpie 管理的副本提示用 magpie 更新。
 - 能力缺失不再默认降级：`doctor.py --project` 把可补齐的缺口（图像生成、看图、本地 Node/浏览器）逐项列成 `GAP`，每项带问题和补齐办法，记入 `project-state.json` 的 `runtime`；Agent 先问用户能否补齐，用户明确选择暂不补齐时用 `--accept-gap <缺口> --by <Owner>` 记录。项目离开需求阶段时，`validate_project.py` 要求每个缺口已补齐或有 Owner 的接受记录。飞书和原生浏览器评论有内置等价方案，不算缺口。
 - `doctor.py` 不再把 Agent 自己的能力误判为没有：Python 脚本看不到 Agent 的工具，之前只认环境变量，导致有生图、看图能力的 Agent 也被报"没有已登记的图像生成适配器 / 视觉理解适配器 / Codex 原生评论"。现在由 Agent 声明：`--image-provider <名称>`、`--visual-understanding`、`--native-comments`；`--remember` 保存到本机 `~/.qifei-proposal/runtime.json`，`--forget` 清除；优先级为本次声明、环境变量、已保存的声明。自动识别宿主（Claude Code、Codex），报告里注明每项能力的来源。声明不放松任何门禁。
 

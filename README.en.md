@@ -262,6 +262,15 @@ python3 skills/qifei-proposal-v2/scripts/memory_box.py
 
 On Windows replace `python3` with `py -3` or `python`, and quote paths that contain spaces or non-ASCII characters.
 
+### 5. Updating
+
+No commands to remember. When a newer release is out, the agent mentions it at the start of a task (at most once a day); say "update the proposal skill" and it updates for you. Only the Skill folders are replaced: projects and proposal memory are untouched, and a new copy that fails its self-check is rolled back. To run it yourself:
+
+```bash
+python3 ~/.codex/skills/qifei-proposal-v2/scripts/update_skill.py run   # update
+python3 ~/.codex/skills/qifei-proposal-v2/scripts/update_skill.py off   # stop checking
+```
+
 <a id="runtime"></a>
 
 ## Runtime tiers: not tied to a Codex subscription

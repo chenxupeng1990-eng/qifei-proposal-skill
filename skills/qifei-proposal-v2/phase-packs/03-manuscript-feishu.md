@@ -7,7 +7,7 @@
 ## 必须读取
 
 - [../references/feishu-proposal-draft-format.md](../references/feishu-proposal-draft-format.md)
-- [../references/proposal-persuasion-gate.md](../references/proposal-persuasion-gate.md)：成稿时逐页按说服力合同写，内部审慎语言不上屏。
+- [../references/proposal-persuasion-gate.md](../references/proposal-persuasion-gate.md)：成稿时逐页按说服力合同写，内部审慎语言不上屏。视觉表现型任务（`visual_showcase`）不套说服力合同，章节也不写“本章回答 / 逻辑路径 / 情绪方向”；上屏文字要短，因为它会和设计要求一起交给生图模型画出来。
 - [../references/cross-page-semantic-qa.md](../references/cross-page-semantic-qa.md)
 - [../references/writing-style-and-humanization.md](../references/writing-style-and-humanization.md)
 - 选用飞书但飞书不可用或授权失败时读取 [../references/environment-degradation.md](../references/environment-degradation.md)。

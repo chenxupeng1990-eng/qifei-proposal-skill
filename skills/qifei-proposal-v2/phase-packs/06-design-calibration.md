@@ -11,6 +11,7 @@
 - [../references/design-and-generation.md](../references/design-and-generation.md)：跨阶段视觉不变量。
 - [../references/design-calibration-contract.md](../references/design-calibration-contract.md)
 - [../references/design-system-contract.md](../references/design-system-contract.md)
+- [../references/page-production-loop.md](../references/page-production-loop.md)：**正式生产的设计要求**。校准页就是后续正式页的母版，做样张前先读，每张样张按正式页的要求做（整页底图＋文字层、文字区、参考图与产品规则），不能先做一套“好看但生产做不出来”的样稿。
 - 所需视觉能力不可用时读取 [../references/environment-degradation.md](../references/environment-degradation.md)。
 
 ## 自适应档位
@@ -19,8 +20,9 @@
 
 ## 必须产出
 
-- `deck/design-calibration.html`。
-- 浏览器逐页评论与修订结果。
+- `deck/design-calibration.html`：每张样张是一个 16:9 的 `data-design-sample="<类型>"` 元素。
+- 校准页评论：运行 `node scripts/capture_calibration_pngs.mjs <项目>` 截取样张，Owner 在工作台的“设计评审”页（`/design`）拉框评论；样张 id 为 `CAL-<类型>`。改完重新截取，评论全部解决后才能批准。
+- `evidence/calibration-production-check.md`：逐张样张对照正式生产要求（整页底图、文字区与组件、参考图与产品、是否只有上屏内容），每种样张类型一行。
 - `DESIGN.md`。
 - `deck/design-tokens.json`。
 
@@ -34,6 +36,13 @@
 - 确认后的校准页就是对应页面类型的**母版**；`DESIGN.md` 写明每类页面用哪张母版，正式生产时按母版生图。
 - `DESIGN.md` 只规定底图的构图、留白和文字区规则，不能给任何页面类型开“纯 HTML”或“配图框”例外。
 
+## 样张上只放上屏内容
+
+- 样张文字只取母稿的 `PPT上屏内容`。核心内容、逻辑展开、讲解方向、策略与过桥、视觉生成建议、证据与来源都不上样张。
+- 审慎用语（“不等于”“不代表”“仅供参考”等）同正式页一样不上屏。
+- 给评审看的样张说明放在 `data-screen-ignore` 元素里，校验时跳过。
+- 校验器会拦：样张里出现母稿字段名、出现审慎用语。
+
 ## 放行
 
-当前档位全部设计风险已覆盖，Owner逐类确认，批准记录匹配。
+当前档位全部设计风险已覆盖；校准页没有未解决的评论；`evidence/calibration-production-check.md` 覆盖全部样张类型；Owner逐类确认，批准记录匹配。

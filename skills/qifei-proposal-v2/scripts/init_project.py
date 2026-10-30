@@ -51,6 +51,13 @@ def parse_args() -> argparse.Namespace:
         help="Governance scope for a full deck or a bounded content module",
     )
     parser.add_argument(
+        "--task-nature",
+        choices=("persuasive", "visual_showcase"),
+        default="persuasive",
+        help="persuasive: proposals and pitches; visual_showcase: brand books and visual albums "
+             "(whole pages drawn by the image generator, no persuasion-chain gates)",
+    )
+    parser.add_argument(
         "--deliverable-level",
         choices=("content", "slides", "export"),
         help="Stop at confirmed content, reviewed slides, or final export",
@@ -170,6 +177,7 @@ def main() -> int:
     state = json.loads(state_path.read_text(encoding="utf-8"))
     state.update({
         "task_mode": args.task_mode,
+        "task_nature": args.task_nature,
         "deliverable_level": deliverable_level,
         "content_authority": content_authority,
         "module_context": None,
@@ -208,7 +216,7 @@ def main() -> int:
             shutil.copy2(source, target / relative)
     print(f"Initialized proposal project: {target}")
     print(f"Project id: {project_id}")
-    print(f"Task mode: {args.task_mode}; deliverable level: {deliverable_level}")
+    print(f"Task mode: {args.task_mode}; task nature: {args.task_nature}; deliverable level: {deliverable_level}")
     print(f"Created {len(created)} template file(s).")
     return 0
 

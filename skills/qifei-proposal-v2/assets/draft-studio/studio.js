@@ -230,8 +230,10 @@
       return `<div class="confirm-row"><span class="chip st-confirmed">${esc(s.chapter_id)} 已确认</span><span class="muted">${esc(s.record.by)} · ${String(s.record.at).replace("T", " ").slice(0, 16)} · rev ${s.record.revision}</span></div>`;
     }
     const again = s.record ? '<span class="chip st-modified">确认后有修改，需要重新确认</span>' : "";
+    const pagesDone = ch.slides.filter((x) => x.status === "confirmed").length;
+    const progress = pagesDone ? `<span class="muted">已逐页确认 ${pagesDone}/${ch.slides.length}</span>` : "";
     if (!live) return `<div class="confirm-row">${again || `<span class="chip st-pending">${esc(s.chapter_id)} 待确认</span>`}</div>`;
-    return `<div class="confirm-row">${again}<button type="button" class="btn primary" data-confirm-chapter="${esc(s.chapter_id)}" ${s.reason ? "disabled" : ""}>确认 ${esc(s.chapter_id)}</button>${s.reason ? `<span class="muted">${esc(s.reason)}</span>` : ""}</div>`;
+    return `<div class="confirm-row">${again}<button type="button" class="btn primary" data-confirm-chapter="${esc(s.chapter_id)}" ${s.reason ? "disabled" : ""}>确认 ${esc(s.chapter_id)} 全部页</button>${progress}${s.reason ? `<span class="muted">${esc(s.reason)}</span>` : ""}</div>`;
   }
 
   async function authorityPost(path, body, okText) {
@@ -241,7 +243,8 @@
       if (!res.ok) { toast(data.error || "没有成功"); return; }
       model = data.model;
       rerender();
-      toast(data.registration_pending ? `${okText}；尚未登记：${data.registration_pending}` : okText, "ok");
+      const text = body.slide_id && data.confirmed ? `${okText}，${data.confirmed.chapter_id} 的页面已全部确认` : okText;
+      toast(data.registration_pending ? `${text}；尚未登记：${data.registration_pending}` : text, "ok");
     } catch (_) { toast("连接不到工作台服务"); }
   }
 
@@ -289,8 +292,11 @@
         : "";
       doc.push(`<section class="chapter" id="${ch.id}" data-chapter><div class="chapter-head"><div class="chapter-kicker">Chapter ${String(ci + 1).padStart(2, "0")}</div><h2>${inline(ch.title)}</h2>${chapterConfirm(ch)}<div class="chapter-intro"><div class="field-body md" data-field="intro:${ch.id}">${block(ch.intro_md)}</div>${ch.intro_span ? editBtn(`data-edit="intro" data-chapter="${ch.id}"`, "编辑本章说明") : ""}</div>${chain}</div>`);
       ch.slides.forEach((s) => {
+        const pageConfirm = live && ch.studio && ch.studio.chapter_id && s.status !== "confirmed"
+          ? `<button type="button" class="btn small" data-confirm-slide="${s.id}">确认本页</button>`
+          : "";
         const tools = live
-          ? `<div class="slide-tools">${editBtn(`data-edit="title" data-slide="${s.id}"`, "改标题")}${s.body_md != null ? editBtn(`data-edit="body" data-slide="${s.id}"`, "编辑本页源文") : ""}</div>`
+          ? `<div class="slide-tools">${editBtn(`data-edit="title" data-slide="${s.id}"`, "改标题")}${s.body_md != null ? editBtn(`data-edit="body" data-slide="${s.id}"`, "编辑本页源文") : ""}${pageConfirm}</div>`
           : "";
         doc.push(`<article class="slide" id="${anchor(s.id)}" data-slide-id="${s.id}"><div class="slide-head"><span class="slide-id">${s.id}</span><h3 class="slide-title" data-field="title:${s.id}">${inline(s.title)}</h3>${chip(s.status)}</div>${tools}<div class="slide-body${s.body_md != null ? " field-body" : ""}" data-field="body:${s.id}">${s.fields.map((f) => fieldHtml(f, s)).join("")}</div></article>`);
       });
@@ -597,6 +603,8 @@
   async function loadComments(announce) {
     const before = new Map(comments.threads.map((t) => [t.id, t.messages.length]));
     comments = await api("/api/comments");
+    // A deleted thread stays in comments.json as a record, but no longer shows anywhere.
+    comments.threads = comments.threads.filter((t) => t.status !== "deleted");
     if (announce) {
       for (const t of comments.threads) {
         const last = t.messages[t.messages.length - 1];
@@ -736,6 +744,7 @@
           <button type="button" data-card-nav="next" title="下一条">⌄</button>
           <button type="button" data-card-nav="prev" title="上一条">⌃</button>
           <button type="button" data-card-status="${resolved ? "open" : "resolved"}" title="${resolved ? "重新打开" : "解决"}">${resolved ? "↺" : "✓"}</button>
+          <button type="button" data-card-status="deleted" title="删除这条评论">🗑</button>
           ${isActive ? '<button type="button" class="collapse" data-card-collapse title="收起（Esc）">收起</button>' : ""}
         </span>
       </div>
@@ -941,12 +950,13 @@
   }
 
   async function setStatus(id, status) {
+    if (status === "deleted" && !window.confirm(`删除评论 ${id}？删除后不再显示，comments.json 里仍保留记录。`)) return;
     try {
       await api("/api/comments/status", { id, status, author });
-      if (status === "resolved") activeThread = null;
+      if (status !== "open") activeThread = null;
       if (status === "resolved" && filterMode === "open") toast("已决定的意见在“全部”或“已决定”里可以回看");
       await loadComments(false);
-      toast(status === "resolved" ? `${id} 已解决` : `${id} 已重新打开`, "ok");
+      toast({ resolved: `${id} 已解决`, deleted: `${id} 已删除`, open: `${id} 已重新打开` }[status], "ok");
     } catch (err) { toast(err.message); }
   }
 
@@ -990,6 +1000,12 @@
         if (window.confirm(`确认 ${id} 的全部 ${n} 页？\n确认会记录每一页当前的内容；之后再修改，这一章会自动退回待确认。`)) {
           authorityPost("/api/confirm", { chapter_id: id, author }, `${id} 已确认`);
         }
+        return;
+      }
+      const pageBtn = e.target.closest("[data-confirm-slide]");
+      if (pageBtn) {
+        const id = pageBtn.dataset.confirmSlide;
+        authorityPost("/api/confirm", { slide_id: id, author }, `${id} 已确认`);
         return;
       }
       if (e.target.closest("[data-register]")) { authorityPost("/api/register", {}, "已登记当前版本"); return; }

@@ -22,6 +22,8 @@ def load_doctor_module():
     return module
 os.environ["QIFEI_MEMORY_HOME"] = tempfile.mkdtemp(prefix="qifei-memory-test-")  # never read or write real memory
 os.environ["QIFEI_RUNTIME_FILE"] = str(Path(tempfile.mkdtemp(prefix="qifei-runtime-test-")) / "runtime.json")  # never the real one
+os.environ["QIFEI_UPDATE_CHECK"] = "0"  # no network in tests
+os.environ["QIFEI_HOME"] = tempfile.mkdtemp(prefix="qifei-home-test-")
 
 
 class RuntimeDoctorTests(unittest.TestCase):
@@ -228,6 +230,12 @@ class CapabilityGapTests(unittest.TestCase):
         self.assertTrue(all(g["question"] and len(g["options"]) >= 3 for g in gaps))
         self.assertEqual(self.doctor.capability_gaps({"image_generation": True, "visual_understanding": True,
                                                       "node": True, "npm": True, "browser": True}), [])
+
+    def test_region_editing_is_asked_only_for_visual_showcase_tasks(self) -> None:
+        full = {"image_generation": True, "visual_understanding": True, "node": True, "npm": True, "browser": True}
+        self.assertEqual(self.doctor.capability_gaps(full), [])
+        self.assertEqual([g["id"] for g in self.doctor.capability_gaps(full, "visual_showcase")], ["image_edit"])
+        self.assertEqual(self.doctor.capability_gaps({**full, "image_edit": True}, "visual_showcase"), [])
 
     def test_unasked_gaps_block_leaving_intake_until_filled_or_accepted_by_the_owner(self) -> None:
         report = self.doctor.build_report({"filesystem": True, "node": True, "npm": True, "browser": True}, "full_deck")

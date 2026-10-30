@@ -35,6 +35,28 @@
 - Image2不生成精确正文、数据表、图表标签和需要严密核对的多步关系；
 - HTML负责准确文字、数据、表格、时间线、流程和关系标注，但不能独立承担整页审美。
 
+## 整页生图页面（render_route: image_full）
+
+视觉表现型任务（`task_nature: visual_showcase`）的默认路线；说服型任务里只有带 Owner 批准的 `route_exception` 才能用。
+
+1. **出图**：把本页冻结的上屏文字（逐字）和设计要求（母版、文字位置、字体气质、留白）一起写进提示词，参考图仍是同类母版和官方产品图。deck-spec 里登记 `render_route: "image_full"`、`visual_mode: "background"`。
+2. **核对文字**：出图后由能看图的 Agent（或 OCR）逐行读出图上的文字，写进 `deck/review/image-text/<页面ID>.json`：
+
+   ```json
+   {
+     "slide_id": "P03",
+     "png_sha256": "<这张最终图的 SHA256>",
+     "recognized_lines": ["图上读到的第一行", "第二行"],
+     "fixes": [{"region": {"x": 820, "y": 140, "w": 420, "h": 90}, "before": "错字", "after": "正字"}],
+     "checked_by": "Agent 名称",
+     "checked_at": "2026-10-30T10:00:00+08:00"
+   }
+   ```
+
+   `recognized_lines` 必须是真实读出的文字，不是把母稿抄一遍。
+3. **修字**：有错字、漏字、多字，框出出错区域，用生图工具的局部编辑（蒙版重绘）只重画这一块；修完重新读一遍，把修过的区域写进 `fixes`，`png_sha256` 换成修好后的图。生图工具不支持局部编辑时，按 doctor 的 `image_edit` 缺口先问用户；用户接受降级才整页重生成。
+4. **进入成品库**：`manage_assembly_ready.py approve --direct-png <图> --slide-id <页面ID>` 会用这份记录逐行比对母稿上屏文字，图换过或文字不一致都会被拦下。`final_check.py` 同样按这份记录核对；导出的 PPTX 里这些页是整页图片，跳过文字比对。
+
 ## 固定画布
 
 - 导出画布固定为1920×1080、16:9；

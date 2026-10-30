@@ -79,7 +79,7 @@
       ${t.anchor ? `<div class="dcard-anchor">“${esc(t.anchor.text)}”</div>` : ""}
       ${messages}
       <textarea rows="2" placeholder="回复…"></textarea>
-      <div class="d-actions">${toggle}<button type="button" class="btn primary" data-reply>回复</button></div>
+      <div class="d-actions"><button type="button" class="btn ghost" data-status="deleted" title="删除这条评论">删除</button>${toggle}<button type="button" class="btn primary" data-reply>回复</button></div>
     </div>`;
   }
 
@@ -194,6 +194,7 @@
     }
     const status = event.target.closest("[data-status]");
     if (status) {
+      if (status.dataset.status === "deleted" && !window.confirm(`删除评论 ${id}？删除后不再显示，记录仍保留在文件里。`)) return;
       try { threads = (await api("/api/design/status", { id, status: status.dataset.status, author })).threads; render(); } catch (error) { toast(error.message); }
       return;
     }

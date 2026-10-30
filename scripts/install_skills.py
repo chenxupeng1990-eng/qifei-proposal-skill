@@ -4,11 +4,13 @@
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -62,6 +64,25 @@ def validate_skill(skill: Path, expected_name: str) -> None:
         raise SystemExit(f"Invalid Skill metadata for {expected_name}: {entrypoint}")
 
 
+def install_record() -> dict:
+    """Which release this copy is and where it came from, so the Skill can check for updates later."""
+    version_file = ROOT / "VERSION"
+    return {
+        "version": version_file.read_text(encoding="utf-8").strip() if version_file.is_file() else None,
+        "source": "git" if (ROOT / ".git").exists() else "archive",
+        "source_path": str(ROOT),
+        "installed_at": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
+    }
+
+
+def self_check(target: Path) -> None:
+    """The freshly installed suite must pass its own dependency check, or the install is rolled back."""
+    checker = target / "qifei-proposal-v2" / "scripts" / "check_suite_dependencies.py"
+    completed = subprocess.run([sys.executable, str(checker), "--skills-root", str(target)], check=False)
+    if completed.returncode:
+        raise SystemExit("Installed suite failed its self-check; the previous version was restored.")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -107,11 +128,13 @@ def main() -> int:
     backup = transaction / "backup"
     installed: list[str] = []
     moved_backups: list[str] = []
+    record = install_record()
     try:
         for name, source in sources.items():
             stage = staged / name
             shutil.copytree(source, stage, ignore=ignore)
             validate_skill(stage, name)
+            (stage / ".install.json").write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             if not args.skip_deps:
                 install_dependencies(stage)
         for name, destination in destinations.items():
@@ -122,6 +145,7 @@ def main() -> int:
             os.replace(staged / name, destination)
             installed.append(name)
             print(f"Installed {name} -> {destination}")
+        self_check(target)
     except BaseException:
         for name in reversed(installed):
             destination = destinations[name]

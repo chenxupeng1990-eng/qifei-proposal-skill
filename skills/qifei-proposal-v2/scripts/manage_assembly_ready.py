@@ -194,6 +194,12 @@ def approve(args: argparse.Namespace, project: Path) -> int:
         else:
             source_png = direct_png
             source_type = "direct_png"
+            if deck_slides[slide_id].get("render_route") == "image_full":
+                import screen_text
+
+                text_problems = screen_text.image_text_problems(project, slide_id, direct_png)
+                if text_problems:
+                    raise SystemExit("Text drawn in the image differs from the frozen draft:\n" + "\n".join(text_problems))
             source_path = str(source_png.relative_to(project)).replace("\\", "/")
         destination = ready_dir / f"{safe_name(slide_id)}.png"
         temp = destination.with_name(f".{destination.name}.tmp")

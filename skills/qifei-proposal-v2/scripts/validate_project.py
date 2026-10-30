@@ -7,9 +7,11 @@ import argparse
 import hashlib
 import json
 import re
+from html.parser import HTMLParser
 from pathlib import Path
 
-from draft_studio import check_format, studio_evidence_errors
+import design_review
+from draft_studio import SCREEN_CAUTION, check_format, studio_evidence_errors
 from proposal_memory import memory_enabled, memory_for_phase, read_signals_receipt, receipt_problem, write_receipt
 from validate_assembly_ready import validate_assembly_ready
 from validate_deck_spec import png_has_alpha
@@ -144,6 +146,17 @@ PLACEHOLDER_PHASES = {
 }
 
 
+
+CHAPTER_FIELDS = ("本章回答", "逻辑路径", "情绪方向")
+
+
+def missing_chapter_fields(text: str) -> list[str]:
+    """Bold or plain, either colon: "**本章回答：**" and "本章回答：" are the same field."""
+    return [
+        marker for marker in CHAPTER_FIELDS
+        if not re.search(rf"(?m)^\s*(?:[-*]\s+)?(?:\*\*)?\s*{marker}\s*(?:\*\*)?\s*[：:]", text)
+    ]
+
 def load_json(path: Path) -> dict:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -239,7 +252,113 @@ def design_content_errors(text: str) -> list[str]:
         ("孤字" in text and "对齐" in text and re.search(r"压(在|纹理)", text),
          "视觉 QA 清单（孤字、对齐、文字压纹理等逐页检查项）"),
     ]
-    return [f"Approved DESIGN.md does not fix {label}" for ok, label in checks if not ok]
+    errors = [f"Approved DESIGN.md does not fix {label}" for ok, label in checks if not ok]
+    errors.extend(product_image_rule_errors(text, "DESIGN.md"))
+    return errors
+
+
+def expression_choice_errors(brief_text: str, task_nature: str | None) -> list[str]:
+    """The brief records the user's choice of expression; project-state.json.task_nature must say the same."""
+    line = re.search(r"表达方式[：:]\s*(.+)", brief_text)
+    if not line:
+        return []  # briefs written before the choice was asked
+    chosen = line.group(1)
+    picked = {"visual_showcase"} if "视觉表现" in chosen else set()
+    picked |= {"persuasive"} if "强逻辑" in chosen else set()
+    if len(picked) != 1:
+        return ["proposal brief 表达方式 must name one choice: 强逻辑叙述 or 视觉表现力"]
+    expected = picked.pop()
+    if (task_nature or "persuasive") != expected:
+        return [f"proposal brief chose {chosen.strip()[:20]} but project-state.json task_nature is {task_nature or 'persuasive'}; "
+                f"set task_nature to {expected}"]
+    return []
+
+
+# Draft fields that never go on screen; seeing their label on a sample means the draft was pasted in.
+OFF_SCREEN_LABELS = ("核心内容", "逻辑展开", "讲解方向", "讲解词", "演讲任务", "策略与过桥", "视觉生成建议", "证据与来源")
+VOID_TAGS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
+
+
+class SampleText(HTMLParser):
+    """Visible text inside each [data-design-sample] element, skipping [data-screen-ignore] parts."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.samples: list[tuple[str, list[str]]] = []
+        self.stack: list[str] = []  # "sample", "skip" or "" per open element
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in VOID_TAGS:
+            return
+        names = dict(attrs)
+        if tag in {"script", "style"} or "data-screen-ignore" in names:
+            self.stack.append("skip")
+        elif "data-design-sample" in names and "sample" not in self.stack:
+            self.samples.append((str(names["data-design-sample"]), []))
+            self.stack.append("sample")
+        else:
+            self.stack.append("")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag not in VOID_TAGS and self.stack:
+            self.stack.pop()
+
+    def handle_data(self, data: str) -> None:
+        if "sample" in self.stack and "skip" not in self.stack and data.strip():
+            self.samples[-1][1].append(data.strip())
+
+
+CALIBRATION_CHECK = "evidence/calibration-production-check.md"
+
+
+def calibration_production_check_errors(project: Path, calibration: dict, sample_types: tuple[str, ...]) -> list[str]:
+    """Before the calibration is approved, each sample is checked against the formal production rules
+    (page-production-loop.md), so a sample that production could not follow is not frozen as a master."""
+    path, error = registered_project_file(project, calibration.get("production_check_path") or CALIBRATION_CHECK, "evidence")
+    if error or not path:
+        return [f"design_calibration.production_check_path: {error or 'missing'} "
+                f"(write {CALIBRATION_CHECK}: each sample against the formal production rules)"]
+    text = path.read_text(encoding="utf-8")
+    return [f"Calibration production check does not cover sample type: {sample_type}"
+            for sample_type in sample_types if sample_type not in text]
+
+
+def calibration_screen_errors(html: str) -> list[str]:
+    """A calibration sample carries only on-screen text: no draft field labels, no internal caution
+    wording. Notes for the reviewer go in an element marked data-screen-ignore."""
+    parser = SampleText()
+    parser.feed(html)
+    errors = []
+    for sample_type, chunks in parser.samples:
+        text = "\n".join(chunks)
+        for label in OFF_SCREEN_LABELS:
+            if label in text:
+                errors.append(f"Design calibration sample {sample_type} shows the draft field label {label}; "
+                              "only PPT上屏内容 goes on a sample (reviewer notes go in data-screen-ignore)")
+        for phrase in sorted({m.group(0) for m in SCREEN_CAUTION.finditer(text)}):
+            errors.append(f"Design calibration sample {sample_type} shows internal caution wording \"{phrase}\"; keep it off screen")
+    return errors
+
+
+# Wording that keeps official product images out of generation (see design-and-generation.md §7).
+PRODUCT_POST_ONLY = re.compile(
+    r"产品(?:图|包装)?[^。\n]{0,20}(?:只能|仅|一律|统一)[^。\n]{0,12}(?:后期|贴回|后贴|合成|叠加)"
+    r"|生成图只(?:承担|负责)[^。\n]{0,6}(?:场景|背景|材质)"
+)
+
+
+def product_image_rule_errors(text: str, label: str) -> list[str]:
+    """Official product images go into generation as references; only the Logo is laid on afterwards.
+    A rule that sends every product image to post-production, or leaves "产品图" without saying it
+    is a generation reference, makes products float over the scene without shared light."""
+    errors = []
+    match = PRODUCT_POST_ONLY.search(text)
+    if match:
+        errors.append(f"{label} keeps product images out of generation (\"{match.group(0)}\"); "
+                      "official product images go in as generation references, only the Logo is laid on afterwards")
+    elif "产品图" in text and not re.search(r"产品图[^。\n]{0,40}参考图|参考图[^。\n]{0,40}产品图", text):
+        errors.append(f"{label} mentions 产品图 without saying they enter generation as reference images")
+    return errors
 
 
 VISUAL_REVIEW_ITEMS = ("single_focus", "orphans", "alignment", "text_on_texture", "overflow", "hierarchy")
@@ -418,9 +537,9 @@ def validate_verified_feishu_draft(project: Path, state: dict, chapters: list[di
         for issue in check_format(snapshot_text):
             errors.append(f"{issue['page']}: draft format: {issue['message']}")
     if snapshot_text:
-        for marker in ("**本章回答：**", "**逻辑路径：**", "**情绪方向：**"):
-            if marker not in snapshot_text:
-                errors.append(f"verified Feishu proposal draft is missing chapter field: {marker}")
+        # A visual_showcase task (brand book) has no persuasion chain to declare per chapter.
+        for marker in missing_chapter_fields(snapshot_text) if state.get("task_nature") != "visual_showcase" else []:
+            errors.append(f"verified Feishu proposal draft is missing chapter field: {marker}")
         for slide_id in expected_slide_ids:
             match = re.search(
                 rf"(?ms)^##\s+{re.escape(slide_id)}(?:\b|｜|\s).*?(?=^##\s+|^#\s+|\Z)",
@@ -578,6 +697,7 @@ def validate_project(project: Path) -> list[str]:
             brief_text = brief_path.read_text(encoding="utf-8")
             if any(marker in brief_text for marker in ("待确认", "待填写")):
                 errors.append("Approved proposal brief still contains unresolved placeholder markers")
+            errors.extend(expression_choice_errors(brief_text, state.get("task_nature")))
         for gate in ("brief_grill", "proposal_brief"):
             if not is_approved(approvals, gate):
                 message = f"Phase {phase} requires approved gate: {gate}"
@@ -651,6 +771,9 @@ def validate_project(project: Path) -> list[str]:
                 marker_single = f"data-design-sample='{sample_type}'"
                 if marker_double not in calibration_text and marker_single not in calibration_text:
                     errors.append(f"Design calibration is missing required sample type: {sample_type}")
+            errors.extend(calibration_screen_errors(calibration_text))
+            if phase_index >= PHASES.index("design_system"):
+                errors.extend(calibration_production_check_errors(project, calibration, required_types))
             if "content-visual-module" in required_types:
                 alpha_value = calibration.get("alpha_sample_path")
                 alpha_path, alpha_error = registered_project_file(project, alpha_value, "assets")
@@ -667,6 +790,8 @@ def validate_project(project: Path) -> list[str]:
             approval_id = str(calibration.get("approval_record_id") or "").strip()
             if is_approved(approvals, "design_calibration") and (not approval_id or approval.get("record_id") != approval_id):
                 errors.append("design_calibration.approval_record_id must match its approval record")
+            for thread in design_review.open_calibration_threads(project):
+                errors.append(f"design calibration sample {thread['slide']} has an open design comment {thread['id']}; resolve it before approving")
     if phase_index >= PHASES.index("generation"):
         for relative in ("deck/deck-spec.json", "deck/slide-contracts.json", "deck/design-tokens.json"):
             if not (project / relative).is_file():
@@ -707,6 +832,7 @@ def validate_project(project: Path) -> list[str]:
                     errors.append(f"Brand visual audit does not cite source id: {source_id}")
             if any(marker in audit_text for marker in ("待确认", "待填写")):
                 errors.append("Approved brand visual audit still contains unresolved placeholder markers")
+            errors.extend(product_image_rule_errors(audit_text, "Brand visual audit"))
 
         for gate in ("brand_visual_sources", "brand_visual_audit"):
             if not is_approved(approvals, gate):
