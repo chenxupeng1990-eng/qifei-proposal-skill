@@ -14,8 +14,8 @@
 </p>
 
 <p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.3.1-ff5f4d">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-195%20passing-1f8b4c">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.3.2-ff5f4d">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-211%20passing-1f8b4c">
   <img alt="Python" src="https://img.shields.io/badge/Python-3.9%2B-3776ab">
   <img alt="Node" src="https://img.shields.io/badge/Node.js-18%2B-339933">
   <img alt="Platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-111827">
@@ -343,7 +343,7 @@ docs/readme-assets/                  本页图片
 
 ## 当前状态
 
-v0.3.1 已发布在 [`codex/qifei-proposal-base`](https://github.com/chenxupeng1990-eng/qifei-proposal-skill/tree/codex/qifei-proposal-base)。本仓库的 195 个 Python 测试和发布自检（`python3 scripts/self_test.py`）全部通过；母稿工作台、设计评审和记忆库都在模拟项目上用浏览器走过完整流程。欢迎用真实任务测试并反馈。
+v0.3.2 已发布在 [`codex/qifei-proposal-base`](https://github.com/chenxupeng1990-eng/qifei-proposal-skill/tree/codex/qifei-proposal-base)，新增品牌手册这类视觉表现型 PPT 的整页生图路线，以及启动时的更新提醒。本仓库的 211 个 Python 测试和发布自检（`python3 scripts/self_test.py`）全部通过；母稿工作台、设计评审和记忆库都在模拟项目上用浏览器走过完整流程。欢迎用真实任务测试并反馈。
 
 <a id="license"></a>
 
