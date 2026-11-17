@@ -95,7 +95,8 @@
       "type": "object",
       "properties": {
         "checked_at": {"type": "string"}, "agent_host": {"type": ["string", "null"]},
-        "runtime_profile": {"type": "string"}, "gaps": {"type": "array", "items": {"type": "string"}}
+        "runtime_profile": {"type": "string"}, "gaps": {"type": "array", "items": {"type": "string"}},
+        "declared": {"type": "object"}
       }
     },
     "runtime_decisions": {
@@ -174,7 +175,9 @@
         "source_ids": {"type": "array", "items": {"type": "string"}},
         "source_files": {"type": "array", "items": {"type": "string"}},
         "audit_path": {"type": "string"},
-        "design_incorporation_record_id": {"type": ["string", "null"]}
+        "design_incorporation_record_id": {"type": ["string", "null"]},
+        "logo_overlay": {"type": ["string", "null"]},
+        "logo_overlay_reason": {"type": ["string", "null"]}
       },
       "additionalProperties": false
     },

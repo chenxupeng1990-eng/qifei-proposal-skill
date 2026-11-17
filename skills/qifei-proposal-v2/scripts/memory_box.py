@@ -10,6 +10,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import secrets
 import sys
 import threading
@@ -210,12 +211,40 @@ def render_html(token: str) -> str:
             .replace("{{TOKEN_JSON}}", json.dumps(token)))
 
 
+def serve_detached(host: str, port: int) -> int:
+    """Start the box in its own session so the link still works after the agent's turn ends."""
+    import subprocess
+    import time
+    pm.init(None)
+    log_path = pm.memory_home() / "box-server.log"
+    command = [sys.executable, str(Path(__file__).resolve()), "--host", host, "--port", str(port)]
+    with log_path.open("w", encoding="utf-8") as log:
+        child = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                                 start_new_session=True)
+    for _ in range(100):
+        text = log_path.read_text(encoding="utf-8") if log_path.is_file() else ""
+        match = re.search(r"Memory box: (\S+)", text)
+        if match:
+            print(f"Memory box: {match.group(1)}  (pid {child.pid}, runs until stopped)")
+            print(f"Stop: kill {child.pid}")
+            return 0
+        if child.poll() is not None:
+            break
+        time.sleep(0.1)
+    print(f"Memory box did not start; see {log_path}", file=sys.stderr)
+    return 1
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8770)
     parser.add_argument("--open", action="store_true", help="open the page in the default browser")
+    parser.add_argument("--detach", action="store_true",
+                        help="keep running after the agent's turn ends; prints the address and the stop command")
     args = parser.parse_args()
+    if args.detach:
+        return serve_detached(args.host, args.port)
     pm.init(None)
     server = None
     for port in range(args.port, args.port + 20):

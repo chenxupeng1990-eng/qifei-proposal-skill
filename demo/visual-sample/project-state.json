@@ -11,7 +11,8 @@
     "source_ids": ["DEMO-BRAND-001"],
     "source_files": ["inputs/brand-official/demo-brand-reference.svg"],
     "audit_path": "evidence/brand-visual-audit.md",
-    "design_incorporation_record_id": "demo-brand-incorporation"
+    "design_incorporation_record_id": "demo-brand-incorporation",
+    "logo_overlay": "inputs/brand-official/demo-logo.svg"
   },
   "design_calibration": {
     "path": "deck/design-calibration.html",

@@ -22,6 +22,9 @@
 - 数据和比例由 HTML 在干净区域承担，图像不画定量条形或柱子；
 - 底图要能独立成立：去掉文字层后，它本身是一张有构图、光线和留白的完整画面，而不是纯色背景上放几张图；
 - 画面铺满整页：文字区是同一场景里的留白（墙面、天空、虚化的前后景、暗部），不是空白画布。空白底上横放一条图片带、或者只在中间放几个物体、其余全是平涂底色，都不算整页底图；
+- 出图记录（design loop 的 `visual`）写明三件事：`references`（这次传给生图的参考图路径）、`products`（画面里出现的产品，没有写空列表）、`edit_rounds`（这张底图局部编辑了几次）。画面里有产品时，参考图必须包含官方产品图（放在 `inputs/brand-official/` 或 `assets/brand/`），`validate_design_loop.py` 会检查。
+- 同一张底图局部编辑最多 2 轮。再要改，用原参考图一次性重新生成：反复局部重绘会让人物、产品发雾变软。检查成图时放大到原尺寸看人脸和产品，不只看缩略图。
+- HTML 文字层默认不加填充底色（标题承接区、数据区、脚注、页码都不加浅色底块），可读性靠底图留出的干净区域解决；确实需要底色时，写进 `DESIGN.md` 的文字层组件并说明用在哪些页。
 - 参考图数量受工具上限约束：通常是母版 1 张加本页实际出现的产品图，总数不超过生图工具允许的张数；
 - 同一张母版只沿用版式、文字区、光线和材质；每页的机位、空间和画面主体必须不同。母版画面里的产品不随参考图带入，提示词写明本页只出现哪些产品；
 - 身体护理类画面用手、手臂、肩颈局部和穿着衣物的人物，避免大面积裸露肌肤，否则容易被图像服务的安全系统拦截；
@@ -31,6 +34,7 @@
 - 放在方框、卡片、缩略图里的配图，以及无关背景、装饰纹理、为过门禁加的角标，都不计入视觉底线；
 - 机制图、无文字语义图标和透明PNG可以作为底图之上的补充，不能替代底图；
 - 个别页面确需其他路线时，在页面上登记 `route_exception`（`record_id`、`reason`），`record_id` 必须是 Owner 对该页的批准记录；`DESIGN.md` 或校准结论不能代替；
+- 纯 HTML/SVG 页（`render_route: "html_only"`，`visual_mode: "none"`）：适合数据表、规范类页面，不生图、出页快，导出矢量 PDF。它不是默认路线，每一页都要 Owner 批准的 `route_exception`；哪些页型默认走、全案比例上限多少，Owner 还没定。全案不能因此变成没有视觉的网页感；
 - 产品是场景主对象时，优先让真实产品参考与场景同光源、同透视、同接触阴影；
 - Image2不生成精确正文、数据表、图表标签和需要严密核对的多步关系；
 - HTML负责准确文字、数据、表格、时间线、流程和关系标注，但不能独立承担整页审美。
@@ -74,7 +78,7 @@
 
 全部正式页生产完、交 Owner 逐页确认之前，做一次独立视觉审查，要求和全稿审查相同：
 
-1. 先运行 `node scripts/check_page_layout.mjs <项目目录> <页面HTML...>`，生成 `reviews/visual/LAYOUT-CHECK.json`：孤字尾行、文字越界或被裁切、文字压在纹理上、左缘差几像素。脚本报出的问题先改掉。
+1. 先运行 `node scripts/check_page_layout.mjs <项目目录> <页面HTML...>`，生成 `reviews/visual/LAYOUT-CHECK.json`：孤字尾行、文字越界或被裁切、文字压在纹理上、左缘差几像素、字号不在字号表里、Logo 偏离槽位、文字或图形压住保护区。保护区由 Agent 放大看成图后手工标：在人脸、产品上放一个空的绝对定位元素 `<div data-keepout="人脸" data-screen-ignore style="…"></div>`，页面上的装饰图形加 `data-graphic`；标了才查得到，放大核对不能省。脚本报出的问题先改掉。
 2. 新开一个独立 Agent（新上下文或独立 API 调用）。只给它：提案意图一句话、`DESIGN.md` 第 14 节视觉 QA 清单、每页 PNG。不给生产过程、其他审查和批准记录。它的任务是找问题，不是确认。
 3. 报告写到 `reviews/visual/`，每页逐项给结论：`single_focus`、`orphans`、`alignment`、`text_on_texture`、`overflow`、`hierarchy`，并记录该页 PNG 的 SHA256、`review_agent_id`、`independent_agent: true`、`layout_check_report`。
 4. 在 `project-state.json.visual_review` 登记 `report_path`、`review_agent_id`、`independent_agent`。

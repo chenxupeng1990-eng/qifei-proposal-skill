@@ -316,6 +316,9 @@ class EndToEndExportTests(unittest.TestCase):
                     "asset_id": "e2e-visual",
                     "asset_path": "assets/approved/e2e-visual.png",
                     "prompt_record": "assets/image2/e2e-visual-prompt.md",
+                    "references": ["inputs/brand-official/demo-brand-reference.svg"],
+                    "products": [],
+                    "edit_rounds": 0,
                 },
                 "html_output": "deck/chapters/C1.html",
                 "validation": checks,
@@ -428,6 +431,21 @@ class EndToEndExportTests(unittest.TestCase):
                 str(project / "exports" / "proposal.pdf"),
             ]).stdout.strip()
             self.assertEqual(pdf_count, "2")
+            vector = project / "exports" / "proposal-vector.pdf"
+            vector_count = self.run_command([
+                "node", "--input-type=module", "-e",
+                (
+                    "import {readFileSync} from 'node:fs';"
+                    "import {PDFDocument} from 'pdf-lib';"
+                    "const p=await PDFDocument.load(readFileSync(process.argv[1]));"
+                    "console.log(p.getPageCount());"
+                ),
+                str(vector),
+            ]).stdout.strip()
+            self.assertEqual(vector_count, "2")
+            if shutil.which("pdftotext"):
+                text = subprocess.run(["pdftotext", str(vector), "-"], capture_output=True, text=True).stdout
+                self.assertIn("复杂营养价值", text)  # text is real text, not pixels
 
             deck = read_json(project / "deck" / "deck-spec.json")
             state = read_json(project / "project-state.json")

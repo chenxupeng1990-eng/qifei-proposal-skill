@@ -71,6 +71,8 @@ python3 scripts/doctor.py --project <项目目录> \
 - `--image-provider`：本 Agent 能调用的生图方式，如 `codex_builtin`、`magpie-image`、`openai_api`。
 - `--visual-understanding`：本 Agent 能读图并判断画面。
 - `--native-comments`：本 Agent 有 Codex 原生浏览器评论。
+- 同一个项目里声明过的能力会记在 `project-state.json` 的 `runtime.declared`，之后各阶段重跑 doctor 不用再声明，也不会再报成缺口。
+- doctor 列出缺口前会先提示 Agent 自查：自己有生图、看图工具时加参数重跑，不要把它当缺口问用户。Codex 的内置生图写 `--image-provider codex_builtin`。
 - `--remember`：把这次声明保存到 `~/.qifei-proposal/runtime.json`，之后在这台电脑上不传参数也有效；`--forget` 清除。保存的声明对这台电脑上的所有 Agent 生效，只保存每个 Agent 都具备的能力；某个 Agent 独有的能力，每次运行时声明。
 - 环境变量 `PROPOSAL_IMAGE_PROVIDER`、`PROPOSAL_VISUAL_UNDERSTANDING=1`、`PROPOSAL_CODEX_NATIVE_COMMENTS=1` 仍然有效，优先级在本次声明之后、已保存的声明之前。
 - 只声明真实可用的能力。声明只决定开工时的能力判断，不放松任何门禁：正式出图仍要登记提供方、模型、提示词、参考图和文件哈希；独立视觉审查仍要另一个 Agent 出具绑定截图哈希的报告；没有原生评论时，评审用绑定 PNG 哈希的评审记录，不能把本地检查说成原生评论确认。

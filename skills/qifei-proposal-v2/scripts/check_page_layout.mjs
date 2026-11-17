@@ -1,8 +1,10 @@
 // Measure low-level layout slips on rendered pages: orphan last lines, text running out of
-// its box or the canvas, text sitting on busy texture, and near-miss left edges.
+// its box or the canvas, text sitting on busy texture, near-miss left edges, font sizes outside the
+// type scale and a Logo away from its slot (both from deck/design-tokens.json when present), and text,
+// Logo or [data-graphic] overlapping a protected [data-keepout] area such as a face or a product.
 // Usage: node scripts/check_page_layout.mjs <project> <page.html> [more.html ...] [--out reviews/visual/LAYOUT-CHECK.json]
 // A page file may hold several `.slide-canvas[data-slide-id]` slides or be a single 1920×1080 page.
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { chromium } from 'playwright-core';
@@ -21,6 +23,14 @@ if (!project || !files.length) {
 const ORPHAN_MAX_CHARS = 3;
 const TEXTURE_MAX_BUSY = 4;
 const ALIGN_NEAR_MISS = [3, 14];
+const SIZE_TOLERANCE = 1;
+const LOGO_TOLERANCE = 4;
+
+// The type scale and Logo slot come from DESIGN.md's compiled tokens (design-tokens.json).
+const tokensPath = path.join(project, 'deck', 'design-tokens.json');
+const tokens = existsSync(tokensPath) ? JSON.parse(readFileSync(tokensPath, 'utf8')) : {};
+const scalePx = Object.values(tokens.type_scale || {}).map(level => Number(level && level.px)).filter(Boolean);
+const logoSlot = tokens.logo && tokens.logo.slot;
 
 function browserPath() {
   const candidates = [
@@ -81,13 +91,26 @@ function measure(rootSelector) {
     const overflowY = el.scrollHeight - el.clientHeight > 2 && /hidden|clip/.test(style.overflow + style.overflowY);
     blocks.push({
       text: ownText.slice(0, 40),
+      fontSize: parseFloat(style.fontSize),
       x: rect.left - canvas.left, y: rect.top - canvas.top, w: rect.width, h: rect.height,
       lines: lines.length, lastLineChars,
       outsideCanvas: rect.left < canvas.left - 1 || rect.top < canvas.top - 1 || rect.right > canvas.right + 1 || rect.bottom > canvas.bottom + 1,
       clipped: overflowX || overflowY,
     });
   }
-  return {width: canvas.width, height: canvas.height, blocks};
+  // Protected areas (faces, products) are marked by the agent as empty boxes with data-keepout="人脸" etc.
+  const keepouts = [...root.querySelectorAll('[data-keepout]')].map(k => {
+    const r = k.getBoundingClientRect();
+    return {label: k.dataset.keepout || '保护区', x: r.left - canvas.left, y: r.top - canvas.top, w: r.width, h: r.height};
+  });
+  const marks = [...root.querySelectorAll('[data-logo], [data-graphic]')].map(m => {
+    const r = m.getBoundingClientRect();
+    return {text: m.hasAttribute('data-logo') ? 'Logo' : (m.dataset.graphic || '图形'), x: r.left - canvas.left, y: r.top - canvas.top, w: r.width, h: r.height};
+  });
+  const logoEl = root.querySelector('[data-logo]');
+  const lr = logoEl && logoEl.getBoundingClientRect();
+  const logo = lr ? {x: lr.left - canvas.left, y: lr.top - canvas.top, w: lr.width, h: lr.height} : null;
+  return {width: canvas.width, height: canvas.height, blocks, logo, keepouts, marks};
 }
 
 function setTextHidden({rootSelector, hidden}) {
@@ -135,6 +158,24 @@ function problemsFor(slide, stds) {
     if (stds[i] > TEXTURE_MAX_BUSY && !/^\d{1,3}$/.test(b.text))  // page numbers excepted
       problems.push(`压纹理：「${b.text}」下方底图纹理杂（${stds[i].toFixed(1)}），文字区不干净`);
   });
+  if (scalePx.length) {
+    const off = new Map();
+    slide.blocks.forEach(b => {
+      if (!scalePx.some(px => Math.abs(px - b.fontSize) <= SIZE_TOLERANCE)) off.set(b.fontSize, off.get(b.fontSize) || b.text);
+    });
+    for (const [size, text] of off) problems.push(`字号不在字号表里：「${text}」${size}px（字号表：${scalePx.join('/')}px）`);
+  }
+  const overlap = (a, b) => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+  for (const k of slide.keepouts || []) {
+    for (const item of [...slide.blocks, ...(slide.marks || [])]) {
+      if (overlap(k, item) > 0) problems.push(`压住保护区「${k.label}」：「${item.text}」`);
+    }
+  }
+  if (logoSlot && slide.logo) {
+    const keys = ['x', 'y', 'w', 'h'].filter(k => typeof logoSlot[k] === 'number');
+    const drift = keys.filter(k => Math.abs(slide.logo[k] - logoSlot[k]) > LOGO_TOLERANCE);
+    if (drift.length) problems.push(`Logo 不在规定位置：${drift.map(k => `${k} ${Math.round(slide.logo[k])}（应为 ${logoSlot[k]}）`).join('，')}`);
+  }
   const lefts = slide.blocks.map(b => Math.round(b.x));
   const seen = new Set();
   for (let i = 0; i < lefts.length; i += 1) {
@@ -153,7 +194,7 @@ function problemsFor(slide, stds) {
 const executablePath = browserPath();
 if (!executablePath) throw new Error('Chrome/Edge/Chromium not found. Set CHROME_PATH or EDGE_PATH.');
 const browser = await chromium.launch({executablePath, headless:true});
-const report = {at: new Date().toISOString(), thresholds: {ORPHAN_MAX_CHARS, TEXTURE_MAX_BUSY, ALIGN_NEAR_MISS}, pages: {}};
+const report = {at: new Date().toISOString(), thresholds: {ORPHAN_MAX_CHARS, TEXTURE_MAX_BUSY, ALIGN_NEAR_MISS, SIZE_TOLERANCE, LOGO_TOLERANCE}, type_scale_px: scalePx, logo_slot: logoSlot || null, pages: {}};
 try {
   const page = await browser.newPage({viewport:{width:1920, height:1080}, deviceScaleFactor:1});
   for (const file of files) {

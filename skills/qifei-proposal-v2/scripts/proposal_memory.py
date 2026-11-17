@@ -621,6 +621,18 @@ def check_candidates(candidates: list[Entry], ids: set[str]) -> list[str]:
     return errors
 
 
+def render_pending(project: Path) -> str:
+    """What the agent tells the Owner after writing candidates: how many wait, what they are, where to decide."""
+    waiting = [e for e in load_candidates(project_dir(project)) if (e.status or "candidate") == "candidate"]
+    if not waiting:
+        return "没有待审的记忆候选。不用向 Owner 提。\n"
+    lines = [f"有 {len(waiting)} 条记忆候选等 Owner 采纳或丢弃（不打断当前阶段，Agent 不代为采纳）：", ""]
+    lines += [f"{n}. {e.title}（{e.id}，建议层级 {e.target or '未填'}）" for n, e in enumerate(waiting, 1)]
+    lines += ["", "转告 Owner：用一两句话说清有几条、各是什么，并给出记忆库地址。",
+              "记忆库地址：运行 `python3 scripts/memory_box.py --detach`，把它打印的 http://127.0.0.1:… 给 Owner。"]
+    return "\n".join(lines) + "\n"
+
+
 def render_advance(project: Path, target: str) -> str:
     """Everything memory needs at a phase change, in one step: distil the phase being left, then load the next."""
     if target not in PHASE_STAGE:
@@ -635,6 +647,8 @@ def render_advance(project: Path, target: str) -> str:
         "1. 下面第一部分是离开本阶段的记忆信号。把能复用的判断写成候选（最多 8 条，来源写信号编号）；没有就不写。",
         "2. 第二部分是新阶段的记忆，开工前读完。",
         f"3. 两步做完后，再把 project-state.json 的 phase 改成 {target}，并运行 validate_project.py。",
+        "4. 写了候选时，运行 `proposal_memory.py pending --project <项目目录>`，按它的输出告诉 Owner 有几条候选、各是什么，"
+        "并给出记忆库地址；没有新候选就不提。",
         "",
         "---",
         "",
@@ -645,9 +659,9 @@ def render_advance(project: Path, target: str) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ("init", "load", "check", "list", "signals", "advance", "accept", "reject", "note", "on", "off", "status"):
+    for name in ("init", "load", "check", "list", "signals", "advance", "pending", "accept", "reject", "note", "on", "off", "status"):
         command = sub.add_parser(name)
-        command.add_argument("--project", required=name in {"signals", "advance", "accept", "reject", "note"},
+        command.add_argument("--project", required=name in {"signals", "advance", "pending", "accept", "reject", "note"},
                              help="proposal project directory")
         if name == "note":
             command.add_argument("text", help="the Owner's correction, in the Owner's words")
@@ -679,7 +693,7 @@ def main() -> int:
     if args.command == "status":
         print(f"提案记忆：{'on' if memory_enabled() else 'off'}（记忆目录 {memory_home()}）")
         return 0
-    if not memory_enabled() and args.command in {"load", "signals", "advance", "note"}:
+    if not memory_enabled() and args.command in {"load", "signals", "advance", "pending", "note"}:
         print(OFF_NOTICE)
         if args.command == "advance":
             print(f"换阶段不需要处理记忆：直接把 project-state.json 的 phase 改成 {args.to}，再运行 validate_project.py。")
@@ -700,6 +714,9 @@ def main() -> int:
             return 0
         if args.command == "advance":
             sys.stdout.write(render_advance(project, args.to))
+            return 0
+        if args.command == "pending":
+            sys.stdout.write(render_pending(project))
             return 0
         if args.command == "note":
             print(f"recorded {add_note(project, args.text, args.context)}")

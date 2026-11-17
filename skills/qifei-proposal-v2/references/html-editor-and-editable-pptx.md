@@ -10,7 +10,7 @@ HTML始终是视觉生产源。浏览器暂存、校稿JSON、评审PNG和PPTX�
 
 ## 浏览器校稿
 
-正式章节HTML应接入 `$ppt-html-calibration-editor`，只开放需要人工校准的文字和图片：
+正式章节HTML接入 `$ppt-html-calibration-editor`，只开放需要人工校准的文字和图片。接入由 `scripts/review_hooks.py inject` 完成（复制编辑器到 `deck/review-editor/`、加载样式和 loader、给文字补 `data-edit-id`），Agent 不手写这些挂钩；`review_hooks.py check` 检查是否漏掉：
 
 - 单页编辑：`?edit=1&capture=<slide-id>`；
 - 全案文字校稿：`?edit=all`；

@@ -227,7 +227,8 @@
     if (!s) return "";
     if (!s.chapter_id) return `<div class="confirm-row muted">${esc(s.reason)}</div>`;
     if (s.confirmed && s.record) {
-      return `<div class="confirm-row"><span class="chip st-confirmed">${esc(s.chapter_id)} 已确认</span><span class="muted">${esc(s.record.by)} · ${String(s.record.at).replace("T", " ").slice(0, 16)} · rev ${s.record.revision}</span></div>`;
+      const undo = live ? `<button type="button" class="btn small" data-unconfirm-chapter="${esc(s.chapter_id)}">撤回确认</button>` : "";
+      return `<div class="confirm-row"><span class="chip st-confirmed">${esc(s.chapter_id)} 已确认</span><span class="muted">${esc(s.record.by)} · ${String(s.record.at).replace("T", " ").slice(0, 16)} · rev ${s.record.revision}</span>${undo}</div>`;
     }
     const again = s.record ? '<span class="chip st-modified">确认后有修改，需要重新确认</span>' : "";
     const pagesDone = ch.slides.filter((x) => x.status === "confirmed").length;
@@ -282,6 +283,11 @@
         : `<b>上屏内容有内部审慎用语</b>：${issues.length} 处，涉及 ${pages.size} 页。上屏只保留来源，边界写进措辞，审慎说明放进讲解方向或证据与来源；改完这些页所在的章才能确认。`;
       doc.push(`<details class="format-warn"><summary>${summary}</summary><ul>${list}</ul>${issues.length > 40 ? `<p>还有 ${issues.length - 40} 处，运行 <code>draft_studio.py check</code> 查看全部。</p>` : ""}</details>`);
     }
+    if (!live) doc.push(`<div class="format-warn readonly-warn"><b>只读预览</b>：这个文件不能确认、评论和保存，内容也不会自动更新。审阅请打开 <code>draft_studio.py serve</code> 给出的地址（http://127.0.0.1:…）。</div>`);
+    const misplaced = model.alignment_issues || [];
+    if (misplaced.length) {
+      doc.push(`<details class="format-warn" open><summary><b>章节和登记的页序对不上</b>：${misplaced.length} 处。对不上的章节不能确认，先按下面改正。</summary><ul>${misplaced.map((i) => `<li>${inline(i.message)}</li>`).join("")}</ul></details>`);
+    }
     if (model.registration) doc.push(authorityBar(model.registration));
     if (model.preface_md) doc.push(`<div class="preface md">${block(model.preface_md)}</div>`);
 
@@ -292,13 +298,14 @@
         : "";
       doc.push(`<section class="chapter" id="${ch.id}" data-chapter><div class="chapter-head"><div class="chapter-kicker">Chapter ${String(ci + 1).padStart(2, "0")}</div><h2>${inline(ch.title)}</h2>${chapterConfirm(ch)}<div class="chapter-intro"><div class="field-body md" data-field="intro:${ch.id}">${block(ch.intro_md)}</div>${ch.intro_span ? editBtn(`data-edit="intro" data-chapter="${ch.id}"`, "编辑本章说明") : ""}</div>${chain}</div>`);
       ch.slides.forEach((s) => {
-        const pageConfirm = live && ch.studio && ch.studio.chapter_id && s.status !== "confirmed"
-          ? `<button type="button" class="btn small" data-confirm-slide="${s.id}">确认本页</button>`
-          : "";
+        const pageConfirm = !(live && ch.studio && ch.studio.chapter_id) ? ""
+          : s.status !== "confirmed"
+            ? `<button type="button" class="btn small" data-confirm-slide="${s.id}">确认本页</button>`
+            : `<button type="button" class="btn small" data-unconfirm-slide="${s.id}">撤回本页确认</button>`;
         const tools = live
           ? `<div class="slide-tools">${editBtn(`data-edit="title" data-slide="${s.id}"`, "改标题")}${s.body_md != null ? editBtn(`data-edit="body" data-slide="${s.id}"`, "编辑本页源文") : ""}${pageConfirm}</div>`
           : "";
-        doc.push(`<article class="slide" id="${anchor(s.id)}" data-slide-id="${s.id}"><div class="slide-head"><span class="slide-id">${s.id}</span><h3 class="slide-title" data-field="title:${s.id}">${inline(s.title)}</h3>${chip(s.status)}</div>${tools}<div class="slide-body${s.body_md != null ? " field-body" : ""}" data-field="body:${s.id}">${s.fields.map((f) => fieldHtml(f, s)).join("")}</div></article>`);
+        doc.push(`<article class="slide" id="${anchor(s.id)}" data-slide-id="${s.id}"><div class="slide-head"><span class="slide-id">${s.id}</span><h3 class="slide-title" data-field="title:${s.id}">${inline(s.title)}</h3>${chip(s.status)}</div>${tools}${wireHtml(s)}<div class="slide-body${s.body_md != null ? " field-body" : ""}" data-field="body:${s.id}">${s.fields.map((f) => fieldHtml(f, s)).join("")}</div></article>`);
       });
       doc.push(`</section>`);
     });
@@ -307,6 +314,72 @@
     document.getElementById("doc").innerHTML = doc.join("");
     wireImages();
   }
+
+  // ---------- Wireframes: grey layout per page, drawn from content/draft/wireframes.json ----------
+  const WIRE_W = 1920, WIRE_H = 1080;
+  const pos = (b) => `left:${b.x}px;top:${b.y}px;width:${b.w}px;height:${b.h || 0}px`;
+  function wireBlock(b, maxPct) {
+    const lines = (b.lines || []).map(esc);
+    switch (b.type) {
+      case "image": return `<div class="wb wb-img${b.optional ? " opt" : ""}${b.note_pos ? ` note-${esc(b.note_pos)}` : ""}" style="${pos(b)}"><span class="wb-note">${esc(b.note || "")}</span><span class="wb-tag">画面${b.optional ? "（可选）" : ""}</span></div>`;
+      case "text": return `<div class="wb wb-t wb-${esc(b.role || "body")}" data-fit style="${pos(b)}">${lines.join("<br>")}</div>`;
+      case "stat": return `<div class="wb wb-stat" data-fit style="${pos(b)}"><b>${esc(b.num)}</b><span>${esc(b.label)}</span></div>`;
+      case "node": case "card": return `<div class="wb wb-node${b.emph ? " emph" : ""}" data-fit style="${pos(b)}"><b>${lines[0] || ""}</b>${lines.slice(1).map((l) => `<span>${l}</span>`).join("")}</div>`;
+      case "step": return `<div class="wb wb-step${b.line ? " floor" : ""}" data-fit style="${pos(b)}"><b>${esc(b.num)}</b><span>${esc(b.label)}</span><i>${esc(b.tag || "")}</i></div>`;
+      case "kv": return `<div class="wb wb-kv" data-fit style="${pos(b)}">${(b.rows || []).map(([k, v]) => `<div><em>${esc(k)}</em><span>${esc(v)}</span></div>`).join("")}</div>`;
+      case "table": {
+        const bar = b.bar_col;
+        const row = (r, cls = "") => `<tr class="${cls}">${r.map((c, i) => i === bar && !cls && /%$/.test(String(c))
+          ? `<td class="wb-barc"><span>${esc(c)}</span><i style="width:calc((100% - 90px) * ${parseFloat(c) / maxPct})"></i></td>`
+          : `<td>${esc(c)}</td>`).join("")}</tr>`;
+        return `<div class="wb wb-table" data-fit style="${pos(b)}"><table><tr>${(b.cols || []).map((c) => `<th>${esc(c)}</th>`).join("")}</tr>${(b.rows || []).map((r) => row(r)).join("")}${b.total ? row(b.total, "total") : ""}</table></div>`;
+      }
+      case "note": return `<div class="wb wb-wnote" style="${pos(b)}">${lines.join("<br>")}</div>`;
+      default: return "";
+    }
+  }
+  function wireLines(blocks) {
+    const paths = blocks.filter((b) => b.type === "arrow" || b.type === "line").map((b) => {
+      const pts = b.type === "arrow" ? [[b.x, b.y], [b.x + b.w, b.y]] : (b.points || []);
+      if (pts.length < 2) return "";
+      let d = `M${pts[0][0]},${pts[0][1]}`;
+      if (b.curve && pts.length >= 3) {
+        for (let i = 1; i + 1 < pts.length; i += 2) d += ` Q${pts[i][0]},${pts[i][1]} ${pts[i + 1][0]},${pts[i + 1][1]}`;
+      } else pts.slice(1).forEach((p) => { d += ` L${p[0]},${p[1]}`; });
+      return `<path d="${d}"${b.dashed ? ' stroke-dasharray="14 10"' : ""}${b.type === "arrow" || b.arrow !== false ? ' marker-end="url(#wire-arrow)"' : ""}/>${b.label ? `<text x="${(b.label_at || pts[Math.floor(pts.length / 2)])[0]}" y="${(b.label_at || pts[Math.floor(pts.length / 2)])[1] - 14}">${esc(b.label)}</text>` : ""}`;
+    }).join("");
+    return paths ? `<svg class="wb-lines" viewBox="0 0 ${WIRE_W} ${WIRE_H}"><defs><marker id="wire-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>${paths}</svg>` : "";
+  }
+  function wireHtml(s) {
+    const w = s.wireframe;
+    if (!w) return `<div class="wire wire-empty">这一页还没有线框。</div>`;
+    const blocks = w.blocks || [];
+    const pcts = blocks.filter((b) => b.type === "table").flatMap((b) => (b.rows || []).map((r) => parseFloat(r[b.bar_col]))).filter((n) => !isNaN(n));
+    const maxPct = pcts.length ? Math.max(...pcts) : 1;
+    const canvas = blocks.filter((b) => b.type === "image").map((b) => wireBlock(b)).join("")
+      + wireLines(blocks)
+      + blocks.filter((b) => b.type !== "image").map((b) => wireBlock(b, maxPct)).join("")
+      + (model.wire_logo ? `<div class="wb wb-logo" style="${pos(model.wire_logo)}">LOGO</div>` : "");
+    const cov = w.coverage || { missing: [], extra: [] };
+    const covHtml = (cov.missing.length ? `<div class="bad">上屏文字没放进线框：${esc(cov.missing.join("、"))}</div>` : `<div class="ok">上屏文字都在线框里</div>`)
+      + (cov.extra.length ? `<div class="warn">线框里有上屏内容以外的文字：${esc(cov.extra.join("、"))}</div>` : "");
+    const change = w.visual_change ? `<div class="wire-change"><b>和母稿视觉建议不同</b>：${esc(w.visual_change)}</div>` : "";
+    return `<div class="wire"><div class="wire-frame"><div class="wire-canvas">${canvas}</div></div><div class="wire-panel"><div class="wire-form">表达形态：${esc(w.form || "未写")}</div><div class="wire-why">${esc(w.why || "")}</div>${change}${covHtml}<div class="wire-fit"></div></div></div>`;
+  }
+  function fitWires() {
+    document.querySelectorAll(".wire-frame").forEach((frame) => {
+      const scale = frame.clientWidth / WIRE_W;
+      if (!scale) return;
+      frame.style.height = `${WIRE_H * scale}px`;
+      frame.firstElementChild.style.transform = `scale(${scale})`;
+      const bad = [...frame.querySelectorAll("[data-fit]")].filter((e) => e.scrollHeight > e.clientHeight + 1 || e.scrollWidth > e.clientWidth + 1);
+      frame.querySelectorAll(".overflow").forEach((e) => e.classList.remove("overflow"));
+      bad.forEach((e) => e.classList.add("overflow"));
+      const out = frame.parentElement.querySelector(".wire-fit");
+      if (out) { out.className = `wire-fit ${bad.length ? "bad" : "ok"}`; out.textContent = bad.length ? `文字区放不下：${bad.length} 处（红框）` : "文字区都放得下"; }
+    });
+  }
+  window.addEventListener("resize", () => { if (document.body.classList.contains("view-wire")) fitWires(); });
 
   function wireImages() {
     document.querySelectorAll("#doc img").forEach((img) => {
@@ -321,8 +394,9 @@
 
   // ---------- Interactions ----------
   function setView(view) {
-    document.body.classList.remove("view-full", "view-client", "view-chain");
+    document.body.classList.remove("view-full", "view-client", "view-chain", "view-wire");
     document.body.classList.add(`view-${view}`);
+    if (view === "wire") requestAnimationFrame(fitWires);
     if (typeof layoutCards === "function" && live) requestAnimationFrame(() => layoutCards());
     document.querySelectorAll(".segmented button").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
     try { localStorage.setItem("draft-studio-view", view); } catch (_) { /* storage may be unavailable */ }
@@ -999,6 +1073,22 @@
         const n = ch ? ch.slides.length : 0;
         if (window.confirm(`确认 ${id} 的全部 ${n} 页？\n确认会记录每一页当前的内容；之后再修改，这一章会自动退回待确认。`)) {
           authorityPost("/api/confirm", { chapter_id: id, author }, `${id} 已确认`);
+        }
+        return;
+      }
+      const undoCh = e.target.closest("[data-unconfirm-chapter]");
+      if (undoCh) {
+        const id = undoCh.dataset.unconfirmChapter;
+        if (window.confirm(`撤回 ${id} 的确认？这一章会回到待确认，确认记录会保留撤回痕迹。`)) {
+          authorityPost("/api/unconfirm", { chapter_id: id, author }, `${id} 已撤回确认`);
+        }
+        return;
+      }
+      const undoPage = e.target.closest("[data-unconfirm-slide]");
+      if (undoPage) {
+        const id = undoPage.dataset.unconfirmSlide;
+        if (window.confirm(`撤回 ${id} 的确认？如果这一章已整章确认，整章也会回到待确认。`)) {
+          authorityPost("/api/unconfirm", { slide_id: id, author }, `${id} 已撤回确认`);
         }
         return;
       }

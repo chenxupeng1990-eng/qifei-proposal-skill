@@ -3,6 +3,8 @@
   "design_version": "design-v0",
   "visual_family_id": "replace-with-approved-visual-family",
   "canvas": {"width": 1920, "height": 1080},
+  "type_scale": {},
+  "logo": {"file": null, "slot": {}},
   "brand_visual": {
     "source_ids": [],
     "symbols": [],

@@ -33,7 +33,7 @@
 
 只有Owner明确确认“全部内容确认，开始拼装”后，才一次性输出PNG、PDF和图片型PPTX；增强型可编辑PPTX需额外坐标与渲染QA。
 
-- 基础交付：PNG、PDF、图片型PPTX。
+- 基础交付：PNG、PDF、图片型PPTX。`export_deck.mjs` 同时输出 `exports/proposal-vector.pdf`：HTML 页从审定时的 HTML 直接打印，文字是矢量、可选中，放大不糊；整页生图页和审定后 HTML 有改动的页用审定 PNG。对外发送优先给矢量版。
 - 增强交付：基础交付加原生文字层的半可编辑PPTX。
 - 不承诺：图表、复杂SVG、场景主视觉和Image2图像全部转为PowerPoint原生可编辑对象。
 

@@ -222,7 +222,7 @@ class ContractTests(unittest.TestCase):
         self.assertTrue(any("visual_showcase route" in e for e in errors), errors)
         page["visual_mode"] = "opaque-module"
         self.assertTrue(any("visual_mode must be background" in e for e in validate_presentation_route(page, "S01", {}, "visual_showcase")))
-        page["render_route"] = "html_only"
+        page["render_route"] = "svg_only"
         self.assertTrue(any("render_route must be one of" in e for e in validate_presentation_route(page, "S01", {}, "visual_showcase")))
 
     def test_design_base_must_cover_the_canvas(self) -> None:

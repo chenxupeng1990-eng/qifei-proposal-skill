@@ -22,6 +22,7 @@ const DECK_SPEC = path.join(PROJECT, 'deck', 'deck-spec.json');
 const ASSEMBLY_MANIFEST = path.join(PROJECT, 'deck', 'assembly-ready', 'manifest.json');
 const PNG_DIR = path.join(PROJECT, 'exports', 'png');
 const PDF_OUT = path.join(PROJECT, 'exports', 'proposal.pdf');
+const VECTOR_PDF_OUT = path.join(PROJECT, 'exports', 'proposal-vector.pdf');
 const PPTX_OUT = path.join(PROJECT, 'exports', 'proposal-preview.pptx');
 
 function sha256(file) {
@@ -224,6 +225,47 @@ try {
   }
   writeFileSync(PDF_OUT, await pdf.save());
 
+  // Vector PDF: each HTML-sourced page printed from the reviewed HTML it was approved from, so text stays
+  // selectable and sharp when zoomed; the base image keeps its own resolution. Pages approved as direct
+  // PNGs (image_full) and pages whose HTML changed since approval go in as their approved PNG.
+  const vector = await PDFDocument.create();
+  const vectorPage = await browser.newPage({viewport:{width:1920, height:1080}, deviceScaleFactor:1});
+  const fromHtml = [];
+  for (const [index, slideId] of ids.entries()) {
+    const ready = readyMap.get(slideId);
+    const htmlRelative = ready.review_html_path;
+    const htmlFile = htmlRelative ? safeTrackedPath(PROJECT, htmlRelative, `review HTML ${slideId}`) : null;
+    if (htmlFile && existsSync(htmlFile) && sha256(htmlFile) === ready.review_html_sha256) {
+      await vectorPage.goto(`${pathToFileURL(htmlFile).href}?export=1&review=1&capture=${encodeURIComponent(slideId)}`, {waitUntil:'load'});
+      await vectorPage.waitForFunction(() => window.__qifeiReady !== false, null, {timeout:30000}).catch(() => {});
+      await vectorPage.evaluate(() => document.fonts && document.fonts.ready);
+      const found = await vectorPage.evaluate(id => {
+        const target = document.querySelector(`[data-slide-id="${CSS.escape(id)}"]`);
+        if (!target) return false;
+        const style = document.createElement('style');
+        style.textContent = `@page { size: 1920px 1080px; margin: 0; }
+          html, body { margin: 0 !important; padding: 0 !important; }
+          [data-slide-id]:not([data-slide-id="${CSS.escape(id)}"]) { display: none !important; }
+          [data-slide-id="${CSS.escape(id)}"] { position: fixed !important; left: 0 !important; top: 0 !important;
+            transform: none !important; margin: 0 !important; z-index: 2147483647 !important; }`;
+        document.head.append(style);
+        return true;
+      }, slideId);
+      if (found) {
+        const bytes = await vectorPage.pdf({width:'1920px', height:'1080px', printBackground:true, pageRanges:'1'});
+        const [copied] = await vector.copyPages(await PDFDocument.load(bytes), [0]);
+        vector.addPage(copied);
+        fromHtml.push(slideId);
+        continue;
+      }
+    }
+    const image = await vector.embedPng(readFileSync(pngFiles[index]));
+    const pngPage = vector.addPage([1440, 810]);
+    pngPage.drawImage(image, {x:0, y:0, width:1440, height:810});
+  }
+  await vectorPage.close();
+  writeFileSync(VECTOR_PDF_OUT, await vector.save());
+
   const pptx = new pptxgen();
   pptx.layout = 'LAYOUT_WIDE';
   pptx.author = 'Company';
@@ -241,6 +283,7 @@ try {
   console.log(`Exported ${count} slide(s)`);
   console.log(`PNG: ${PNG_DIR}`);
   console.log(`PDF: ${PDF_OUT}`);
+  console.log(`Vector PDF: ${VECTOR_PDF_OUT} (${fromHtml.length}/${ids.length} page(s) from HTML, text selectable)`);
   console.log(`PPTX: ${PPTX_OUT}`);
 } finally {
   await browser.close();

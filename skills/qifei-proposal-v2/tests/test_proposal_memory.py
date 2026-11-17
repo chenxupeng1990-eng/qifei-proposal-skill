@@ -333,6 +333,16 @@ class MemoryCandidateTests(unittest.TestCase):
         self.assertIn("2 条信号已被候选或记忆引用", out)
         self.assertIn("### C-0001", self.run_memory("signals", "--project", str(self.project), "--all").stdout)
 
+    def test_pending_tells_the_owner_what_waits(self) -> None:
+        self.assertIn("没有待审", self.run_memory("pending", "--project", str(self.project)).stdout)
+        self.write_candidates()
+        out = self.run_memory("pending", "--project", str(self.project)).stdout
+        self.assertIn("有 2 条记忆候选", out)
+        self.assertIn("可见证明写证据，不写设计方向", out)
+        self.assertIn("memory_box.py --detach", out)
+        self.run_memory("reject", "MC-0002", "--project", str(self.project))
+        self.assertIn("有 1 条记忆候选", self.run_memory("pending", "--project", str(self.project)).stdout)
+
     def test_owner_accepts_an_edited_candidate_into_its_layer(self) -> None:
         candidates = self.write_candidates()
         result = self.run_memory("accept", "MC-0001", "--project", str(self.project), "--title", "可见证明只写证据")

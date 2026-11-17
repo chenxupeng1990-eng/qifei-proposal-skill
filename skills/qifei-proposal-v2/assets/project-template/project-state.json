@@ -38,7 +38,9 @@
     "source_ids": [],
     "source_files": [],
     "audit_path": "evidence/brand-visual-audit.md",
-    "design_incorporation_record_id": null
+    "design_incorporation_record_id": null,
+    "logo_overlay": null,
+    "logo_overlay_reason": null
   },
   "visual_direction": {
     "directions": [],
