@@ -83,6 +83,7 @@ python3 scripts/proposal_memory.py load --project <项目目录> --phase <projec
 
 - **对话里的更正**：Owner 在对话里给出能复用的更正（例如"不允许白底产品图"），当场运行 `python3 scripts/proposal_memory.py note --project <项目目录> "<Owner 原话>" [--context S05 设计校准]` 记下，编号 `N-0001`。这类更正不在工作台里，不记就会丢。
 - **换阶段只用一个命令**：`python3 scripts/proposal_memory.py advance --project <项目目录> --to <新阶段>`。它一次做完三件事：汇总离开阶段的信号（下面第 1 步）、提示写候选（第 2 步）、读取新阶段的记忆并留下回执。写完候选再改 `phase`。下面的分步命令仍然可用，适合单独补跑。
+- **告诉 Owner**：写了候选后运行 `python3 scripts/proposal_memory.py pending --project <项目目录>`。它列出待审候选；Agent 照着用一两句话告诉 Owner 有几条、各是什么，并用 `python3 scripts/memory_box.py --detach` 启动记忆库、给出地址。只提醒，不打断当前阶段，不代为采纳；没有新候选就不提。
 - **门禁**：`signals` 和 `advance` 每次运行都会留下信号回执。进入母稿之后的阶段时，`validate_project.py` 要求回执来自上一阶段或更晚，否则报 `proposal memory:` 错误。
 
 1. `advance` 的第一部分，或单独运行 `python3 scripts/proposal_memory.py signals --project <项目目录>`。它汇总工作台里已决定的评论（`C-0001`）、Owner 的修改及改前改后（`R262`，即修订号）和章节确认记录；已被候选或记忆引用过的信号默认不再显示，`--all` 显示全部。

@@ -32,7 +32,10 @@
   3. 每章由 Owner 在工作台上点"确认"。确认会记录这一章每一页的内容指纹；之后再改，这一章会自动退回待确认。
   4. 确认后，工作台会自动登记当前版本；有修改时，用页面上的按钮或 `python3 scripts/draft_studio.py register <项目目录>` 重新登记。
 - 飞书流程：修改评论后重新抓取整份飞书，并再次校验。
-- 给 Owner 阅读整章或整份母稿时，用 `python3 scripts/draft_studio.py render <项目目录>` 生成富格式阅读页（`deck/review/draft-studio.html`），需要 Markdown 时用 `export-md --profile full|brief`；Owner 想直接在页面上改稿时，用 `serve` 启动本地工作台，保存即写盘并记录版本。阅读页和导出的 Markdown 都是派生物，不改变权威源，见 [../references/draft-studio.md](../references/draft-studio.md)。
+- 给 Owner 审阅、评论、确认时，只给 `python3 scripts/draft_studio.py serve <项目目录> --detach` 打印的地址（http://127.0.0.1:…），不给文件路径。`render` 生成的 `deck/review/draft-studio.html` 是只读预览，没有确认、评论和保存，内容也不会更新，只用于离线存档或发给不参与审阅的人；链接文字不能写成“工作台”。需要 Markdown 时用 `export-md --profile full|brief`。
+- Agent 直接改母稿文件后（插页、挪页、改标题层级），先跑 `draft_studio.py check <项目目录>`：它会核对每一页所在的章节和 `project-state.json` 登记的页序是否一致。对不上的章节在工作台上不能确认，会显示原因，先改正再交给 Owner。新增页面要同时登记进对应章节的 `chapters[].slides`。
+- 每章写完后，给这一章每页写线框布局（`content/draft/wireframes.json`，写法见 draft-studio.md「线框视图」）：先判断核心内容和内容关系，再选表达形态，只给设计留出文字和画面位置。跑 `draft_studio.py wireframes <项目目录>` 到 PASS，再请 Owner 在工作台“线框”视图里审。线框判断和母稿视觉生成建议不一致时，以线框为准，写 `visual_change` 并同步改视觉生成建议。
+- Owner 可以在工作台上撤回自己的章节或页面确认；撤回记录留在 `confirmations.json`。Agent 不代为撤回。阅读页和导出的 Markdown 都是派生物，不改变权威源，见 [../references/draft-studio.md](../references/draft-studio.md)。
 - 临时插页、拆页和合页先进入变更候选清单；写入权威源，并完成登记（工作台）或整份回读（飞书）之前，不修改正式页序。
 - 只写讲解方向，不生成完整演讲稿。
 - `PPT上屏内容` 只放观点、证据和来源，不放内部审慎说明（"不等于""不代表""尚未""仅参考""另行商定""以…为准""非…"这类）。边界写进措辞本身：写"Instagram 搜索热度"，不写"搜索热度，不等于销量"；审慎说明放进讲解方向或证据与来源。`check` 会拦截这些用语；确属客户要求的上屏声明，由 Owner 在评论里确认后改写成正面表述。

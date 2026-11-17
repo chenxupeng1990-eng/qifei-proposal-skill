@@ -352,3 +352,54 @@ mark { background: color-mix(in srgb, var(--warn) 30%, transparent); color: inhe
   details.internal { display: none; }
   body { background: #fff; }
 }
+
+/* ---------- Wireframe view ---------- */
+.wire { display: none; }
+body.view-wire .wire { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 16px; margin: 8px 22px 12px; }
+body.view-wire .wire.wire-empty { display: block; color: var(--muted, #777); font-size: 13px; margin: 0 22px 8px; }
+body.view-wire .slide-body > :not(.field-screen) { display: none; }
+body.view-wire .chapter-intro, body.view-wire .chain { display: none; }
+@media (max-width: 900px) { body.view-wire .wire { grid-template-columns: 1fr; } }
+.wire-frame { position: relative; width: 100%; overflow: hidden; background: #fafafa; border: 1px solid #ddd; border-radius: 4px; }
+.wire-canvas { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; color: #222;
+  font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif; line-height: 1.3; }
+.wire-canvas > .wb { position: absolute; overflow: hidden; }
+.wb-img { background: repeating-linear-gradient(45deg, #ececec 0 18px, #e4e4e4 18px 36px); border: 2px solid #d0d0d0; display: flex; align-items: center; justify-content: center; }
+.wb-img.opt { border-style: dashed; opacity: .7; }
+.wb-img .wb-note { max-width: 70%; font-size: 30px; line-height: 1.5; color: #8a8a8a; text-align: center; }
+.wb-img.note-top { align-items: flex-start; padding-top: 180px; } .wb-img.note-bottom { align-items: flex-end; padding-bottom: 56px; }
+.wb-img.note-top .wb-note, .wb-img.note-bottom .wb-note { font-size: 24px; }
+.wb-img .wb-tag { position: absolute; right: 16px; bottom: 12px; font-size: 22px; color: #999; letter-spacing: 4px; }
+.wb-t { outline: 1px dashed #9e9e9e; padding: 2px 6px; line-height: 1.3; }
+.wb-title { font-size: 52px; font-weight: 700; } .wb-hero { font-size: 84px; font-weight: 700; }
+.wb-sub { font-size: 32px; font-weight: 500; } .wb-label { font-size: 26px; font-weight: 600; color: #555; }
+.wb-body { font-size: 24px; line-height: 1.5; } .wb-close { font-size: 36px; font-weight: 600; }
+.wb-center { font-size: 48px; font-weight: 700; display: flex; align-items: center; justify-content: center; text-align: center; }
+.wb-source { font-size: 16px; color: #777; outline: none; }
+.wb-stat { outline: 1px dashed #9e9e9e; padding: 8px 10px; background: rgba(255,255,255,.75); }
+.wb-stat b { display: block; font-size: 64px; line-height: 1.1; } .wb-stat span { font-size: 24px; color: #555; }
+.wb-node { background: #fff; border: 2px solid #555; padding: 10px 18px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+.wb-node b { font-size: 30px; } .wb-node span { font-size: 21px; color: #555; }
+.wb-node.emph { border-width: 5px; border-color: #222; } .wb-node.emph b { font-size: 40px; }
+.wb-step { background: #e9e9e9; border-left: 10px solid #555; padding: 20px 28px; display: flex; align-items: baseline; gap: 28px; }
+.wb-step b { font-size: 64px; } .wb-step span { font-size: 28px; color: #444; } .wb-step i { margin-left: auto; font-style: normal; font-size: 28px; font-weight: 600; }
+.wb-step.floor { border-bottom: 4px dashed #555; }
+.wb-kv div { display: flex; gap: 20px; padding: 14px 0; border-top: 1px solid #bbb; font-size: 24px; line-height: 1.45; }
+.wb-kv em { font-style: normal; font-weight: 600; width: 120px; flex: none; color: #555; }
+.wb-table table { width: 100%; border-collapse: collapse; font-size: 22px; }
+.wb-table th { text-align: left; font-size: 18px; color: #777; padding: 6px 10px; border-bottom: 2px solid #555; }
+.wb-table td { padding: 0 10px; height: 46px; border-bottom: 1px solid #ddd; }
+.wb-table .total td { font-weight: 700; border-top: 2px solid #555; }
+.wb-barc { position: relative; width: 34%; } .wb-barc span { display: inline-block; width: 70px; }
+.wb-barc i { position: absolute; left: 90px; top: 12px; height: 22px; background: #bdbdbd; }
+.wb-wnote { font-size: 20px; color: #999; font-style: italic; }
+.wb-logo { border: 2px dashed #999; color: #999; font-size: 20px; display: flex; align-items: center; justify-content: center; letter-spacing: 4px; }
+.wb-lines { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: visible; pointer-events: none; }
+.wb-lines path { fill: none; stroke: #555; stroke-width: 3; } .wb-lines marker path { fill: #555; stroke: none; }
+.wb-lines text { font-size: 20px; fill: #888; font-style: italic; }
+.wire-canvas .overflow { outline: 4px solid #e53935 !important; }
+.wire-panel { font-size: 13px; line-height: 1.6; background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; padding: 12px; align-self: start; }
+.wire-form { font-weight: 600; margin-bottom: 6px; } .wire-why { margin-bottom: 8px; color: #444; }
+.wire-change { background: #fff7e0; border-radius: 4px; padding: 6px 8px; margin-bottom: 8px; }
+.wire-panel .ok { color: #2e7d32; } .wire-panel .bad { color: #c62828; } .wire-panel .warn { color: #8a6d00; }
+@media print { .wire { display: none !important; } }

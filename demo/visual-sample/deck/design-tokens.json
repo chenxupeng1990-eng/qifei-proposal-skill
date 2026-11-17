@@ -2,6 +2,20 @@
   "schema_version": "1.0",
   "design_version": "design-v1",
   "canvas": {"width": 1920, "height": 1080},
+  "type_scale": {
+    "hero": {"px": 94, "line_height": 1.04},
+    "statement": {"px": 72, "line_height": 1.12},
+    "title": {"px": 64, "line_height": 1.12},
+    "subtitle": {"px": 32, "line_height": 1.48},
+    "card_title": {"px": 31, "line_height": 1.22},
+    "body": {"px": 30, "line_height": 1.62},
+    "list": {"px": 29, "line_height": 1.48},
+    "small": {"px": 23, "line_height": 1.5},
+    "eyebrow": {"px": 19, "line_height": 1.2},
+    "index": {"px": 18, "line_height": 1.2},
+    "source": {"px": 17, "line_height": 1.4}
+  },
+  "logo": {"file": "inputs/brand-official/demo-logo.svg", "slot": {"x": 1680, "y": 48, "w": 180}, "safe_area_px": 24},
   "brand_visual": {
     "source_ids": ["DEMO-BRAND-001"],
     "symbols": ["circular retention cell", "continuous cyan arc"],

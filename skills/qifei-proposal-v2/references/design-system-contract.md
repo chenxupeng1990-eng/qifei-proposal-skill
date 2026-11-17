@@ -4,13 +4,15 @@
 
 ## 必须固定
 
-- 品牌来源ID、Logo规则和安全区；
+- 品牌来源ID、Logo规则和安全区；Logo 槽位写成具体数值（位置、宽度、安全区 px），用 `brand_visual.logo_overlay` 登记的透明文件，并编译进 `design-tokens.json` 的 `logo: {file, slot: {x, y, w}}`；
 - 网格（列数、列距）、安全区和页码／来源位置的具体 px；
-- 字号表（封面、章节、内容标题、核心数字、正文、来源各层级的 px 与行高）和字号下限与拆页触发；
+- 字号表（封面、章节、内容标题、核心数字、正文、来源各层级的 px 与行高）和字号下限与拆页触发；同时编译进 `design-tokens.json` 的 `type_scale`（每级 `{px, line_height}`，至少 4 级，含 `title`、`body`、`source`）。`check_page_layout.mjs` 会报出不在字号表里的字号和偏离槽位的 Logo（页面上的 Logo 元素加 `data-logo`）。放不下时改写或拆页，不临时缩字；
 - 受保护文字区的位置与画面占比（%），以及"先生图、后由 HTML 编排"的做法；
 - 文字层组件：标题组、编号列表、数据行、信息带／遮罩、卡片、章节标记、来源，各自的样式；
 - 分批生成规则（每批 3–5 页，先看单页和整章 montage）；
 - 母版清单与视觉 QA 清单（孤字、对齐、文字压纹理、越界、层级）。
+
+文字层组件由 `python3 scripts/build_components.py <项目目录>` 从 `design-tokens.json` 编译成 `deck/components.css`（每个字号层级一个 `.q-<层级>` 类，Logo 槽位为 `.q-logo`）。页面用这些类，不自己写字号和 Logo 位置；改字号或 Logo 只改 tokens 再重新编译，全部页面一起变。`review_hooks.py inject` 会自动给页面加上这份样式。
 
 以上各项必须写出具体数值或规则，`validate_project.py` 会逐项检查，只写标题不算。模板见 `assets/project-template/DESIGN.md`。
 

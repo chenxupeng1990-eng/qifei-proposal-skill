@@ -1,5 +1,19 @@
 # Changelog
 
+## 未发布（0.3.3 待改清单）
+
+- 工作台不再"丢功能"：`render` 生成的页面顶部标明"只读预览"，命令输出提醒给 Owner 审阅只用 `serve` 地址；母稿里某页落到别的章节标题下（插页时标题层级写错）时，`check` 报错，工作台写出具体原因，不再静默藏掉确认按钮；Owner 可以撤回章节或页面确认，留撤回记录。
+- `review_hooks.py`：正式页 HTML 的校稿编辑器由脚本接入（加载编辑器、给文字补 `data-edit-id`），`check` 查出重写页面时漏掉的挂钩。
+- `doctor.py` 列缺口前先让 Agent 自查自己的生图、看图工具；同一项目声明过的能力记在 `project-state.json`，换阶段不再报缺口。
+- 设计校准：样张用 `data-sample-page` 标明取自哪一页，只能出现这一页的上屏文字；不同样张不能共用一张底图；`calibration-production-check.md` 每张写核心内容、表达载体、排版理由。
+- 页面上叠的 Logo 要登记透明文件（`brand_visual.logo_overlay`，SVG 或透明 PNG）；`design-tokens.json` 必须有字号表 `type_scale` 和 Logo 槽位 `logo.slot`；`check_page_layout.mjs` 报出字号表以外的字号、偏离槽位的 Logo、压住人脸或产品保护区（`data-keepout`）的文字和图形。
+- 出图记录写 `references`、`products`、`edit_rounds`：画面有产品就要有官方产品参考图；同一底图局部编辑超过 2 轮改为整页重生成。HTML 文字层默认不加填充底色。
+- 换阶段写了记忆候选后，`proposal_memory.py pending` 列出待审候选，Agent 转告 Owner 并给出记忆库地址；`memory_box.py --detach` 让记忆库常驻。
+- `export_deck.mjs` 另出 `exports/proposal-vector.pdf`：HTML 页从审定的 HTML 直接打印，文字可选中、放大不糊。
+- 工作台新增"线框"视图：Agent 写 `content/draft/wireframes.json`，每页画成 16:9 灰阶线框，按内容选表达形态、只给设计留位置；`draft_studio.py wireframes` 检查线框和上屏文字是否一致。
+- 新路线 `render_route: html_only`（纯 HTML/SVG 页），每页需要 Owner 批准，不是默认；默认走不走、比例多少由 Owner 定。
+- `build_components.py`：把字号表和 Logo 槽位编译成 `deck/components.css`，页面共用，改 tokens 全部页面一起变。
+
 ## 0.3.2（2026-10-30）
 
 - 只改格式不再让已确认的章节退回待确认：确认指纹升到第 3 版，比对前抹掉加粗、全角半角冒号和空白差异；旧版本的确认记录从 `revisions/` 取出当时的版本按同样规则比较。全稿审查的章节字段同时接受 `本章回答：` 和 `**本章回答：**` 两种写法，与母稿格式说明一致。

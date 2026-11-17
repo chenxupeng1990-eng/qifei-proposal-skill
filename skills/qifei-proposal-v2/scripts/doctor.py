@@ -85,23 +85,39 @@ def detect_agent_host() -> str:
     return "unknown"
 
 
-def first_declared(declared: dict, saved: dict, key: str, env_value) -> tuple:
-    """(value, source): what the agent declared now, then the environment, then what was saved on this machine."""
-    for source, value in (("agent", declared.get(key)), ("env", env_value), ("saved", saved.get(key))):
+DECLARABLE = ("image_provider", "visual_understanding", "codex_native_comments", "image_edit")
+
+
+def first_declared(declared: dict, saved: dict, key: str, env_value, project_saved: dict | None = None) -> tuple:
+    """(value, source): what the agent declared now, then the environment, then what an earlier run declared
+    for this project, then what was saved on this machine."""
+    for source, value in (("agent", declared.get(key)), ("env", env_value),
+                          ("project", (project_saved or {}).get(key)), ("saved", saved.get(key))):
         if value:
             return value, source
     return None, None
 
 
-def detect_capabilities(declared: dict | None = None) -> dict:
+def project_declared(project: Path | None) -> dict:
+    """Abilities an agent declared in an earlier doctor run of this project (kept in project-state.json)."""
+    try:
+        state = json.loads((project / "project-state.json").read_text(encoding="utf-8"))
+    except (TypeError, OSError, ValueError):
+        return {}
+    value = (state.get("runtime") or {}).get("declared")
+    return value if isinstance(value, dict) else {}
+
+
+def detect_capabilities(declared: dict | None = None, project_saved: dict | None = None) -> dict:
     """The agent's own abilities (image generation, reading images, native browser comments) are invisible to
     this script, so the agent declares them; the environment and earlier saved declarations also count."""
     declared = declared or {}
     saved = load_saved()
-    provider, provider_source = first_declared(declared, saved, "image_provider", os.environ.get("PROPOSAL_IMAGE_PROVIDER"))
-    visual, visual_source = first_declared(declared, saved, "visual_understanding", env_true("PROPOSAL_VISUAL_UNDERSTANDING"))
-    comments, comments_source = first_declared(declared, saved, "codex_native_comments", env_true("PROPOSAL_CODEX_NATIVE_COMMENTS"))
-    edit, edit_source = first_declared(declared, saved, "image_edit", env_true("PROPOSAL_IMAGE_EDIT"))
+    ps = project_saved or {}
+    provider, provider_source = first_declared(declared, saved, "image_provider", os.environ.get("PROPOSAL_IMAGE_PROVIDER"), ps)
+    visual, visual_source = first_declared(declared, saved, "visual_understanding", env_true("PROPOSAL_VISUAL_UNDERSTANDING"), ps)
+    comments, comments_source = first_declared(declared, saved, "codex_native_comments", env_true("PROPOSAL_CODEX_NATIVE_COMMENTS"), ps)
+    edit, edit_source = first_declared(declared, saved, "image_edit", env_true("PROPOSAL_IMAGE_EDIT"), ps)
     browser_candidates = (
         os.environ.get("CHROME_PATH"),
         os.environ.get("EDGE_PATH"),
@@ -131,9 +147,9 @@ def detect_capabilities(declared: dict | None = None) -> dict:
     }
 
 
-def load_capabilities(path: str | None, declared: dict | None = None) -> dict:
+def load_capabilities(path: str | None, declared: dict | None = None, project_saved: dict | None = None) -> dict:
     if not path:
-        return detect_capabilities(declared)
+        return detect_capabilities(declared, project_saved)
     value = json.loads(Path(path).expanduser().read_text(encoding="utf-8"))
     if not isinstance(value, dict):
         raise ValueError("capabilities input must be a JSON object")
@@ -182,6 +198,10 @@ GAP_HELP = {
         ],
     },
 }
+
+
+SELF_FLAGS = {"image_generation": "--image-provider <名称，如 magpie-image>",
+              "visual_understanding": "--visual-understanding", "image_edit": "--image-edit"}
 
 
 def capability_gaps(capabilities: dict, task_nature: str = "persuasive") -> list[dict]:
@@ -291,6 +311,10 @@ def update_notice() -> dict | None:
         return None
 
 
+SOURCE_KEY = {"image_provider": "image_generation", "visual_understanding": "visual_understanding",
+              "codex_native_comments": "codex_native_comments", "image_edit": "image_edit"}
+
+
 def record_runtime(project: Path, report: dict) -> dict:
     """Write the gaps found into project-state.json, so validation can check each was put to the Owner."""
     state_path = project / "project-state.json"
@@ -302,6 +326,10 @@ def record_runtime(project: Path, report: dict) -> dict:
         "agent_host": report["capabilities"].get("agent_host"),
         "runtime_profile": report["runtime_profile"],
         "gaps": [gap["id"] for gap in report["gaps"]],
+        # Abilities the agent declared stay with the project, so a later phase does not report them missing again.
+        "declared": {key: caps[key] for key in DECLARABLE
+                     if (caps := report["capabilities"]).get(key)
+                     and (caps.get("capability_sources") or {}).get(SOURCE_KEY[key]) in {"agent", "project"}},
     }
     state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return state.get("runtime_decisions") or {}
@@ -366,7 +394,8 @@ def main() -> int:
         nature = args.task_nature
         if nature is None and project is not None and (project / "project-state.json").is_file():
             nature = json.loads((project / "project-state.json").read_text(encoding="utf-8")).get("task_nature")
-        report = build_report(load_capabilities(args.capabilities, declared), args.task_mode, nature or "persuasive")
+        report = build_report(load_capabilities(args.capabilities, declared, project_declared(project)),
+                              args.task_mode, nature or "persuasive")
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"Runtime doctor failed: {exc}", file=sys.stderr)
         return 2
@@ -394,7 +423,8 @@ def main() -> int:
         print(f"Task mode: {report['task_mode']}")
         caps = report["capabilities"]
         sources = caps.get("capability_sources") or {}
-        label = {"agent": "agent declared", "env": "environment", "saved": "saved on this machine"}
+        label = {"agent": "agent declared", "env": "environment", "project": "declared earlier for this project",
+                 "saved": "saved on this machine"}
         def show(name: str, value: str, key: str) -> None:
             print(f"{name}: {value}" + (f" ({label[sources[key]]})" if sources.get(key) else ""))
         print(f"Agent host: {caps.get('agent_host')}")
@@ -412,9 +442,21 @@ def main() -> int:
             if gap.get("decision"):
                 d = gap["decision"]
                 print(f"ACCEPTED {gap['id']}: {d.get('by')} {d.get('at', '')[:10]} {d.get('note', '')}".rstrip())
+        self_check = [gap for gap in open_gaps if gap["id"] in SELF_FLAGS]
+        if self_check:
+            print()
+            print("先自查，再问用户：doctor 看不到你（Agent）自己的工具。下面这些能力你自己有的话，加参数重跑 doctor，"
+                  "不要报给用户（同一项目以后会记住，加 --remember 对这台电脑也记住）：")
+            for gap in self_check:
+                flag = SELF_FLAGS[gap["id"]]
+                if gap["id"] == "image_generation" and caps.get("agent_host") == "codex":
+                    flag = "--image-provider codex_builtin"
+                print(f"    {gap['id']}: {flag}")
+            if caps.get("agent_host") == "codex" and not caps.get("codex_native_comments"):
+                print("    codex_native_comments: --native-comments（Codex 应用内浏览器有评论时）")
         if open_gaps:
             print()
-            print("先问用户，不要默认降级。逐项问用户能否补齐；补齐后重跑 doctor，"
+            print("自查后仍缺的，才问用户，不要默认降级。逐项问用户能否补齐；补齐后重跑 doctor，"
                   "用户明确选择暂不补齐时运行 doctor.py --project <项目目录> --accept-gap <缺口> --by <Owner> --note <原因>。")
             for gap in open_gaps:
                 print(f"GAP {gap['id']}（影响：{'、'.join(gap['blocks'])}）：{gap['question']}")

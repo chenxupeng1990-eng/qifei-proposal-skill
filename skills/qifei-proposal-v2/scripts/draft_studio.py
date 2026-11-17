@@ -535,6 +535,7 @@ def model_from_text(
                 slide["status"] = "modified"
     draft_state = (state or {}).get("proposal_draft") or {}
     model["format_issues"] = check_format(text)
+    attach_wireframes(model, draft_path)
     model["meta"] = {
         "source": str(draft_path.relative_to(project)) if draft_path.is_relative_to(project) else str(draft_path),
         "authority": draft_state.get("authority"),
@@ -549,14 +550,155 @@ def model_from_text(
     return model
 
 
+# ---------- Wireframes: the agent's layout data per page, drawn by the studio ----------
+
+WIREFRAMES = "wireframes.json"
+WIRE_SPLIT = re.compile(r"[：:｜|→]")
+WIRE_NORM = re.compile(r"[\s`*_]")
+WIRE_LABELS = {"标题", "副标题", "左侧", "右侧", "路径", "收束句", "核心句", "小标题", "正文", "数据", "来源"}
+WIRE_TEXT_TYPES = {"text", "node", "card"}
+
+
+def wireframes_path(draft_path: Path) -> Path:
+    return draft_path.parent / WIREFRAMES
+
+
+def load_wireframes(draft_path: Path) -> dict[str, Any]:
+    """{"logo": {x, y, w, h} (optional), "pages": {"P03": {form, why, visual_change?, blocks: [...]}}}"""
+    path = wireframes_path(draft_path)
+    if not path.is_file():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8") or "{}")
+    return data if isinstance(data.get("pages"), dict) else {}
+
+
+def _wire_norm(text: str) -> str:
+    return WIRE_NORM.sub("", text)
+
+
+def _screen_pieces(line: str) -> list[str]:
+    line = re.sub(r"^\s*[-*]\s*", "", line).strip()
+    if not line or line.endswith(("：", ":")):
+        return []
+    parts = [p.strip() for p in WIRE_SPLIT.split(line)]
+    if len(parts) > 1 and parts[0] in WIRE_LABELS:
+        parts = parts[1:]
+    return [p for p in parts if p]
+
+
+def _block_texts(block: dict[str, Any]) -> list[str]:
+    kind = block.get("type")
+    if kind in WIRE_TEXT_TYPES:
+        return [str(x) for x in block.get("lines") or []]
+    if kind == "stat":
+        return [str(block.get("num", "")), str(block.get("label", ""))]
+    if kind == "step":
+        return [str(block.get(k, "")) for k in ("num", "label", "tag")]
+    if kind == "kv":
+        return [str(x) for row in block.get("rows") or [] for x in row]
+    if kind == "table":
+        rows = (block.get("rows") or []) + ([block["total"]] if block.get("total") else [])
+        return [str(x) for x in (block.get("cols") or []) + [x for row in rows for x in row]]
+    return []  # image, arrow, line, note: not on-screen copy
+
+
+def wireframe_coverage(screen_md: str, wire: dict[str, Any]) -> dict[str, list[str]]:
+    """On-screen copy missing from the wireframe, and wireframe text that is not on-screen copy."""
+    blocks = wire.get("blocks") or []
+    shown = _wire_norm("".join(x for b in blocks for x in _block_texts(b)))
+    missing = []
+    for line in screen_md.splitlines():
+        pieces = _screen_pieces(line)
+        lost = [p for p in pieces if _wire_norm(p) not in shown]
+        # "价格角色：品牌锚点｜日常主销" — a short lead label before the colon may stay off the frame.
+        if lost and lost[0] == pieces[0] and len(pieces) > 1 and len(pieces[0]) <= 6 and re.search(r"[：:]", line):
+            lost = lost[1:]
+        missing += lost
+    source = _wire_norm(screen_md)
+    extra = [p.strip() for b in blocks for x in _block_texts(b) for p in WIRE_SPLIT.split(x)
+             if p.strip() and _wire_norm(p) not in source]
+    return {"missing": missing, "extra": list(dict.fromkeys(extra))}
+
+
+def attach_wireframes(model: dict[str, Any], draft_path: Path) -> None:
+    try:
+        data = load_wireframes(draft_path)
+    except (OSError, ValueError) as error:
+        model["wireframe_error"] = f"{WIREFRAMES} 读不了：{error}"
+        return
+    wires = data.get("pages") or {}
+    if isinstance(data.get("logo"), dict):
+        model["wire_logo"] = data["logo"]
+    for chapter in model["chapters"]:
+        for slide in chapter["slides"]:
+            wire = wires.get(slide["id"])
+            if not isinstance(wire, dict):
+                continue
+            screen = next((f["md"] for f in slide["fields"] if f["key"] == "screen"), "")
+            slide["wireframe"] = {**wire, "coverage": wireframe_coverage(screen, wire)}
+    model["has_wireframes"] = bool(wires)
+
+
+def wireframe_issues(model: dict[str, Any]) -> list[dict[str, str]]:
+    issues = []
+    for chapter in model["chapters"]:
+        for slide in chapter["slides"]:
+            wire = slide.get("wireframe")
+            if wire is None:
+                if model.get("has_wireframes"):
+                    issues.append({"page": slide["id"], "message": "还没有线框"})
+                continue
+            if not str(wire.get("form") or "").strip() or not str(wire.get("why") or "").strip():
+                issues.append({"page": slide["id"], "message": "线框缺表达形态（form）或理由（why）"})
+            if wire["coverage"]["missing"]:
+                issues.append({"page": slide["id"], "message": f"上屏文字没放进线框：{'、'.join(wire['coverage']['missing'])}"})
+            if wire["coverage"]["extra"]:
+                issues.append({"page": slide["id"], "message": f"线框里有上屏内容以外的文字：{'、'.join(wire['coverage']['extra'])}"})
+    return issues
+
+
+def chapter_alignment_issues(model: dict[str, Any], state: dict[str, Any] | None) -> list[dict[str, str]]:
+    """Each registered chapter's pages must sit under one drafted chapter, and every drafted page must be
+    registered. A misplaced heading otherwise hides confirm buttons without any error."""
+    registered = [c for c in (state or {}).get("chapters") or [] if c.get("slides")]
+    if not registered:
+        return []
+    where = {s["id"]: ch["title"] for ch in model["chapters"] for s in ch["slides"]}
+    owner = {str(s): c.get("chapter_id") for c in registered for s in c["slides"]}
+    issues = []
+    for chapter in registered:
+        cid, pages = chapter.get("chapter_id"), [str(s) for s in chapter["slides"]]
+        missing = [s for s in pages if s not in where]
+        if missing:
+            issues.append({"page": cid, "message": f"{cid} 登记的 {'、'.join(missing)} 在母稿里找不到"})
+        homes: dict[str, list[str]] = {}
+        for s in pages:
+            if s in where:
+                homes.setdefault(where[s], []).append(s)
+        if len(homes) > 1:
+            spread = "；".join(f"{'、'.join(ps)} 在「{title}」下" for title, ps in homes.items())
+            issues.append({"page": cid, "message": f"{cid} 的页面被母稿标题分到了不同章节：{spread}。把这些页移到同一个章节标题下，或改 project-state.json 的页序"})
+    for ch in model["chapters"]:
+        loose = [s["id"] for s in ch["slides"] if s["id"] not in owner]
+        if loose:
+            issues.append({"page": "、".join(loose), "message": f"「{ch['title']}」下的 {'、'.join(loose)} 没有登记到任何章节（project-state.json 的 chapters[].slides）"})
+        if not ch["slides"]:
+            issues.append({"page": "-", "message": f"标题「{ch['title']}」被当成了一章，但下面没有页面；如果它是总标题，用比章节标题高一级的标题"})
+    return issues
+
+
 def annotate_studio(model: dict[str, Any], state: dict[str, Any], confirmations: "ConfirmationStore", revision: int) -> None:
     """Tell the page which registered chapter each drafted chapter is, and where registration stands."""
     issue_pages = {i["page"] for i in model.get("format_issues", [])}
+    alignment = chapter_alignment_issues(model, state)
+    model["alignment_issues"] = alignment
     for chapter in model["chapters"]:
         ids = {s["id"] for s in chapter["slides"]}
         match = next((c for c in state.get("chapters") or [] if ids and set(c.get("slides") or []) and set(c.get("slides") or []) <= ids), None)
         if not match:
-            chapter["studio"] = {"chapter_id": None, "reason": "project-state.json 里没有登记这一章的页序"}
+            near = next((c for c in state.get("chapters") or [] if ids & {str(s) for s in c.get("slides") or []}), None)
+            why = next((i["message"] for i in alignment if near and i["page"] == near.get("chapter_id")), None)
+            chapter["studio"] = {"chapter_id": None, "reason": why or "project-state.json 里没有登记这一章的页序"}
             continue
         record = confirmations.find(match.get("confirmation_record_id"))
         blocked = sorted(ids & issue_pages)
@@ -1179,6 +1321,43 @@ def confirm_page(project: Path, draft_path: Path, slide_id: str, by: str) -> dic
     return result
 
 
+def retract_confirmation(project: Path, draft_path: Path, by: str, chapter_id: str | None = None,
+                         slide_id: str | None = None) -> dict[str, Any]:
+    """The Owner takes back a chapter or page confirmation. The page goes back to pending; the record is kept."""
+    state = read_state(project)
+    if not is_studio(state):
+        raise EditError("只有以工作台为权威源的项目可以在这里撤回确认")
+    if slide_id:
+        chapter = next((c for c in state.get("chapters") or [] if slide_id in [str(s) for s in c.get("slides") or []]), None)
+        if chapter is None:
+            raise EditError(f"project-state.json 的章节页序里没有 {slide_id}")
+    else:
+        chapter = _state_chapter(state, str(chapter_id))
+    pages = chapter.get("page_confirmations") or {}
+    targets = [slide_id] if slide_id else [str(s) for s in chapter.get("slides") or []]
+    held = [s for s in targets if s in pages] or (targets if chapter.get("manuscript_confirmed") else [])
+    if not held:
+        raise EditError(f"{slide_id or chapter.get('chapter_id')} 现在没有确认，不需要撤回")
+    record = {
+        "record_id": f"retract-{slide_id or chapter.get('chapter_id')}-{secrets.token_hex(3)}",
+        "chapter_id": chapter.get("chapter_id"),
+        "scope": "retract",
+        "slides": held,
+        "retracts": sorted({r for r in [chapter.get("confirmation_record_id"), *[pages.get(s) for s in held]] if r}),
+        "by": (by or "Owner")[:40],
+        "at": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
+    }
+    ConfirmationStore(draft_path).add(record)
+    if chapter.get("manuscript_confirmed") and not slide_id:
+        pages = {}
+    chapter["page_confirmations"] = {s: r for s, r in pages.items() if s not in held}
+    chapter["pages_reopened"] = [s for s in chapter.get("pages_reopened") or [] if s not in held]
+    chapter["manuscript_confirmed"] = False
+    chapter["confirmation_record_id"] = None
+    write_state(project, state)
+    return record
+
+
 def register_draft(project: Path, draft_path: Path) -> dict[str, Any]:
     """Record the current draft as the verified version (the studio's equivalent of a Feishu reread)."""
     state = read_state(project)
@@ -1484,6 +1663,11 @@ class StudioServer(ThreadingHTTPServer):
                     self.publish_comments()
                 if self.design.digest() != self.design_digest:
                     self.publish_design()
+                wires = wireframes_path(self.store.draft_path)
+                stamp = wires.stat().st_mtime_ns if wires.is_file() else None
+                if stamp != getattr(self, "wire_stamp", stamp):
+                    self.publish_state()
+                self.wire_stamp = stamp
             except (OSError, ValueError):
                 continue
 
@@ -1558,7 +1742,7 @@ class StudioHandler(BaseHTTPRequestHandler):
             return self._comment_post(url.path)
         if url.path.startswith("/api/design/"):
             return self._design_post(url.path)
-        if url.path in {"/api/confirm", "/api/register"}:
+        if url.path in {"/api/confirm", "/api/unconfirm", "/api/register"}:
             return self._authority_post(url.path)
         if url.path != "/api/save":
             return self._json(404, {"error": "not found"})
@@ -1588,6 +1772,10 @@ class StudioHandler(BaseHTTPRequestHandler):
                             result["registered"] = register_draft(store.project, store.draft_path)
                         except EditError as error:
                             result["registration_pending"] = str(error)
+                elif path == "/api/unconfirm":
+                    result = {"retracted": retract_confirmation(
+                        store.project, store.draft_path, str(payload.get("author") or "Owner"),
+                        chapter_id=payload.get("chapter_id"), slide_id=payload.get("slide_id"))}
                 elif path == "/api/confirm":
                     record = confirm_chapter(store.project, store.draft_path, str(payload["chapter_id"]), str(payload.get("author") or "Owner"))
                     result = {"confirmed": record}
@@ -1803,6 +1991,9 @@ def main() -> int:
     reg = sub.add_parser("register", help="record the current studio draft as the verified version")
     reg.add_argument("project")
     reg.add_argument("--draft")
+    wire = sub.add_parser("wireframes", help="check content/draft/wireframes.json against each page's on-screen copy")
+    wire.add_argument("project")
+    wire.add_argument("--draft")
     check = sub.add_parser("check", help="check the draft against the single draft format")
     check.add_argument("project")
     check.add_argument("--draft")
@@ -1842,13 +2033,26 @@ def main() -> int:
         return 0
     if args.command == "check":
         draft_path, _ = load_project(project, args.draft)
-        issues = check_format(draft_path.read_text(encoding="utf-8"))
+        text = draft_path.read_text(encoding="utf-8")
+        issues = check_format(text)
+        state = read_state(project)
+        if is_studio(state):
+            issues += chapter_alignment_issues(parse_draft(text), state)
         for issue in issues:
             print(f"{issue['page']}\t{issue['message']}")
         print(f"{'FAIL' if issues else 'PASS'}: {len(issues)} format issue(s) in {draft_path.name}")
         return 1 if issues else 0
     if args.command == "normalize":
         return run_normalize(project, args.draft, args.write)
+    if args.command == "wireframes":
+        draft_path, state = load_project(project, args.draft)
+        model = model_from_text(draft_path.read_text(encoding="utf-8"), project, draft_path, state)
+        issues = wireframe_issues(model)
+        drawn = sum(1 for ch in model["chapters"] for s in ch["slides"] if s.get("wireframe"))
+        for issue in issues:
+            print(f"{issue['page']}\t{issue['message']}")
+        print(f"{'FAIL' if issues else 'PASS'}: {drawn} page(s) with wireframes, {len(issues)} issue(s)")
+        return 1 if issues else 0
     if args.command in {"comments", "reply"}:
         draft_path, _ = load_project(project, args.draft)
         store = CommentStore(draft_path)
@@ -1876,6 +2080,8 @@ def main() -> int:
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(render_html(model, threads=threads), encoding="utf-8")
         print(f"Rendered {len(model['chapters'])} chapter(s), {slide_count} page(s) -> {out}")
+        print("This is a READ-ONLY preview: no confirm, comment or save. Give the Owner the address printed by "
+              "`draft_studio.py serve <project> --detach` for review, never this file.")
     else:
         text = export_markdown(model, args.profile, threads)
         if args.out:

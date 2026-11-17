@@ -14,7 +14,7 @@ LOOP_STEPS = ["template", "image2", "html", "validate"]
 VISUAL_MODES = {"none", "background", "opaque-module", "transparent-png"}
 # image_plus_html: a design base with an HTML text layer. image_full: the generator draws the whole page,
 # text included; the default for visual_showcase tasks (brand books), an Owner exception elsewhere.
-RENDER_ROUTES = {"image_plus_html", "image_full"}
+RENDER_ROUTES = {"image_plus_html", "image_full", "html_only"}
 DOMINANT_TYPES = {"information_first", "design_first"}
 EXPRESSION_OBJECTS = {
     "data_evidence",
@@ -159,9 +159,15 @@ def validate_presentation_route(
             )
         if str(page.get("visual_mode") or "") != "background":
             errors.append(f"{scope}: render_route image_full draws the whole page; visual_mode must be background")
+    elif render_route == "html_only":
+        # Pure HTML/SVG pages (data, tables, rules) are not a default: the Owner approves each one.
+        if not owner_exception_ok(page, approvals):
+            errors.append(f"{scope}: render_route html_only needs route_exception with an Owner approval record_id for this page")
+        if str(page.get("visual_mode") or "") != "none":
+            errors.append(f"{scope}: render_route html_only has no Image2 base; visual_mode must be none")
     route = page.get("presentation_route")
     if not isinstance(route, dict):
-        return [f"{scope}: presentation_route is required"]
+        return errors + [f"{scope}: presentation_route is required"]
 
     for field in PRESENTATION_ROUTE_FIELDS:
         if not str(route.get(field) or "").strip():
@@ -258,6 +264,39 @@ def validate_presentation_route(
         if str(image2_decision.get("semantic_role") or "") not in BASE_ROLES:
             errors.append(f"{scope}: a design base is a scene or hero; semantic_role must be one of {sorted(BASE_ROLES)}")
 
+    return errors
+
+
+MAX_EDIT_ROUNDS = 2
+OFFICIAL_PRODUCT_ROOTS = ("inputs/brand-official/", "assets/brand/")
+
+
+def generation_record_errors(project: Path, visual: dict, scope: str) -> list[str]:
+    """What went into the image: the references passed in, the products shown, and how many times the
+    base was edited in place. Products need an official product reference; repeated in-place edits fog
+    the image, so past MAX_EDIT_ROUNDS the base is regenerated from the references instead."""
+    errors = []
+    references = visual.get("references")
+    products = visual.get("products")
+    if not isinstance(references, list):
+        errors.append(f"{scope}: visual.references must list the reference images passed to Image2 (may be empty)")
+        references = []
+    if not isinstance(products, list):
+        errors.append(f"{scope}: visual.products must list the products shown in the image (empty list when none)")
+        products = []
+    for ref in references:
+        _, ref_error = project_file(project, ref, "")
+        if ref_error:
+            errors.append(f"{scope}: visual.references {ref_error}")
+    if products and not any(str(ref).replace("\\", "/").startswith(OFFICIAL_PRODUCT_ROOTS) for ref in references):
+        errors.append(f"{scope}: shows {', '.join(map(str, products))} but no official product image was passed as a reference "
+                      f"(put it under {' or '.join(OFFICIAL_PRODUCT_ROOTS)} and list it in visual.references)")
+    rounds = visual.get("edit_rounds")
+    if not isinstance(rounds, int) or rounds < 0:
+        errors.append(f"{scope}: visual.edit_rounds must record how many in-place edits the base went through (0 when none)")
+    elif rounds > MAX_EDIT_ROUNDS:
+        errors.append(f"{scope}: base edited in place {rounds} times (more than {MAX_EDIT_ROUNDS}); regenerate it in one pass "
+                      "from the references, repeated edits fog faces and products")
     return errors
 
 
@@ -371,6 +410,8 @@ def validate_chapter_report(project: Path, chapter_id: str) -> list[str]:
             if prompt_error:
                 errors.append(f"{scope}: prompt_record {prompt_error}")
 
+            if visual_mode == "background":
+                errors.extend(generation_record_errors(project, visual, scope))
             if visual_mode == "background" and asset_file:
                 errors.extend(validate_base_image(asset_file, scope))
                 if asset_path in base_owner:

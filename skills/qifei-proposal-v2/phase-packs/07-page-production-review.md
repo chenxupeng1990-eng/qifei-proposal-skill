@@ -47,6 +47,7 @@
 - 正式页底图按母版生图：把同类页面已确认的校准页（母版）和官方产品图作为参考图交给 Image2，沿用母版的版式、文字区、光线和材质，登记 `master_reference`。
 - HTML不能独立承担整页审美。
 - 不用无关装饰图过门禁。
+- 校稿编辑器由脚本接入，不手写：每次写完或重写页面 HTML，运行 `python3 scripts/review_hooks.py inject <项目目录> <页面HTML...>`（加载编辑器、给文字加 `data-edit-id`，可重复运行）；出评审 PNG 和进拼装准备库前运行 `review_hooks.py check`，FAIL 时先补上。不需要开放编辑的文字加 `data-edit="off"`，设计装饰加 `data-screen-ignore`。
 - 全部正式页完成后，先跑 `check_page_layout.mjs` 版面测量，再由独立 Agent 按视觉 QA 清单逐页做对抗审查（见 page-production-loop.md「独立视觉审查」），登记 `visual_review`；页面改动后重新审查。
 - Owner 的页面意见走工作台的设计评审页（`/design`）：框选、评论、Agent 用 `design_review.py list/reply` 处理，Owner 解决；还有未解决设计评论的页面不能进拼装准备库。见 [../references/draft-studio.md](../references/draft-studio.md)「设计评审」。
 - 评论关闭、独立审查通过都不等于页面确认。

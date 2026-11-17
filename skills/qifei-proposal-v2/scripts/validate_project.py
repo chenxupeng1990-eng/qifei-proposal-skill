@@ -323,6 +323,141 @@ def calibration_production_check_errors(project: Path, calibration: dict, sample
             for sample_type in sample_types if sample_type not in text]
 
 
+class SampleMeta(HTMLParser):
+    """Per [data-design-sample]: the draft page it takes its copy from and the images it uses."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.samples: list[dict] = []
+        self.depth = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        names = dict(attrs)
+        if "data-design-sample" in names and not self.depth:
+            self.samples.append({"type": str(names["data-design-sample"]), "page": names.get("data-sample-page"), "images": []})
+            self.depth = 1 if tag not in VOID_TAGS else 0
+            self.samples[-1]["images"] += re.findall(r"url\(\s*['\"]?([^'\")]+)", str(names.get("style") or ""))
+            return
+        if self.depth:
+            if tag == "img" and names.get("src"):
+                self.samples[-1]["images"].append(str(names["src"]))
+            for url in re.findall(r"url\(\s*['\"]?([^'\")]+)", str(names.get("style") or "")):
+                self.samples[-1]["images"].append(url)
+            if tag not in VOID_TAGS:
+                self.depth += 1
+
+    def handle_endtag(self, tag: str) -> None:
+        if self.depth and tag not in VOID_TAGS:
+            self.depth -= 1
+
+
+PRODUCTION_CHECK_COLUMNS = ("核心内容", "表达载体", "排版理由")
+
+
+def production_check_column_errors(text: str, sample_types: tuple[str, ...]) -> list[str]:
+    """Each sample row says what the page is about, which carrier expresses it, and why it is laid out so."""
+    rows = [[c.strip() for c in line.strip().strip("|").split("|")] for line in text.splitlines() if line.strip().startswith("|")]
+    header = next((r for r in rows if all(any(col in cell for cell in r) for col in PRODUCTION_CHECK_COLUMNS)), None)
+    if header is None:
+        return [f"{CALIBRATION_CHECK} needs a table with columns {'、'.join(PRODUCTION_CHECK_COLUMNS)} (one row per sample)"]
+    index = {col: next(i for i, cell in enumerate(header) if col in cell) for col in PRODUCTION_CHECK_COLUMNS}
+    errors = []
+    for sample_type in sample_types:
+        row = next((r for r in rows if r is not header and any(sample_type == cell.strip("` ") for cell in r)), None)
+        if row is None:
+            errors.append(f"{CALIBRATION_CHECK} has no row for sample {sample_type}")
+            continue
+        empty = [col for col, i in index.items() if i >= len(row) or not row[i].strip("-— ")]
+        if empty:
+            errors.append(f"{CALIBRATION_CHECK} sample {sample_type} leaves {'、'.join(empty)} empty")
+    return errors
+
+
+def calibration_sample_errors(project: Path, calibration_path: Path, html: str) -> list[str]:
+    """Before calibration is approved: every sample names its draft page and shows only that page's
+    on-screen copy, and no two samples share one base image (each content needs its own carrier)."""
+    import screen_text
+
+    parser = SampleMeta()
+    parser.feed(html)
+    texts = SampleText()
+    texts.feed(html)
+    chunks = {sample_type: found for sample_type, found in texts.samples}
+    try:
+        screens = screen_text.draft_screen(project)
+    except (OSError, ValueError, KeyError, SystemExit):
+        screens = {}
+    allowed = screen_text.whitelist(project)
+    errors = []
+    owners: dict[str, str] = {}
+    for sample in parser.samples:
+        kind, page = sample["type"], (sample["page"] or "").strip()
+        if not page:
+            errors.append(f"Design calibration sample {kind} must name the draft page it takes its copy from "
+                          f'(data-sample-page="P03")')
+        elif screens and page not in screens:
+            errors.append(f"Design calibration sample {kind}: data-sample-page {page} is not a page in the draft")
+        elif page in screens:
+            extra = screen_text.compare(screens[page], chunks.get(kind, []), allowed)["extra"]
+            if extra:
+                errors.append(f"Design calibration sample {kind} shows text that is not in {page}'s PPT上屏内容: "
+                              f"{'；'.join(extra[:3])}（讲解、策略和说明不上样张；固定设计字放进 screen_text_whitelist）")
+        for src in dict.fromkeys(sample["images"]):
+            if src.startswith(("data:", "http:", "https:")) or "logo" in src.lower():
+                continue
+            file = (calibration_path.parent / src.split("?")[0]).resolve()
+            if not file.is_file() or file.suffix.lower() == ".svg" or (file.suffix.lower() == ".png" and png_has_alpha(file)):
+                continue
+            digest = hashlib.sha256(file.read_bytes()).hexdigest()
+            if digest in owners and owners[digest] != kind:
+                errors.append(f"Design calibration samples {owners[digest]} and {kind} use the same base image {src}; "
+                              "each sample needs a carrier chosen for its own content")
+            owners.setdefault(digest, kind)
+    return errors
+
+
+def logo_overlay_errors(project: Path, brand_visual: dict) -> list[str]:
+    """The Logo laid on pages must be a vector or a PNG with real transparency, or it lands on a white box."""
+    value = brand_visual.get("logo_overlay")
+    if not value:
+        if str(brand_visual.get("logo_overlay_reason") or "").strip():
+            return []
+        return ["brand_visual.logo_overlay must register the official Logo file laid on pages (SVG or transparent PNG), "
+                "or logo_overlay_reason must say why there is none"]
+    for root in ("inputs", "assets"):
+        path, error = registered_project_file(project, value, root)
+        if path:
+            break
+    if not path:
+        return [f"brand_visual.logo_overlay: {error}"]
+    if path.suffix.lower() == ".svg" or (path.suffix.lower() == ".png" and png_has_alpha(path)):
+        return []
+    return [f"brand_visual.logo_overlay {path.name} has no transparency; cut it out to a transparent PNG or use the SVG "
+            "before laying it on pages"]
+
+
+TYPE_SCALE_LEVELS = ("title", "body", "source")
+
+
+def type_scale_and_logo_errors(tokens: dict, brand_visual: dict) -> list[str]:
+    """DESIGN.md fixes font sizes by level and the Logo's place and size; tokens carry them for the layout check."""
+    errors = []
+    scale = tokens.get("type_scale") if isinstance(tokens.get("type_scale"), dict) else {}
+    for level in TYPE_SCALE_LEVELS:
+        if not isinstance((scale.get(level) or {}).get("px"), (int, float)):
+            errors.append(f"design-tokens.json type_scale.{level}.px is required (font size per level, from DESIGN.md)")
+    if len(scale) < 4:
+        errors.append("design-tokens.json type_scale needs at least 4 levels (e.g. title, subtitle, body, data, source)")
+    logo = tokens.get("logo") if isinstance(tokens.get("logo"), dict) else {}
+    slot = logo.get("slot") if isinstance(logo.get("slot"), dict) else {}
+    if brand_visual.get("logo_overlay"):
+        if str(logo.get("file") or "").replace("\\", "/") != str(brand_visual["logo_overlay"]).replace("\\", "/"):
+            errors.append("design-tokens.json logo.file must be brand_visual.logo_overlay")
+        if not all(isinstance(slot.get(k), (int, float)) for k in ("x", "y", "w")):
+            errors.append("design-tokens.json logo.slot needs x, y and w in px (the Logo's place and size on the 1920×1080 page)")
+    return errors
+
+
 def calibration_screen_errors(html: str) -> list[str]:
     """A calibration sample carries only on-screen text: no draft field labels, no internal caution
     wording. Notes for the reviewer go in an element marked data-screen-ignore."""
@@ -772,6 +907,12 @@ def validate_project(project: Path) -> list[str]:
                 if marker_double not in calibration_text and marker_single not in calibration_text:
                     errors.append(f"Design calibration is missing required sample type: {sample_type}")
             errors.extend(calibration_screen_errors(calibration_text))
+            if not is_approved(approvals, "design_calibration"):
+                # v0.3.3 checks run until the calibration is approved; approved calibrations are not reopened.
+                errors.extend(calibration_sample_errors(project, calibration_path, calibration_text))
+                check_path, _ = registered_project_file(project, calibration.get("production_check_path") or CALIBRATION_CHECK, "evidence")
+                if check_path:
+                    errors.extend(production_check_column_errors(check_path.read_text(encoding="utf-8"), required_types))
             if phase_index >= PHASES.index("design_system"):
                 errors.extend(calibration_production_check_errors(project, calibration, required_types))
             if "content-visual-module" in required_types:
@@ -834,6 +975,9 @@ def validate_project(project: Path) -> list[str]:
                 errors.append("Approved brand visual audit still contains unresolved placeholder markers")
             errors.extend(product_image_rule_errors(audit_text, "Brand visual audit"))
 
+        if phase_index >= PHASES.index("design_calibration"):
+            errors.extend(logo_overlay_errors(project, brand_visual))
+
         for gate in ("brand_visual_sources", "brand_visual_audit"):
             if not is_approved(approvals, gate):
                 message = f"Phase {phase} requires approved gate: {gate}"
@@ -885,6 +1029,7 @@ def validate_project(project: Path) -> list[str]:
                         errors.append("design-tokens.json page_system.chapter_variants must include at least three chapter variants")
                     if set(page_system.get("density_levels") or []) != {"low", "medium", "high"}:
                         errors.append("design-tokens.json page_system.density_levels must include low, medium, and high")
+                    errors.extend(type_scale_and_logo_errors(tokens, brand_visual))
                     alpha_tokens = tokens.get("transparent_png") if isinstance(tokens.get("transparent_png"), dict) else {}
                     # Transparent modules are optional on top of the full-page base; when used they need real alpha.
                     if alpha_tokens.get("enabled") is True and alpha_tokens.get("alpha_required") is not True:
