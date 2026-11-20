@@ -60,6 +60,21 @@ DRAFT = f"""<title>上屏表格样例</title>
 |-|-|
 | 抖音 | 60% |
 | 天猫 | 40% |
+
+## P04｜两列数据表
+
+### PPT上屏内容
+
+- 标题：两列数据标题
+
+**上屏数据表：现有资产**
+
+| 资产 | 数据 |
+|-|-|
+| 天猫旗舰店 | 6 年 |
+| 高端零售 | 连卡佛 |
+
+- 来源：天猫旗舰店页面
 """
 
 
@@ -108,6 +123,13 @@ class ScreenFieldPreviewTests(unittest.TestCase):
     def test_several_tables_are_not_merged(self) -> None:
         p03 = self.report["slides"]["P03"]
         self.assertEqual([(t["columns"], t["rows"]) for t in p03["tables"]], [(2, 1), (2, 2)])
+
+    def test_single_two_column_data_table_is_shown_whole(self) -> None:
+        p04 = self.report["slides"]["P04"]
+        self.assertEqual(p04["title"], "两列数据标题")
+        self.assertEqual(p04["kv_rows"], [])
+        self.assertEqual([(t["columns"], t["rows"]) for t in p04["tables"]], [(2, 2)])
+        self.assertEqual(p04["sequence"], ["上屏数据表：现有资产", "TABLE", "来源：天猫旗舰店页面"])
 
 
 if __name__ == "__main__":

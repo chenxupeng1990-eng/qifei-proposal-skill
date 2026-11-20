@@ -178,6 +178,14 @@
   function screenHtml(md, fallbackTitle) {
     const tables = tablesOf(md);
     if (tables.length > 1 || tables.some((t) => splitRow(t[0]).length > 2)) return screenMarkdownHtml(md, fallbackTitle);
+    // A single two-column table is a "字段｜内容" description of the slide only when it says so
+    // (a 元素/字段/项目 header or a 标题 row); otherwise it is a data table and is shown whole.
+    if (tables.length === 1) {
+      const t = tables[0];
+      const described = /^(元素|字段|项目|要素)$/.test(stripBold(splitRow(t[0])[0] || ""))
+        || t.slice(2).some((l) => /^(主?标题|副标题)$/.test(stripBold(splitRow(l)[0] || "")));
+      if (!described) return screenMarkdownHtml(md, fallbackTitle);
+    }
     const rows = rowsOf(md);
     if (!rows) return `<div class="md">${block(md)}</div>`;
     let title = "", sub = "";
