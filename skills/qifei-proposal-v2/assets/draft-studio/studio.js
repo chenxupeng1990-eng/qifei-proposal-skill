@@ -39,10 +39,10 @@
   const isSep = (line) => /^\s*\|?\s*:?-{1,}:?\s*(\|\s*:?-{1,}:?\s*)*\|?\s*$/.test(line);
   const stripBold = (s) => s.replace(/^\*\*(.*)\*\*$/, "$1");
 
-  function tableHtml(rows) {
+  function tableHtml(rows, full = false) {
     const head = splitRow(rows[0]);
     const body = rows.slice(2).map(splitRow);
-    if (head.length === 2) {
+    if (head.length === 2 && !full) {
       const cells = body.map((r) => `<div class="k">${inline(stripBold(r[0] || ""))}</div><div>${inline(r[1] || "")}</div>`).join("");
       return `<div class="kv">${cells}</div>`;
     }
@@ -80,7 +80,7 @@
     return `<div class="callout"><span class="ic">!</span><div class="ct md">${heading}${inner}</div></div>`;
   }
 
-  function block(text) {
+  function block(text, opts = {}) {
     const lines = (text || "").split("\n");
     const out = [];
     let i = 0;
@@ -108,7 +108,7 @@
       if (t.startsWith("|") && i + 1 < lines.length && isSep(lines[i + 1])) {
         const buf = [];
         while (i < lines.length && lines[i].trim().startsWith("|")) buf.push(lines[i++]);
-        out.push(tableHtml(buf));
+        out.push(tableHtml(buf, opts.fullTables));
         continue;
       }
       const h = t.match(/^(#{1,6})\s+(.*)$/);
@@ -146,7 +146,38 @@
     return lines.slice(2).map(splitRow).filter((r) => r.length >= 2);
   }
 
+  // Every Markdown table in a field: consecutive `|` lines whose second line is a separator.
+  function tablesOf(md) {
+    const lines = md.split("\n");
+    const tables = [];
+    for (let i = 0; i < lines.length; i++) {
+      if (!lines[i].trim().startsWith("|") || i + 1 >= lines.length || !isSep(lines[i + 1])) continue;
+      const buf = [];
+      while (i < lines.length && lines[i].trim().startsWith("|")) buf.push(lines[i++]);
+      tables.push(buf);
+      i--;
+    }
+    return tables;
+  }
+
+  // Screen content that holds data tables: keep every table whole and in place; "标题：…" items become the card title.
+  function screenMarkdownHtml(md, fallbackTitle) {
+    let title = "", sub = "";
+    const rest = md.split("\n").filter((l) => {
+      const m = l.match(/^\s*[-*+]\s+(?:\*\*)?(主标题|标题|副标题)(?:\*\*)?\s*[：:]\s*(.+)$/);
+      if (!m) return true;
+      if (m[1] === "副标题") { if (sub) return true; sub = m[2].trim(); return false; }
+      if (title) return true;
+      title = m[2].trim();
+      return false;
+    }).join("\n");
+    if (!title) title = fallbackTitle || "";
+    return `<div class="screen screen-md">${title ? `<p class="s-title">${inline(title)}</p>` : ""}${sub ? `<p class="s-sub">${inline(sub)}</p>` : ""}<div class="md">${block(rest, { fullTables: true })}</div></div>`;
+  }
+
   function screenHtml(md, fallbackTitle) {
+    const tables = tablesOf(md);
+    if (tables.length > 1 || tables.some((t) => splitRow(t[0]).length > 2)) return screenMarkdownHtml(md, fallbackTitle);
     const rows = rowsOf(md);
     if (!rows) return `<div class="md">${block(md)}</div>`;
     let title = "", sub = "";
