@@ -12,6 +12,10 @@
 - [../references/placeholder-contract.md](../references/placeholder-contract.md)
 - 需要行业、市场、人群、竞品、货品或平台数据支持策略时，读取 [../references/data-to-strategy-evidence-engine.md](../references/data-to-strategy-evidence-engine.md)。已有策略时定向找证据；策略未形成时从数据不对称中推导对品牌有利的策略。
 
+## 按题目选读
+
+- 本案涉及人群切入、内容种草、达人投放或效果验证时，可参阅[营销前置理解](../references/marketing-planning-context.md)，用其中的方法整理策略假设和待验证问题。可在现有策略材料中引用相关结论。
+
 ## 必须产出
 
 - 策略立场卡。
