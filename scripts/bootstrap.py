@@ -60,6 +60,21 @@ def main() -> int:
             if not lockfile.is_file():
                 raise SystemExit(f"Missing lockfile: {lockfile}")
             run([npm, "ci", "--no-audit", "--no-fund"], cwd=package)
+        try:
+            import PIL  # noqa: F401
+        except ImportError:
+            print("\nInstalling Pillow for cross-platform WebP compression and HTML presenter tests...")
+            pip_res = subprocess.run(
+                [sys.executable, "-m", "pip", "install", "--quiet", "Pillow"],
+                cwd=ROOT,
+                check=False,
+            )
+            if pip_res.returncode:
+                print(
+                    "[warn] Could not install Pillow automatically; install it manually with "
+                    f"`{sys.executable} -m pip install Pillow` to enable WebP compression without cwebp.",
+                    file=sys.stderr,
+                )
 
     v2 = ROOT / "skills" / "qifei-proposal-v2"
     run(["node", str(v2 / "scripts" / "check_environment.mjs")], cwd=v2)

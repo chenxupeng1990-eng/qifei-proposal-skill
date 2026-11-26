@@ -25,7 +25,11 @@ import tempfile
 from typing import Any
 
 
+_WEBP_FALLBACK_WARNED = False
+
+
 def encode_image_data_uri(img_path: pathlib.Path, webp_quality: int = 84) -> str:
+    global _WEBP_FALLBACK_WARNED
     ext = img_path.suffix.lower()
     if ext == ".webp":
         return "data:image/webp;base64," + base64.b64encode(img_path.read_bytes()).decode("ascii")
@@ -49,8 +53,14 @@ def encode_image_data_uri(img_path: pathlib.Path, webp_quality: int = 84) -> str
                 buf = io.BytesIO()
                 im.save(buf, format="WEBP", quality=webp_quality, method=4)
                 return "data:image/webp;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
-        except Exception:
-            pass
+        except Exception as exc:
+            if not _WEBP_FALLBACK_WARNED:
+                _WEBP_FALLBACK_WARNED = True
+                print(
+                    f"[warn] WebP conversion unavailable ({exc}); embedding raw {ext} images "
+                    f"(install Pillow via `python -m pip install Pillow` or `cwebp` to shrink offline HTML size).",
+                    file=sys.stderr,
+                )
     mime = "image/png" if ext == ".png" else "image/jpeg"
     return f"data:{mime};base64," + base64.b64encode(img_path.read_bytes()).decode("ascii")
 

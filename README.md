@@ -175,9 +175,9 @@ https://github.com/user-attachments/assets/967b7514-1410-44d5-ad18-003d6258f496
 - **会议室兜底设计**：顶栏内置 `V` 键一键关闭动效，遇投影设备卡顿秒切 100% 纯净静态定稿；全案零外链、零云端、无需本地起服务。
 
 ```bash
-# 从审定 PNG 与终版讲稿打包离线双语讲解台（可按需挂载动效包）
+# 从清单 JSON（含 slides 数组）打包离线双语讲解台（默认支持在线编辑讲稿；只读模式加 --no-edit-notes）
 python3 skills/qifei-proposal-v2/scripts/build_presenter_html.py \
-  --project <项目目录> --langs zh,en --editable-notes
+  --manifest <deck-spec.json> --langs zh,en --out exports/presenter.html
 ```
 
 ---
@@ -312,7 +312,7 @@ python3 skills/qifei-proposal-v2/scripts/draft_studio.py serve <项目目录> --
 python3 skills/qifei-proposal-v2/scripts/memory_box.py
 ```
 
-Windows 中将 `python3` 替换为 `py -3` 或 `python`；路径含中文或空格请加引号。
+Windows 中将 `python3` 替换为 `py -3` 或 `python`（运行自检：`python scripts/self_test.py`）；路径含中文或空格请加引号。
 
 ### 4. 自动检查更新
 

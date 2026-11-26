@@ -22,7 +22,7 @@ class ProjectStateSchemaTests(unittest.TestCase):
     def initialize(self, project: Path) -> dict:
         result = subprocess.run(
             [
-                "python3",
+                sys.executable,
                 str(SCRIPTS / "init_project.py"),
                 "--project",
                 str(project),
@@ -125,7 +125,7 @@ class ProjectStateSchemaTests(unittest.TestCase):
             self.assertEqual(state["content_freeze_id"], "CF-PARENT-01")
             self.assertEqual(state["design_version"], "DESIGN-PARENT-02")
             self.assertEqual(state["module_context"]["parent_project_id"], parent_state["project_id"])
-            self.assertEqual((child / "DESIGN.md").read_text(), "# Approved parent design\n")
+            self.assertEqual((child / "DESIGN.md").read_text(encoding="utf-8"), "# Approved parent design\n")
             self.assertEqual(validate_project(child), [])
 
     def test_schema_rejects_unknown_state_field(self) -> None:

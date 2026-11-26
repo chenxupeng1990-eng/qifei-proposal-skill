@@ -7,7 +7,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from PIL import Image
+try:
+    from PIL import Image
+except ImportError:  # pragma: no cover - optional on minimal Windows Python before bootstrap
+    Image = None  # type: ignore[assignment]
 
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
@@ -98,6 +101,7 @@ class PresenterHtmlAndMotionTests(unittest.TestCase):
         self.assertEqual(rep_pass["status"], "PASS")
         self.assertEqual(rep_pass["max_static_run"], 10)
 
+    @unittest.skipIf(Image is None, "Pillow not installed; run scripts/bootstrap.py")
     def test_build_presenter_html_supports_single_and_bilingual_modes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -139,6 +143,7 @@ class PresenterHtmlAndMotionTests(unittest.TestCase):
             self.assertIn("Microsoft YaHei", bi_html)
             self.assertIn("Segoe UI", bi_html)
 
+    @unittest.skipIf(Image is None, "Pillow not installed; run scripts/bootstrap.py")
     def test_encode_image_falls_back_to_pillow_webp_without_cwebp(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             p1 = Path(tmp) / "slide.png"

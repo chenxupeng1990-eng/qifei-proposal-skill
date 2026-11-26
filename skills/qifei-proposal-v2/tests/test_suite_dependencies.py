@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -29,7 +30,7 @@ class SuiteDependencyTests(unittest.TestCase):
             self.write_skill(root, "qifei-proposal-v2")
             self.write_skill(root, "grill-me-lite")
             result = subprocess.run(
-                ["python3", str(CHECKER), "--skills-root", str(root)],
+                [sys.executable, str(CHECKER), "--skills-root", str(root)],
                 text=True,
                 capture_output=True,
                 check=False,
@@ -40,7 +41,7 @@ class SuiteDependencyTests(unittest.TestCase):
     def test_missing_required_skill_still_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             result = subprocess.run(
-                ["python3", str(CHECKER), "--skills-root", tmp],
+                [sys.executable, str(CHECKER), "--skills-root", tmp],
                 text=True,
                 capture_output=True,
                 check=False,
@@ -59,7 +60,7 @@ class SuiteDependencyTests(unittest.TestCase):
             )
             self.write_skill(root, "grill-me-lite")
             result = subprocess.run(
-                ["python3", str(CHECKER), "--skills-root", str(root)],
+                [sys.executable, str(CHECKER), "--skills-root", str(root)],
                 text=True,
                 capture_output=True,
                 check=False,

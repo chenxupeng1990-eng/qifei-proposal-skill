@@ -175,9 +175,9 @@ Once every page is approved, speaker notes are aligned and final checks pass, Ow
 - **Boardroom Safety Net**: press `V` anytime to drop instantly to 100% static high-res slides; zero external URLs, zero cloud services, double-click ready.
 
 ```bash
-# Build a single-file offline bilingual presenter stage (with optional motion bundle)
+# Build a single-file offline bilingual presenter stage from a manifest JSON (editable notes on by default; pass --no-edit-notes for read-only)
 python3 skills/qifei-proposal-v2/scripts/build_presenter_html.py \
-  --project <project-dir> --langs zh,en --editable-notes
+  --manifest <deck-spec.json> --langs zh,en --out exports/presenter.html
 ```
 
 ---
@@ -314,7 +314,7 @@ python3 skills/qifei-proposal-v2/scripts/draft_studio.py serve <project-dir> --d
 python3 skills/qifei-proposal-v2/scripts/memory_box.py
 ```
 
-On Windows replace `python3` with `py -3` or `python`, and quote paths containing spaces or non-ASCII characters.
+On Windows replace `python3` with `py -3` or `python` (run self-test via `python scripts/self_test.py`), and quote paths containing spaces or non-ASCII characters.
 
 ### 4. Updates
 

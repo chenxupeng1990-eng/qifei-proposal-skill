@@ -8,6 +8,16 @@ import { chromium } from 'playwright-core';
 
 const [url, project, slideId, fieldKey, phrase] = process.argv.slice(2);
 const studio = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'scripts', 'draft_studio.py');
+function runPython(args, opts = {}) {
+  const candidates = process.platform === 'win32'
+    ? (process.env.PYTHON ? [[process.env.PYTHON, []]] : [['py', ['-3']], ['python', []]])
+    : [['python3', []], ['python', []]];
+  let lastErr;
+  for (const [cmd, prefix] of candidates) {
+    try { return execFileSync(cmd, [...prefix, ...args], opts); } catch (err) { lastErr = err; }
+  }
+  throw lastErr;
+}
 const browserPath = [
   process.env.CHROME_PATH,
   process.env.EDGE_PATH,
@@ -15,7 +25,11 @@ const browserPath = [
   '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
   '/usr/bin/google-chrome',
   '/usr/bin/chromium',
+  process.env.PROGRAMFILES && path.join(process.env.PROGRAMFILES, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+  process.env['PROGRAMFILES(X86)'] && path.join(process.env['PROGRAMFILES(X86)'], 'Google', 'Chrome', 'Application', 'chrome.exe'),
   process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+  process.env['PROGRAMFILES(X86)'] && path.join(process.env['PROGRAMFILES(X86)'], 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+  process.env.PROGRAMFILES && path.join(process.env.PROGRAMFILES, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
 ].find(candidate => candidate && existsSync(candidate));
 if (!browserPath) { console.error('Chrome not found'); process.exit(3); }
 
@@ -58,7 +72,7 @@ try {
     return Math.abs(mark.top - card.top) < 40 && card.left > mark.right;
   }, undefined, {timeout: 2000}).then(() => true, () => false);
   const longReply = Array.from({length: 9}, (_, i) => `第 ${i + 1} 点：口径说明`).join('\n');
-  execFileSync('python3', [studio, 'reply', project, 'C-0001', longReply]);
+  runPython([studio, 'reply', project, 'C-0001', longReply]);
   await page.waitForFunction(() => document.querySelectorAll('[data-card="C-0001"] .msg').length === 2, undefined, {timeout: 5000});
   await page.click('[data-card="C-0001"] .card-quote');
   report.long_message_clamped = await page.textContent('[data-card="C-0001"] [data-msg-toggle]').catch(() => null);
@@ -89,7 +103,7 @@ try {
     return {height: Math.round(head.height), counts: document.getElementById('rail-counts').textContent};
   });
   report.decision_badge = await page.textContent(`#slide-${slideId} .cmt-count.done`);
-  const threads = JSON.parse(execFileSync('python3', [studio, 'comments', project, '--json', '--all'], {encoding: 'utf8'}));
+  const threads = JSON.parse(runPython([studio, 'comments', project, '--json', '--all'], {encoding: 'utf8'}));
   report.status_in_file = threads[0].status;
   report.messages_in_file = threads[0].messages.map(m => m.author);
   report.script_errors = errors;

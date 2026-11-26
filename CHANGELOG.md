@@ -2,6 +2,7 @@
 
 ## 未发布（0.3.3 待改清单）
 
+- Windows 兼容性加固：消除测试与 e2e 脚本里的硬编码 `python3`（统一改用 `sys.executable` / Windows `py -3` 回退，避免命中 Microsoft Store 9009 占位存根）；`bootstrap.py` 自动检查并安装 `Pillow`；`doctor.py` 补全 Windows/Linux 的 Chrome 与 Edge 路径检测以及 `pillow` / `webp_cli` 能力输出；`build_presenter_html.py` 在 `cwebp` 与 `Pillow` 均不可用时向 stderr 输出明确警告不再静默降级；`test_presenter_html_and_motion.py` 对缺少 Pillow 优雅跳过；同步修正 README 中 `build_presenter_html.py` 的 `--manifest` / `--out` 参数示例与 `install_v2.ps1` 宿主提示。
 - 新增离线 HTML 讲解台与分层沉浸式动效增强（`references/presenter-html-and-motion.md`、`scripts/build_presenter_html.py`）：作为阶段 08 终稿与讲稿核对通过后的可选交付分支，默认打包为单文件 100% 离线 HTML，支持单语/中英双语切换、讲稿在线编辑与导出、原生 `file://` 双屏投屏模式（观众端 16:9 强锁比零视差、演讲者端下一页预告/计时器/讲稿遥控，以及鼠标停留在左屏按钮区或拓展大屏时触控板双指仍可实时跨屏滚动讲稿）、按母稿情绪曲线分档配置动效（基础 Hero/Ending/章节过渡/切换 + 增强 A/B/C 三档）、连续静页节奏检查（12–19 页提示、≥20 页强制建议补位）以及 6 条防低能力模型翻车约束与一键回退静态稿兜底；同步更新 `phase-packs/08-speaker-export.md`、`schemas/project-state.schema.json` 与单元测试 `tests/test_presenter_html_and_motion.py`。
 - 新增参考 `references/marketing-planning-context.md`（营销前置理解）：方案涉及人群切入、内容种草、达人投放或效果验证时，按题目选读，用来整理策略假设和待验证问题；`phase-packs/02-strategy-outline.md` 加了“按题目选读”入口。
 - 草稿工作台的“PPT上屏内容”预览不再丢列：之前字段里的所有表格行都被当成一张“字段｜内容”两列表，三列以上的数据表只剩前两列，多张表被拼成一张。现在只有单张、写明是页面描述的两列表（表头为“元素/字段/项目/要素”或含“标题”行）沿用键值卡片；其他两列数据表也完整显示表头；有更宽的表或多张表时按 Markdown 显示，每张表列和行完整、各在原位，表前说明和表后来源保留，“标题：…”仍是卡片标题。

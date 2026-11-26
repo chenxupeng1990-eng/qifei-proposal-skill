@@ -118,15 +118,31 @@ def detect_capabilities(declared: dict | None = None, project_saved: dict | None
     visual, visual_source = first_declared(declared, saved, "visual_understanding", env_true("PROPOSAL_VISUAL_UNDERSTANDING"), ps)
     comments, comments_source = first_declared(declared, saved, "codex_native_comments", env_true("PROPOSAL_CODEX_NATIVE_COMMENTS"), ps)
     edit, edit_source = first_declared(declared, saved, "image_edit", env_true("PROPOSAL_IMAGE_EDIT"), ps)
+    pf = os.environ.get("PROGRAMFILES")
+    pf86 = os.environ.get("PROGRAMFILES(X86)")
+    local_app = os.environ.get("LOCALAPPDATA")
     browser_candidates = (
         os.environ.get("CHROME_PATH"),
         os.environ.get("EDGE_PATH"),
         "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
         "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
         "/Applications/Chromium.app/Contents/MacOS/Chromium",
+        str(Path(pf) / "Google" / "Chrome" / "Application" / "chrome.exe") if pf else None,
+        str(Path(pf86) / "Google" / "Chrome" / "Application" / "chrome.exe") if pf86 else None,
+        str(Path(local_app) / "Google" / "Chrome" / "Application" / "chrome.exe") if local_app else None,
+        str(Path(pf86) / "Microsoft" / "Edge" / "Application" / "msedge.exe") if pf86 else None,
+        str(Path(pf) / "Microsoft" / "Edge" / "Application" / "msedge.exe") if pf else None,
+        shutil.which("google-chrome"),
+        shutil.which("chromium"),
+        shutil.which("chromium-browser"),
+        shutil.which("msedge"),
+        shutil.which("chrome"),
     )
     browser = any(Path(item).is_file() for item in browser_candidates if item)
     lark_cli = shutil.which("lark-cli") is not None
+    import importlib.util
+    pillow_ok = importlib.util.find_spec("PIL") is not None
+    webp_cli = shutil.which("cwebp") is not None
     return {
         "agent_host": declared.get("agent_host") or detect_agent_host(),
         "filesystem": True,
@@ -135,6 +151,8 @@ def detect_capabilities(declared: dict | None = None, project_saved: dict | None
         "node": shutil.which("node") is not None,
         "npm": shutil.which("npm") is not None,
         "browser": browser,
+        "pillow": pillow_ok,
+        "webp_cli": webp_cli,
         "image_generation": bool(provider),
         "image_provider": str(provider) if provider else None,
         "visual_understanding": bool(visual),

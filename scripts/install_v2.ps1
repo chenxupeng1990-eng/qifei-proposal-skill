@@ -31,4 +31,4 @@ if ($InstallLarkCli -and -not (Get-Command lark-cli -ErrorAction SilentlyContinu
   npm install -g @larksuite/cli
 }
 
-Write-Host "Proposal Skill V2 installation is complete. Restart Codex before first use."
+Write-Host "Proposal Skill V2 installation is complete. Restart your agent (Codex / Claude Code / etc.) before first use."
