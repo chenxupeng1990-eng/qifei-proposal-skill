@@ -213,20 +213,43 @@ def render_html(token: str) -> str:
 
 def serve_detached(host: str, port: int) -> int:
     """Start the box in its own session so the link still works after the agent's turn ends."""
+    import os
     import subprocess
     import time
     pm.init(None)
     log_path = pm.memory_home() / "box-server.log"
     command = [sys.executable, str(Path(__file__).resolve()), "--host", host, "--port", str(port)]
+    env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
     with log_path.open("w", encoding="utf-8") as log:
-        child = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
-                                 start_new_session=True)
+        if os.name == "nt":
+            base_flags = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+            breakaway = getattr(subprocess, "CREATE_BREAKAWAY_FROM_JOB", 0)
+            child = None
+            if breakaway:
+                try:
+                    child = subprocess.Popen(
+                        command, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                        env=env, creationflags=base_flags | breakaway,
+                    )
+                except OSError:
+                    child = None
+            if child is None:
+                child = subprocess.Popen(
+                    command, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                    env=env, creationflags=base_flags,
+                )
+        else:
+            child = subprocess.Popen(
+                command, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                env=env, start_new_session=True,
+            )
     for _ in range(100):
-        text = log_path.read_text(encoding="utf-8") if log_path.is_file() else ""
+        text = log_path.read_text(encoding="utf-8", errors="replace") if log_path.is_file() else ""
         match = re.search(r"Memory box: (\S+)", text)
         if match:
+            stop = f"taskkill /PID {child.pid} /F" if os.name == "nt" else f"kill {child.pid}"
             print(f"Memory box: {match.group(1)}  (pid {child.pid}, runs until stopped)")
-            print(f"Stop: kill {child.pid}")
+            print(f"Stop: {stop}")
             return 0
         if child.poll() is not None:
             break

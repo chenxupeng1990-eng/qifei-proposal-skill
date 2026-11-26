@@ -71,12 +71,13 @@ def validate_feishu_draft_evidence(project: Path, state: dict[str, Any]) -> list
     elif snapshot_path:
         try:
             snapshot_bytes = snapshot_path.read_bytes()
-            snapshot_bytes.decode("utf-8")
+            snapshot_text = snapshot_bytes.decode("utf-8").replace("\r\n", "\n")
         except UnicodeDecodeError:
             errors.append("proposal_draft.verified_snapshot_path must be UTF-8 text")
         else:
             actual_hash = hashlib.sha256(snapshot_bytes).hexdigest()
-            if draft.get("verified_snapshot_sha256") != actual_hash:
+            actual_lf_hash = hashlib.sha256(snapshot_text.encode("utf-8")).hexdigest()
+            if draft.get("verified_snapshot_sha256") not in (actual_hash, actual_lf_hash):
                 errors.append("proposal_draft.verified_snapshot_sha256 does not match the reread snapshot")
             elif authority == "studio":
                 from draft_studio import studio_evidence_errors  # local import keeps this module light

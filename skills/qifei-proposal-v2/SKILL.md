@@ -38,6 +38,8 @@ V1 `$qifei-proposal` 已弃用并从仓库移除，一律使用 V2。V2 沿用 V
 
 ## 通用命令
 
+> Windows 上把命令里的 `python3` 换成 `py -3`（没有 py 启动器时用 `python`）；路径含中文或空格时加引号。
+
 ```bash
 python3 scripts/doctor.py --task-mode <full_deck|inherited_module|standalone_module> --project <项目目录> --json
 python3 scripts/init_project.py --project <项目目录> --name <项目名> --owner <Owner> --task-mode <模式>

@@ -719,7 +719,7 @@ def annotate_studio(model: dict[str, Any], state: dict[str, Any], confirmations:
 
 def build_model(project: Path, draft_arg: str | None) -> dict[str, Any]:
     draft_path, state = load_project(project, draft_arg)
-    text = draft_path.read_bytes().decode("utf-8")
+    text = draft_path.read_bytes().decode("utf-8").replace("\r\n", "\n")
     store = DraftStore(project, draft_path, state)
     if store.log_path.is_file():
         return model_from_text(text, project, draft_path, state, store.revision, store.edited_slides())
@@ -1135,9 +1135,11 @@ class DraftStore:
     def sync_external(self) -> dict[str, Any] | None:
         """Record a change made to the draft outside the studio (for example by an agent)."""
         with self.lock:
-            text = self.read()
+            raw = self.draft_path.read_bytes()
+            text = raw.decode("utf-8").replace("\r\n", "\n")
             last = self.last_sha()
-            if last is None or sha256_text(text) == last:
+            # Logs written before LF normalisation hashed the raw (possibly CRLF) bytes.
+            if last is None or last in (sha256_text(text), hashlib.sha256(raw).hexdigest()):
                 return None
             previous = self.revisions_dir / f"rev-{self.revision:06d}.md"
             before = previous.read_text(encoding="utf-8") if previous.is_file() else ""
@@ -1911,6 +1913,28 @@ def serve(project: Path, draft_arg: str | None, host: str, port: int, open_brows
     return 0
 
 
+def _spawn_detached(command: list[str], log_handle, env: dict[str, str]) -> subprocess.Popen:
+    if os.name == "nt":
+        base_flags = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+        breakaway = getattr(subprocess, "CREATE_BREAKAWAY_FROM_JOB", 0)
+        if breakaway:
+            try:
+                return subprocess.Popen(
+                    command, stdout=log_handle, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                    env=env, creationflags=base_flags | breakaway,
+                )
+            except OSError:
+                pass
+        return subprocess.Popen(
+            command, stdout=log_handle, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+            env=env, creationflags=base_flags,
+        )
+    return subprocess.Popen(
+        command, stdout=log_handle, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+        env=env, start_new_session=True,
+    )
+
+
 def serve_detached(project: Path, draft_arg: str | None, host: str, port: int) -> int:
     """Start the studio in its own session so it outlives the agent turn that started it.
 
@@ -1923,16 +1947,17 @@ def serve_detached(project: Path, draft_arg: str | None, host: str, port: int) -
     command = [sys.executable, str(Path(__file__).resolve()), "serve", str(project), "--host", host, "--port", str(port)]
     if draft_arg:
         command += ["--draft", draft_arg]
+    env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
     with log_path.open("w", encoding="utf-8") as log:
-        child = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
-                                 start_new_session=True)
+        child = _spawn_detached(command, log, env)
     for _ in range(100):
-        text = log_path.read_text(encoding="utf-8") if log_path.is_file() else ""
+        text = log_path.read_text(encoding="utf-8", errors="replace") if log_path.is_file() else ""
         match = re.search(r"Draft studio: (\S+)", text)
         if match:
             (log_dir / "studio-server.pid").write_text(str(child.pid), encoding="utf-8")
+            stop = f"taskkill /PID {child.pid} /F" if os.name == "nt" else f"kill {child.pid}"
             print(f"Draft studio: {match.group(1)}  (pid {child.pid}, runs until stopped)")
-            print(f"Stop: kill {child.pid}")
+            print(f"Stop: {stop}")
             return 0
         if child.poll() is not None:
             break

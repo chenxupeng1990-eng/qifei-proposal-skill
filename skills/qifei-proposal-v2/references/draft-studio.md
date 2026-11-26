@@ -155,7 +155,7 @@ python3 scripts/draft_studio.py wireframes <项目目录>
 
 ## 让工作台一直开着
 
-Agent 一轮结束时，很多运行环境会关掉这一轮启动的进程，Owner 打开时链接已经失效。给 Owner 用的工作台用 `python3 scripts/draft_studio.py serve <项目目录> --detach` 启动：它在独立会话里运行，打印地址和停止命令（`kill <pid>`），日志在 `deck/review/studio-server.log`。
+Agent 一轮结束时，很多运行环境会关掉这一轮启动的进程，Owner 打开时链接已经失效。给 Owner 用的工作台用 `python3 scripts/draft_studio.py serve <项目目录> --detach` 启动：它在独立会话里运行，打印地址和停止命令（macOS/Linux 用 `kill <pid>`，Windows 用 `taskkill /PID <pid> /F`），日志在 `deck/review/studio-server.log`。
 
 ## 评论（serve）
 
