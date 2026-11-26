@@ -25,6 +25,8 @@ class EnvironmentCheckTests(unittest.TestCase):
             check=False,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             env=env,
         )
 
@@ -34,7 +36,12 @@ class EnvironmentCheckTests(unittest.TestCase):
         modules.mkdir()
         for package in PACKAGES:
             if package != missing:
-                (modules / package).symlink_to(REAL_MODULES / package, target_is_directory=True)
+                dst = modules / package
+                src = REAL_MODULES / package
+                try:
+                    dst.symlink_to(src, target_is_directory=True)
+                except OSError:
+                    shutil.copytree(src, dst)
 
     def test_missing_node_modules_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -57,8 +64,8 @@ class EnvironmentCheckTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             self.fixture(root)
-            fake = root / "fake-browser"
-            fake.write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+            fake = root / ("fake-browser.cmd" if os.name == "nt" else "fake-browser")
+            fake.write_text("@exit /b 1\r\n" if os.name == "nt" else "#!/bin/sh\nexit 1\n", encoding="utf-8")
             fake.chmod(fake.stat().st_mode | stat.S_IXUSR)
             result = self.run_check(root, CHROME_PATH=str(fake), EDGE_PATH="")
             self.assertNotEqual(result.returncode, 0)

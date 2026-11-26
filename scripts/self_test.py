@@ -52,7 +52,7 @@ ALLOWED_TEXT = {
 
 
 def command_path(name: str) -> str:
-    path = shutil.which(name)
+    path = (shutil.which(f"{name}.cmd") if os.name == "nt" else None) or shutil.which(name)
     if not path:
         raise SystemExit(f"Required command not found: {name}")
     return path
@@ -146,6 +146,8 @@ def check_clean_worktree() -> None:
         check=True,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
     if completed.stdout.strip():
         raise SystemExit("Release check requires a clean Git worktree")

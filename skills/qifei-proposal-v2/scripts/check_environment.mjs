@@ -16,7 +16,11 @@ function record(name, ok, detail) {
 const nodeMajor = Number(process.versions.node.split('.')[0]);
 record('Node.js', nodeMajor >= 18, `${process.versions.node} (required >=18)`);
 
-const npmCheck = spawnSync('npm', ['--version'], { encoding: 'utf8' });
+const isWin = process.platform === 'win32';
+const npmCheck = spawnSync(isWin ? 'npm.cmd' : 'npm', ['--version'], {
+  encoding: 'utf8',
+  shell: isWin,
+});
 record(
   'npm',
   npmCheck.status === 0,

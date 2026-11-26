@@ -150,7 +150,7 @@ class StudioServerCase(unittest.TestCase):
         self.port = free_port()
         self.process = subprocess.Popen(
             [sys.executable, str(SCRIPTS / "draft_studio.py"), "serve", str(self.project), "--port", str(self.port)],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace",
         )
         self.base = f"http://127.0.0.1:{self.port}"
         for _ in range(50):
@@ -297,7 +297,7 @@ class CommentApiTests(StudioServerCase):
         self.assertEqual(self.request("/api/comments/status", {"id": "C-0001", "status": "resolved"})[0], 200)
         self.assertEqual(self.request("/api/comments/reply", {"id": "C-0404", "text": "x"})[0], 400)
         self.assertEqual(self.request("/api/comments", {"quote": "x", "text": "y"}, token=None)[0], 403)
-        listed = subprocess.run([sys.executable, str(SCRIPTS / "draft_studio.py"), "comments", str(self.project)], capture_output=True, text=True, check=True)
+        listed = subprocess.run([sys.executable, str(SCRIPTS / "draft_studio.py"), "comments", str(self.project)], capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
         self.assertIn("No open comment threads.", listed.stdout)
 
 
@@ -309,7 +309,7 @@ class StudioBrowserTests(StudioServerCase):
     def test_edit_in_page_and_receive_outside_change(self) -> None:
         result = subprocess.run(
             ["node", str(Path(__file__).with_name("draft-studio-live.e2e.mjs")), self.base + "/", str(self.draft), "P01", "talk", "P02"],
-            cwd=SKILL_ROOT, capture_output=True, text=True, check=False, timeout=60,
+            cwd=SKILL_ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace", check=False, timeout=60,
         )
         if result.returncode == 3:
             self.skipTest("no Chromium-based browser available")
@@ -321,7 +321,7 @@ class StudioBrowserTests(StudioServerCase):
     def test_select_text_comment_reply_and_resolve(self) -> None:
         result = subprocess.run(
             ["node", str(Path(__file__).with_name("draft-studio-comments.e2e.mjs")), self.base + "/", str(self.project), "P01", "core", "长期经营"],
-            cwd=SKILL_ROOT, capture_output=True, text=True, check=False, timeout=60,
+            cwd=SKILL_ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace", check=False, timeout=60,
         )
         if result.returncode == 3:
             self.skipTest("no Chromium-based browser available")

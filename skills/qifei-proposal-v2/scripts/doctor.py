@@ -38,11 +38,14 @@ def detect_lark_authorization(lark_cli: bool) -> bool:
     if not lark_cli:
         return False
     try:
+        lark_bin = shutil.which("lark-cli") or "lark-cli"
         result = subprocess.run(
-            ["lark-cli", "auth", "status", "--json"],
+            [lark_bin, "auth", "status", "--json"],
             check=False,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=3,
         )
         if result.returncode != 0:

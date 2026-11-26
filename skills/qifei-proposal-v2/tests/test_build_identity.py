@@ -36,6 +36,8 @@ class BuildIdentityTests(unittest.TestCase):
             check=True,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
         )
         javascript = json.loads(result.stdout)
         self.assertEqual(javascript["material"], expected_material)

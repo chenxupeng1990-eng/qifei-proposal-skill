@@ -649,9 +649,10 @@ def validate_verified_feishu_draft(project: Path, state: dict, chapters: list[di
         errors.append(f"proposal_draft.verified_snapshot_path: {snapshot_error}")
     elif snapshot_path:
         snapshot_bytes = snapshot_path.read_bytes()
-        snapshot_text = snapshot_bytes.decode("utf-8")
+        snapshot_text = snapshot_bytes.decode("utf-8").replace("\r\n", "\n")
         actual_hash = hashlib.sha256(snapshot_bytes).hexdigest()
-        if draft.get("verified_snapshot_sha256") != actual_hash:
+        actual_lf_hash = hashlib.sha256(snapshot_text.encode("utf-8")).hexdigest()
+        if draft.get("verified_snapshot_sha256") not in (actual_hash, actual_lf_hash):
             errors.append("proposal_draft.verified_snapshot_sha256 does not match the reread snapshot")
         if authority == "studio":
             errors.extend(studio_evidence_errors(project, draft, snapshot_path, chapters))

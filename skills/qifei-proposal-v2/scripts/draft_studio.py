@@ -1073,7 +1073,7 @@ class DraftStore:
         return {slide for entry in self.entries() if entry["actor"] != "baseline" for slide in entry.get("slides", [])}
 
     def read(self) -> str:
-        return self.draft_path.read_bytes().decode("utf-8")
+        return self.draft_path.read_bytes().decode("utf-8").replace("\r\n", "\n")
 
     def model(self) -> dict[str, Any]:
         with self.lock:
@@ -1095,8 +1095,8 @@ class DraftStore:
             "note": note,
         }
         self.revisions_dir.mkdir(parents=True, exist_ok=True)
-        (self.revisions_dir / f"rev-{entry['revision']:06d}.md").write_text(text, encoding="utf-8")
-        with self.log_path.open("a", encoding="utf-8") as log:
+        (self.revisions_dir / f"rev-{entry['revision']:06d}.md").write_text(text, encoding="utf-8", newline="\n")
+        with self.log_path.open("a", encoding="utf-8", newline="\n") as log:
             log.write(json.dumps(entry, ensure_ascii=False) + "\n")
         if actor != "baseline":
             entry["reopened"] = invalidate_after_change(self.project, slides)
@@ -1109,7 +1109,7 @@ class DraftStore:
 
     def _write(self, text: str) -> None:
         fd, tmp = tempfile.mkstemp(prefix=".draft-", suffix=".md", dir=self.draft_path.parent)
-        with os.fdopen(fd, "w", encoding="utf-8", newline="") as handle:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
             handle.write(text)
         os.replace(tmp, self.draft_path)
 

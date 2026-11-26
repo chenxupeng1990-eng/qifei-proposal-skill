@@ -46,6 +46,8 @@ class EndToEndExportTests(unittest.TestCase):
             check=False,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             env=os.environ.copy(),
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
