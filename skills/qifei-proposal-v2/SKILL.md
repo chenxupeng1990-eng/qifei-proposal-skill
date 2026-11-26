@@ -7,6 +7,10 @@ description: 公司提案总控：把品牌需求做成有观点、能打动评�
 
 V1 `$qifei-proposal` 已弃用并从仓库移除，一律使用 V2。V2 沿用 V1 的项目结构和机器校验器，把执行规则拆成阶段包，避免无关规则同时占用上下文。
 
+## 第一次使用
+
+用户没有项目或问怎么用时，先用几句话讲清 8 步和需要 Owner 拍板的 5 步，再打开图文导览 [assets/guide/onboarding.html](assets/guide/onboarding.html)，然后开始第 1 步。
+
 ## 永久规则
 
 1. 完整读取本文件与 [agent.md](agent.md)。
