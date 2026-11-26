@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import io
 import json
 import pathlib
 import shutil
@@ -28,17 +29,28 @@ def encode_image_data_uri(img_path: pathlib.Path, webp_quality: int = 84) -> str
     ext = img_path.suffix.lower()
     if ext == ".webp":
         return "data:image/webp;base64," + base64.b64encode(img_path.read_bytes()).decode("ascii")
-    if ext in (".png", ".jpg", ".jpeg") and shutil.which("cwebp"):
-        with tempfile.NamedTemporaryFile(suffix=".webp", delete=False) as tf:
-            tmp_webp = pathlib.Path(tf.name)
+    if ext in (".png", ".jpg", ".jpeg"):
+        if shutil.which("cwebp"):
+            with tempfile.NamedTemporaryFile(suffix=".webp", delete=False) as tf:
+                tmp_webp = pathlib.Path(tf.name)
+            try:
+                subprocess.run(
+                    ["cwebp", "-quiet", "-q", str(webp_quality), "-m", "4", str(img_path), "-o", str(tmp_webp)],
+                    check=True,
+                )
+                return "data:image/webp;base64," + base64.b64encode(tmp_webp.read_bytes()).decode("ascii")
+            finally:
+                tmp_webp.unlink(missing_ok=True)
+        # Cross-platform fallback (especially Windows without cwebp CLI): compress to WebP via Pillow if available
         try:
-            subprocess.run(
-                ["cwebp", "-quiet", "-q", str(webp_quality), "-m", "4", str(img_path), "-o", str(tmp_webp)],
-                check=True,
-            )
-            return "data:image/webp;base64," + base64.b64encode(tmp_webp.read_bytes()).decode("ascii")
-        finally:
-            tmp_webp.unlink(missing_ok=True)
+            from PIL import Image  # type: ignore
+
+            with Image.open(img_path) as im:
+                buf = io.BytesIO()
+                im.save(buf, format="WEBP", quality=webp_quality, method=4)
+                return "data:image/webp;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
+        except Exception:
+            pass
     mime = "image/png" if ext == ".png" else "image/jpeg"
     return f"data:{mime};base64," + base64.b64encode(img_path.read_bytes()).decode("ascii")
 
@@ -221,7 +233,11 @@ def build_html(
   --notes-w: 460px;
 }}
 * {{ box-sizing: border-box; }}
-html, body {{ margin: 0; height: 100%; background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", "Noto Sans SC", Inter, Arial, sans-serif; overflow: hidden; }}
+html, body {{ margin: 0; height: 100%; background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", "PingFang SC", "Noto Sans SC", "Microsoft YaHei", Inter, Arial, sans-serif; overflow: hidden; }}
+.notes-body, .sidebar-list {{ scrollbar-width: thin; scrollbar-color: rgba(24,26,24,.22) transparent; }}
+.notes-body::-webkit-scrollbar, .sidebar-list::-webkit-scrollbar {{ width: 7px; height: 7px; }}
+.notes-body::-webkit-scrollbar-thumb, .sidebar-list::-webkit-scrollbar-thumb {{ background: rgba(24,26,24,.20); border-radius: 999px; }}
+.notes-body::-webkit-scrollbar-thumb:hover, .sidebar-list::-webkit-scrollbar-thumb:hover {{ background: rgba(24,26,24,.36); }}
 .topbar {{
   height: var(--bar-h); background: var(--surface); border-bottom: 1px solid var(--line);
   display: flex; align-items: center; padding: 0 16px; gap: 10px; position: relative; z-index: 20;

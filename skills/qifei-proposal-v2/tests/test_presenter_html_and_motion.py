@@ -14,7 +14,9 @@ SKILL_ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = SKILL_ROOT / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
-from build_presenter_html import analyze_motion_pacing, build_html, collect_slides  # noqa: E402
+from unittest.mock import patch
+
+from build_presenter_html import analyze_motion_pacing, build_html, collect_slides, encode_image_data_uri  # noqa: E402
 from validate_project import validate_project  # noqa: E402
 
 
@@ -134,6 +136,16 @@ class PresenterHtmlAndMotionTests(unittest.TestCase):
             self.assertIn('data-lang="en"', bi_html)
             self.assertIn('id="btn-edit"', bi_html)
             self.assertIn("NEXT SLIDE", bi_html)
+            self.assertIn("Microsoft YaHei", bi_html)
+            self.assertIn("Segoe UI", bi_html)
+
+    def test_encode_image_falls_back_to_pillow_webp_without_cwebp(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            p1 = Path(tmp) / "slide.png"
+            Image.new("RGB", (160, 90), (244, 243, 239)).save(p1)
+            with patch("build_presenter_html.shutil.which", return_value=None):
+                uri = encode_image_data_uri(p1)
+            self.assertTrue(uri.startswith("data:image/webp;base64,"))
 
 
 if __name__ == "__main__":
