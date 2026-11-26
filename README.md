@@ -275,6 +275,14 @@ Owner 的判断跨项目沉淀为三层：**Owner 偏好 / 方法论 / 项目记
 
 ---
 
+<a id="onboarding"></a>
+
+## 第一次用：图文导览
+
+装好之后对 Agent 说一句“用提案 skill 帮我做一份提案”，它会先讲清一共 8 步、哪 5 步需要你拍板，再打开一份图文导览：每一步 Agent 做什么、你要决定什么，配真实工作台样式的界面图。导览是单文件 HTML，中英双语，位于 [`skills/qifei-proposal-v2/assets/guide/onboarding.html`](skills/qifei-proposal-v2/assets/guide/onboarding.html)，下载后双击即可打开。
+
+<p align="center"><img src="docs/readme-assets/onboarding/guide-zh-hero.webp" alt="新手导览首屏" width="49%"> <img src="docs/readme-assets/onboarding/guide-zh-studio.webp" alt="新手导览：母稿工作台一步" width="49%"></p>
+
 <a id="quickstart"></a>
 
 ## 快速开始

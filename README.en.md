@@ -277,6 +277,14 @@ Idea / brief / scattered source material
 
 ---
 
+<a id="onboarding"></a>
+
+## First run: the illustrated guide
+
+After installing, tell the agent “use the proposal skill to build a proposal”. It first explains the eight steps and the five where you sign off, then opens an illustrated guide: what the agent does and what you decide at each step, with screens drawn after the real studio. The guide is a single bilingual HTML file at [`skills/qifei-proposal-v2/assets/guide/onboarding.html`](skills/qifei-proposal-v2/assets/guide/onboarding.html); download it and double-click to open.
+
+<p align="center"><img src="docs/readme-assets/onboarding/guide-en-hero.webp" alt="Guide, first screen" width="49%"> <img src="docs/readme-assets/onboarding/guide-en-studio.webp" alt="Guide, manuscript step" width="49%"></p>
+
 <a id="quickstart"></a>
 
 ## Quick Start
