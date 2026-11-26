@@ -9,6 +9,7 @@
 - [../references/content-and-speaker.md](../references/content-and-speaker.md)
 - 导出时读取 [../references/html-editor-and-editable-pptx.md](../references/html-editor-and-editable-pptx.md)。
 - 导出或拼装时再读取 [../references/workflow.md](../references/workflow.md) 的页面确认与交付部分。
+- 当 Owner 选择交付 **HTML 离线讲解台**或开启**分层动效增强**时，读取 [../references/presenter-html-and-motion.md](../references/presenter-html-and-motion.md)。
 
 ## 讲稿门禁
 
@@ -35,6 +36,7 @@
 
 - 基础交付：PNG、PDF、图片型PPTX。`export_deck.mjs` 同时输出 `exports/proposal-vector.pdf`：HTML 页从审定时的 HTML 直接打印，文字是矢量、可选中，放大不糊；整页生图页和审定后 HTML 有改动的页用审定 PNG。对外发送优先给矢量版。
 - 增强交付：基础交付加原生文字层的半可编辑PPTX。
+- 讲解台交付（可选，Owner 选定 HTML 为最终演示版本时启用）：按 [../references/presenter-html-and-motion.md](../references/presenter-html-and-motion.md) 运行 `python3 scripts/build_presenter_html.py`，输出单文件离线讲解台 HTML（支持单语或中英双语、讲稿在线编辑导出、双屏投屏演讲者模式，以及基于母稿情绪曲线与防枯燥间隔规则的基础/增强分层动效；须先报 Owner 批准《动效配置单》后再开工制作）。
 - 不承诺：图表、复杂SVG、场景主视觉和Image2图像全部转为PowerPoint原生可编辑对象。
 
 增强交付必须依次完成布局捕获、PPTX编译和PPTX验证；验证报告为 `PASS` 后才可交付。PPTX只作为交付副本，正式改版仍回到HTML生产源。

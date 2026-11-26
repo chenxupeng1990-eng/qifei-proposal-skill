@@ -117,7 +117,8 @@
       }
     },
     "visual_review": {"type": "object"},
-    "final_check": {"type": "object"}
+    "final_check": {"type": "object"},
+    "presenter_html": {"$ref": "#/$defs/presenterHtml"}
   },
   "additionalProperties": false,
   "$defs": {
@@ -237,6 +238,26 @@
         "status": {"enum": ["collecting", "all_pages_confirmed", "final_approved"]},
         "ready_slide_ids": {"type": "array", "items": {"type": "string"}},
         "final_approval_record_id": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "presenterHtml": {
+      "type": "object",
+      "required": ["enabled", "languages", "notes_editable", "motion_tier"],
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "languages": {
+          "type": "array",
+          "items": {"enum": ["zh", "en"]},
+          "minItems": 1
+        },
+        "notes_editable": {"type": "boolean"},
+        "dual_screen": {"type": "boolean"},
+        "motion_tier": {"enum": ["none", "basic", "enhanced"]},
+        "motion_plan_path": {"type": ["string", "null"]},
+        "motion_plan_approved": {"type": "boolean"},
+        "max_static_run": {"type": ["integer", "null"]},
+        "output_path": {"type": ["string", "null"]}
       },
       "additionalProperties": false
     },

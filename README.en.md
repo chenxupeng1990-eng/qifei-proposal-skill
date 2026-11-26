@@ -147,6 +147,14 @@ The Owner's judgement carries across projects in three layers: Owner preferences
 - Memory can be switched off globally with `proposal_memory.py off` or the "启用记忆" toggle at the top of the memory box.
 - Loading memory does not depend on the prompt. `doctor.py` and `validate_project.py` deliver the memory and check a read receipt, and leaving a phase without distilling its signals fails validation.
 
+### Offline HTML presenter & tiered motion (optional delivery)
+
+Once all pages are frozen and speaker notes pass final check, Owners who choose HTML as the presentation deliverable can build a single-file 100% offline presenter stage via [`scripts/build_presenter_html.py`](skills/qifei-proposal-v2/scripts/build_presenter_html.py) and [`references/presenter-html-and-motion.md`](skills/qifei-proposal-v2/references/presenter-html-and-motion.md):
+
+- **Dual-screen presenter mode**: works directly over `file://` with zero cloud dependency—an external projector shows clean borderless slides and motion, while the presenter laptop shows the next-slide preview, timer, and editable single/bilingual speaker notes with live remote control (paging, language switch, replay, interactive portals, blackout).
+- **Emotion-matched motion tiers**: covers basic Hero/Ending/chapter transitions plus three enhancement tiers (subtle flow on restrained strategy slides, precision attention cues on commercial data slides, and video/interactive/3D spaces on marketing peaks), gated by Owner approval of the motion plan before production.
+- **Pacing & aesthetic guardrails**: scans consecutive static runs (warns at 12–19 slides, flags ≥20 slides), enforces six visual/engineering constraints against noisy low-taste effects, and includes a one-click static fallback toggle.
+
 ### Stricter gates
 
 | New check | What it stops |
@@ -181,7 +189,7 @@ Idea / brief / source material
    ├─ Design review ············· box comments → agent fixes → Owner resolves → assembly-ready library
    ├─ Independent visual review · layout measurement + a second agent reviewing every page
    ├─ Speaker notes ············· written once, against the final page numbers
-   └─ Final check → export ······ PNG / PDF / PPTX
+   └─ Final check → export ······ PNG / PDF / PPTX / Offline HTML presenter
 ```
 
 Every phase answers three questions: what checkable object it produces, who may confirm it, and which conditions stop the flow. At the start of each phase the agent loads the memory relevant to it.
