@@ -353,7 +353,13 @@ body.is-audience .presenter-bar,
 body.is-audience .next-preview-box {{ display: none !important; }}
 body.is-audience .workspace {{ height: 100vh; background: #000; }}
 body.is-audience .stage-col {{ padding: 0; background: #000; }}
-body.is-audience .slide-frame {{ border-radius: 0; border: 0; box-shadow: none; width: 100vw; max-width: 100vw; max-height: 100vh; }}
+body.is-audience .canvas-wrap {{ width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; background: #000; }}
+body.is-audience .slide-frame {{
+  border-radius: 0; border: 0; box-shadow: none;
+  width: min(100vw, calc(100vh * 16 / 9));
+  height: min(100vh, calc(100vw * 9 / 16));
+  max-width: 100vw; max-height: 100vh;
+}}
 .aud-float-bar {{
   display: none; position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 90;
   background: rgba(20,24,22,.82); backdrop-filter: blur(12px); color: #fff;
@@ -664,10 +670,12 @@ body.is-presenter .next-preview-box {{ display: flex; }}
     }});
     const nxt = slides[idx + 1];
     if (nxt) {{
+      $("next-thumb-img").style.display = "";
       $("next-thumb-img").src = lang === "zh" ? (nxt.img_zh || nxt.img_en) : (nxt.img_en || nxt.img_zh);
       $("next-preview-title").textContent = `${{nxt.id}} · ${{lang === "zh" ? nxt.title_zh : nxt.title_en}}`;
     }} else {{
       $("next-thumb-img").removeAttribute("src");
+      $("next-thumb-img").style.display = "none";
       $("next-preview-title").textContent = "已到最后一页";
     }}
     if (!isAudience) {{
