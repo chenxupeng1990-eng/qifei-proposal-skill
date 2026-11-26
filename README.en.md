@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="README.md">简体中文</a> · <strong>English</strong>
+  <a href="README.md">简体中文</a> &nbsp;·&nbsp; <strong>English</strong>
 </p>
 
 <p align="center">
@@ -9,30 +9,76 @@
 <h1 align="center">Proposal Skill V2</h1>
 
 <p align="center">
-  <strong>Take an idea all the way to a proposal you can present, verify and deliver.</strong><br>
-  A proposal production system for AI agents: strategy, manuscript, visuals, review and delivery, each step confirmed by a person and checked by a machine.
+  <strong>Take an idea all the way to a proposal you can present, verify and perform live.</strong><br>
+  A governed proposal production &amp; presentation system for AI agents: strategy, manuscript, visuals, review, delivery and an offline HTML presenter stage—each gate owned by a person and checked by a script.
 </p>
 
 <p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.3.2-ff5f4d">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-211%20passing-1f8b4c">
-  <img alt="Python" src="https://img.shields.io/badge/Python-3.9%2B-3776ab">
-  <img alt="Node" src="https://img.shields.io/badge/Node.js-18%2B-339933">
-  <img alt="Platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-111827">
-  <img alt="License" src="https://img.shields.io/badge/license-PolyForm%20Noncommercial-6b7280">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.3.2-ff5f4d?style=flat-square">
+  <img alt="HTML Motion Stage" src="https://img.shields.io/badge/HTML_Presenter-Dual--Screen_%26_Motion-c89d4a?style=flat-square">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-244%20passing-1f8b4c?style=flat-square">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.9%2B-3776ab?style=flat-square">
+  <img alt="Node" src="https://img.shields.io/badge/Node.js-18%2B-339933?style=flat-square">
+  <img alt="Platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-111827?style=flat-square">
+  <img alt="License" src="https://img.shields.io/badge/license-PolyForm%20Noncommercial-6b7280?style=flat-square">
 </p>
 
 <p align="center">
-  <a href="#overview">Overview</a> ·
-  <a href="#whats-new">What's new in v0.3</a> ·
-  <a href="#pipeline">Pipeline</a> ·
-  <a href="#gates">Gates</a> ·
-  <a href="#quickstart">Quick start</a> ·
-  <a href="#runtime">Runtime tiers</a> ·
+  <a href="#showcase">Showcase Video</a> &nbsp;·&nbsp;
+  <a href="#overview">Overview</a> &nbsp;·&nbsp;
+  <a href="#presenter">Offline HTML Presenter</a> &nbsp;·&nbsp;
+  <a href="#whats-new">Core Studios</a> &nbsp;·&nbsp;
+  <a href="#pipeline">Pipeline &amp; Gates</a> &nbsp;·&nbsp;
+  <a href="#quickstart">Quick Start</a> &nbsp;·&nbsp;
+  <a href="#runtime">Runtime Tiers</a> &nbsp;·&nbsp;
   <a href="#license">License</a>
 </p>
 
-> The tools are built for Chinese-language proposals, so the screenshots below show Chinese interfaces.
+---
+
+<a id="showcase"></a>
+
+## Showcase Video: From Grounded Drafts to a Living Offline HTML Stage
+
+### 42 seconds · Offline HTML presenter &amp; tiered motion showcase
+
+<p align="center">
+  <a href="https://github.com/chenxupeng1990-eng/qifei-proposal-skill/blob/codex/qifei-proposal-base/docs/readme-assets/motion-showcase-github.mp4">
+    <img src="docs/readme-assets/v033/motion-showcase-reel.webp" alt="42-second showcase: offline HTML presenter, tiered motion, 3D pavilion and dual-screen console (click for full 1080p MP4 with audio)" width="100%">
+  </a>
+</p>
+
+<p align="center">
+  <sub>
+    <strong>42.8 seconds · 1080p · Instrumental soundtrack</strong> &nbsp;·&nbsp;
+    <a href="docs/readme-assets/motion-showcase-github.mp4">Preview / Download full MP4 (8.2 MB)</a><br>
+    Real case excerpt: 73-slide English commercial deck · 25 emotion-matched motion slides · compiled into <strong>1 offline HTML file</strong> (visual reference only)
+  </sub>
+</p>
+
+<table>
+  <tr>
+    <td width="33.3%"><img src="docs/readme-assets/v033/tier-depth-vines.webp" alt="Depth-occluded botanical motion behind real product bottles"></td>
+    <td width="33.3%"><img src="docs/readme-assets/v033/tier-3d-pavilion.webp" alt="Offline 360-degree 3D interactive pavilion"></td>
+    <td width="33.3%"><img src="docs/readme-assets/v033/tier-data-stars.webp" alt="Commercial data focus with ascending curves and starbursts"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><strong>Depth-Occluded Motion</strong><br>Locked official packaging, zero distortion</sub></td>
+    <td align="center"><sub><strong>Offline 360° 3D Pavilion</strong><br>Interactive Three.js space, zero cloud</sub></td>
+    <td align="center"><sub><strong>Precision Data Cues</strong><br>No flashy gimmicks—eyes locked on numbers</sub></td>
+  </tr>
+</table>
+
+<details>
+<summary><strong>80 seconds · Full end-to-end production flow (Draft Studio → Box Review → Gated Export)</strong></summary>
+
+<br>
+
+https://github.com/user-attachments/assets/967b7514-1410-44d5-ad18-003d6258f496
+
+80 seconds · 1080p · [Download the original 80s flow MP4](docs/readme-assets/intro-github.mp4)
+
+</details>
 
 ---
 
@@ -40,21 +86,27 @@
 
 ## Overview
 
-Most slide skills optimise the last step: pouring finished text into a template.
+Most slide skills optimise the final step: pouring existing text into a template.
 
-Proposal Skill V2 governs the whole chain: understanding the material, forming a point of view, writing the manuscript, locking a visual language, producing pages, absorbing review comments and checking the delivery. The agent drives the work, the Owner makes the calls, and scripts enforce the checks. Those boundaries live in the workflow itself, not in a prompt the agent may or may not follow.
+**Proposal Skill V2 governs the whole chain**: understanding source material, forming a point of view, writing the manuscript, locking a visual language, producing pages, absorbing review comments, verifying delivery, and—when presenting live—compiling the finished deck into an **offline HTML presenter stage**. The agent drives execution, the Owner makes the calls, and scripts enforce every boundary.
 
-> **Strategy sets the ceiling. Quality gates protect the floor.**
+> **Strategy sets the ceiling. Quality gates protect the floor. The presenter stage carries the final 10% in the room.**
 
-### The whole flow in 80 seconds
+### How it differs
 
-https://github.com/user-attachments/assets/967b7514-1410-44d5-ad18-003d6258f496
+| Dimension | Typical slide skill | Proposal Skill V2 |
+|---|---|---|
+| **Starting point** | Formats as soon as text arrives | Settles audience, decision goal, stance and core tension first |
+| **Structure** | Generates slides in isolation | Compiles a strategy spine, chapter interfaces and page-level argument chains |
+| **Visuals** | Relies on a rigid template | Renders real Image2 directions first, locks `DESIGN.md`, selects best carrier per page |
+| **Sign-off** | Agent decides it "looks fine" | Ties every approval to an object, version and screenshot hash—Owner only |
+| **Revisions** | Feedback scattered across chat | Comments anchor directly to manuscript text and 1920×1080 page boxes |
+| **Continuity** | Starts every deck from scratch | Distils Owner judgement into a 3-layer memory box loaded automatically next time |
+| **Live delivery** | Stops at a static PPTX | Optional single-file offline HTML presenter: tiered motion, ZH/EN toggle, dual-screen console |
 
-80 seconds · 1080p · [Download the original MP4](docs/readme-assets/intro-github.mp4)
+### Recent work &amp; direction calibration
 
-### Recent work
-
-Anonymised page thumbnails from recent proposals across nutrition and wellness, dermocosmetics, market strategy and brand visual systems. They are visual references only, not client material or a fact base.
+Anonymised page thumbnails from recent decks across nutrition, dermocosmetics, market strategy and brand visual systems (visual references only):
 
 <table>
   <tr>
@@ -75,13 +127,13 @@ Anonymised page thumbnails from recent proposals across nutrition and wellness, 
   </tr>
 </table>
 
-The same content is never forced into a template. The system first renders two or three visual directions from real Image2 samples. The Owner picks one, it is fixed as `DESIGN.md`, and every page is produced against it.
+The same content is never forced into a single template. Real Image2 samples establish 2–3 distinct visual directions; once the Owner chooses one, it is locked as `DESIGN.md` before page production begins:
 
 <table>
   <tr>
-    <td width="33%"><img src="docs/readme-assets/direction-editorial.webp" alt="Editorial Intelligence direction"></td>
-    <td width="33%"><img src="docs/readme-assets/direction-precision.webp" alt="Precision Control direction"></td>
-    <td width="33%"><img src="docs/readme-assets/direction-balanced.webp" alt="Strategy Engine direction"></td>
+    <td width="33.3%"><img src="docs/readme-assets/direction-editorial.webp" alt="Editorial Intelligence direction"></td>
+    <td width="33.3%"><img src="docs/readme-assets/direction-precision.webp" alt="Precision Control direction"></td>
+    <td width="33.3%"><img src="docs/readme-assets/direction-balanced.webp" alt="Strategy Engine direction"></td>
   </tr>
   <tr>
     <td align="center"><sub>Editorial Intelligence</sub></td>
@@ -90,142 +142,146 @@ The same content is never forced into a template. The system first renders two o
   </tr>
 </table>
 
-### How it differs
+---
 
-| Typical slide skill | Proposal Skill V2 |
-|---|---|
-| Starts formatting as soon as text arrives | Settles audience, decision goal, stance and core tension first |
-| Generates pages one by one | Builds a strategy spine, chapter interfaces and a page-level argument chain |
-| Relies on a template for consistency | Relies on `DESIGN.md`, master pages and a carrier decision for every page |
-| Lets the agent decide a page "looks fine" | Ties every approval to an object, a version and evidence, from the Owner only |
-| Leaves feedback scattered in chat | Anchors comments to exact places in the manuscript and on the page; the agent replies, the Owner decides |
-| Starts every project from scratch | Turns the Owner's judgement into memory that the next project loads |
-| Calls it done once a PPTX exists | Exports only after page order, on-screen text, layout and speaker notes are checked |
+<a id="presenter"></a>
+
+## Offline HTML Presenter &amp; Tiered Motion (Optional Delivery)
+
+Once every page is approved, speaker notes are aligned and final checks pass, Owners who choose **HTML as their live presentation deliverable** activate [`references/presenter-html-and-motion.md`](skills/qifei-proposal-v2/references/presenter-html-and-motion.md) and compile a **100% offline single-file presenter stage** via [`scripts/build_presenter_html.py`](skills/qifei-proposal-v2/scripts/build_presenter_html.py). Motion is strictly an enhancement layer—it never alters frozen copy, numbers or product packaging.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/readme-assets/v033/dual-screen-stage.webp" alt="Dual-screen presenter mode: clean borderless projector output plus synced laptop console"></td>
+    <td width="50%"><img src="docs/readme-assets/v033/living-mosaic.webp" alt="25 of 73 living motion slides overview in one offline HTML file"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><strong>Dual-Screen Presenter Mode (native file://)</strong><br>Borderless slides on the projector; next-slide preview, timer &amp; editable bilingual notes on your laptop</sub></td>
+    <td align="center"><sub><strong>Emotion-Matched Motion Choreography</strong><br>Cinema video, interactive portals, 3D spaces &amp; data focus—all inside one local HTML file</sub></td>
+  </tr>
+</table>
+
+### Motion Tiers &amp; Anti-Slop Guardrails
+
+| Tier | Target slides | Role &amp; standard execution | Hard boundaries |
+|---|---|---|---|
+| **Base** | Hero / Ending / Chapter dividers / Page transitions | 6–8s locked-camera cinema video + crisp vector title overlay; subtle chapter sheen; 200–340ms transitions | Text is never burned into video; no bouncing, spinning or cheap slide wipes |
+| **Tier A** | Restrained multi-column strategy, timeline &amp; framework slides | Subtle brand-motif threads connecting columns to ease reading fatigue | Zero copy overlap; no flashing or heavy contrast blocks |
+| **Tier B** | Market sizing, pricing, channel &amp; financial models | Progressive curve reveals, inflection starbursts &amp; delta highlights to anchor key numbers | **No gimmicky VFX**; zero distortion of data scales or coordinates |
+| **Tier C** | Emotional &amp; marketing peaks flagged in the manuscript | Ambient living video insets, depth-occluded cutouts, interactive live portals, offline 3D pavilions | Must serve a named speaking beat; otherwise demote to Tier A or static |
+
+- **Pacing Guardrail**: `build_presenter_html.py` scans consecutive static runs across the final slide order—warning at `12–19` static slides and flagging `≥ 20` slides for pacing relief so long decks never lose the room.
+- **Six Aesthetic &amp; Engineering Constraints**: palette locked to `design-tokens.json`, restrained cubic-bezier physics, one focal point per slide, no hand-drawn low-taste figurative Canvas art, print-ready resting frames, and zero invisible pointer-blocking layers.
+- **Boardroom Safety Net**: press `V` anytime to drop instantly to 100% static high-res slides; zero external URLs, zero cloud services, double-click ready.
+
+```bash
+# Build a single-file offline bilingual presenter stage (with optional motion bundle)
+python3 skills/qifei-proposal-v2/scripts/build_presenter_html.py \
+  --project <project-dir> --langs zh,en --editable-notes
+```
 
 ---
 
 <a id="whats-new"></a>
 
-## What's new in v0.3
+## Core Studios &amp; Governance System
 
-v0.3 moves collaboration from Feishu to a local studio. It was then tested on a complete mock project, with an agent doing all the work and a person acting as Owner. Every gap the test exposed has been closed.
+> Note: the draft studio, design review and memory box interfaces below were originally authored for Chinese-language workflows, while the HTML presenter stage supports single-language or full bilingual `ZH / EN` switching.
 
-### Proposal draft studio
+### 01 · Proposal draft studio
 
-The single source of truth for the manuscript. Read it in the browser, edit in place, and comment on selected text. When the agent edits the draft file directly, open pages update within about half a second. The Owner confirms chapter by chapter. Each confirmation records a fingerprint of every page, so any later change sends that chapter back for confirmation.
+The single source of truth for the manuscript. Read, edit in place and comment on selected text in the browser; direct agent edits sync within half a second. Chapter confirmations record per-page content fingerprints, so any later edit automatically re-opens that chapter for confirmation.
 
 <p align="center">
   <img src="docs/readme-assets/v03/studio.webp" alt="Draft studio: chapter confirmation, comments on selected text, agent replies" width="100%">
 </p>
 
-- Three views: full, client view, and a read-only title chain.
-- Comment threads: the Owner asks, the agent answers with `draft_studio.py reply`, and the Owner agrees and resolves in one click. Decided comments stay visible as a decision record.
-- `serve --detach` keeps the studio running after the agent's turn ends, so the link always works.
-- No Feishu account needed; Feishu can still be chosen as the source of truth when a project starts.
+- Includes **Full / Client / Title-Chain / Wireframe** views with intact multi-column data tables.
+- Threaded resolution: Owner comments → agent answers via `draft_studio.py reply` → Owner resolves in one click; decided notes stay visible as a decision trail.
+- `serve --detach` keeps the studio alive after the agent's turn; no Feishu account required (Feishu remains optional at project init).
 
-### Design review: box comments on rendered pages
+### 02 · Design review: box comments on rendered pages
 
-During page production, the Owner draws a box on the rendered page and writes the note there. No more screenshots or exported JSON.
+During page production, the Owner draws a box directly on the rendered 16:9 slide and leaves a note—no screenshot annotations or manual JSON exports.
 
 <p align="center">
   <img src="docs/readme-assets/v03/design-review.webp" alt="Design review: box comments on a rendered page" width="100%">
 </p>
 
-- Each comment records the page, the screenshot hash, the box in 1920×1080 coordinates, the text under the box and a crop of the area.
-- The agent reads comments with `design_review.py list`, fixes the page and answers with `reply`. When the page is captured again, older comments are marked as outdated.
-- Only the Owner resolves. A page with open design comments cannot enter the assembly-ready library.
+- Automatically captures page id, screenshot hash, 1920×1080 coordinates, enclosed text and region crop.
+- Only the Owner can resolve comments; slides with open design comments cannot enter the assembly-ready library.
 
-### Proposal memory box
+### 03 · Three-layer proposal memory box
 
-The Owner's judgement carries across projects in three layers: Owner preferences, playbook and project memory. Before each phase is released, the agent drafts candidate memories from comments, edits and confirmations. The Owner accepts, rewrites or discards them in the memory box, and accepted entries load automatically at the start of each later phase.
+Owner judgement carries across projects in three layers: **Owner preferences / Playbook / Project memory**. At each phase transition, the agent proposes candidates grounded in real comment and edit signals; accepted entries auto-load at future phases with read-receipt verification.
 
 <p align="center">
   <img src="docs/readme-assets/v03/memory-box.webp" alt="Memory box: pending candidates and three memory layers" width="100%">
 </p>
 
-- The agent needs two commands: `proposal_memory.py note` captures a correction the Owner gives in conversation, and `proposal_memory.py advance --to <phase>` handles a phase change in one step (distil signals, prompt for candidates, load the next phase's memory).
-- Memory can be switched off globally with `proposal_memory.py off` or the "启用记忆" toggle at the top of the memory box.
-- Loading memory does not depend on the prompt. `doctor.py` and `validate_project.py` deliver the memory and check a read receipt, and leaving a phase without distilling its signals fails validation.
+- Two commands for the agent: `proposal_memory.py note` to record live corrections, and `proposal_memory.py advance --to <phase>` to distil signals and load the next phase's memory. Can be toggled off globally with `proposal_memory.py off`.
 
-### Offline HTML presenter & tiered motion (optional delivery)
+### 04 · Hard quality gates
 
-Once all pages are frozen and speaker notes pass final check, Owners who choose HTML as the presentation deliverable can build a single-file 100% offline presenter stage via [`scripts/build_presenter_html.py`](skills/qifei-proposal-v2/scripts/build_presenter_html.py) and [`references/presenter-html-and-motion.md`](skills/qifei-proposal-v2/references/presenter-html-and-motion.md):
-
-- **Dual-screen presenter mode**: works directly over `file://` with zero cloud dependency—an external projector shows clean borderless slides and motion, while the presenter laptop shows the next-slide preview, timer, and editable single/bilingual speaker notes with live remote control (paging, language switch, replay, interactive portals, blackout).
-- **Emotion-matched motion tiers**: covers basic Hero/Ending/chapter transitions plus three enhancement tiers (subtle flow on restrained strategy slides, precision attention cues on commercial data slides, and video/interactive/3D spaces on marketing peaks), gated by Owner approval of the motion plan before production.
-- **Pacing & aesthetic guardrails**: scans consecutive static runs (warns at 12–19 slides, flags ≥20 slides), enforces six visual/engineering constraints against noisy low-taste effects, and includes a one-click static fallback toggle.
-
-### Stricter gates
-
-| New check | What it stops |
+| Check | What it catches |
 |---|---|
-| Approver check | Gate approvals must come from the Owner; the agent can neither approve its own work nor waive validator errors |
-| `DESIGN.md` content check | A design spec with headings but no values: grid and safe area, type floor and split rule, text-zone share, text-layer components, batch rule, master list, QA checklist |
-| On-screen caution lint | Internal hedging ("does not equal", "does not represent", "not yet") on pages the client will see |
-| Line-by-line text check | On-screen text in the page or the PPTX that differs from the frozen manuscript, missing or extra |
-| Layout measurement | Orphan last lines, overflow, text on busy texture and near-miss left edges, measured on the real render |
-| Independent visual review | A second agent reviews every page adversarially; its report is bound to each page's screenshot hash |
-| Final check | Before export, only low-level slips: page order, on-screen text, layout, a recorded proofread |
+| **Approver check** | Approvals must come from the Owner; agents cannot self-approve or waive errors |
+| **`DESIGN.md` content check** | Specs with headings but missing concrete numbers (grid, type scale, logo slot, safe zones) |
+| **On-screen caution lint** | Internal hedging ("does not represent", "for reference only") leaking onto client slides |
+| **Line-by-line text parity** | Missing, extra or altered copy between frozen manuscript, HTML slides and PPTX |
+| **Measured layout QA** | Orphan last lines, overflow, text over busy texture, drifted logos or overlapping keepouts |
+| **Independent visual review** | A second agent reviews every slide adversarially, bound to screenshot hashes |
+| **Final check &amp; pacing scan** | Page order, typos and speaker notes alignment; static-run scan when HTML motion is enabled |
 
-See [`CHANGELOG.md`](CHANGELOG.md) for the full list.
+Full changelog in [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
 <a id="pipeline"></a>
 
-## From idea to deliverable
+## Governed Production Pipeline
 
 ```text
-Idea / brief / source material
+Idea / brief / scattered source material
    │
-   ├─ Decision interview ········ audience, goal, stance, core tension
-   ├─ Strategy spine ············ thesis, chapter interfaces, argument order
-   ├─ Manuscript ················ whole chapters → studio comments → Owner confirms each chapter
-   ├─ Full-draft review ········· one independent pass: logic, wording, page splits, leaked hedging
-   ├─ Content freeze
-   ├─ Visual direction ·········· real Image2 samples → Owner choice → DESIGN.md
-   ├─ Design calibration ········ master pages, text-layer components, full pages reviewed with text
-   ├─ Page production ··········· best carrier per page → full-page Image2 base + HTML text layer → batches
-   ├─ Design review ············· box comments → agent fixes → Owner resolves → assembly-ready library
-   ├─ Independent visual review · layout measurement + a second agent reviewing every page
-   ├─ Speaker notes ············· written once, against the final page numbers
-   └─ Final check → export ······ PNG / PDF / PPTX / Offline HTML presenter
+   ├─ 01 Decision interview ····· audience, goal, stance, core tension (grill-me-lite)
+   ├─ 02 Strategy spine ········· thesis, chapter interfaces, argument order
+   ├─ 03 Manuscript ············· whole chapters → studio comments → Owner confirms each chapter
+   ├─ 04 Full-draft review ······ one independent pass: logic, page splits, leaked hedging
+   ├─    Content freeze
+   ├─ 05 Visual direction ······· real Image2 samples → Owner picks → DESIGN.md + tokens
+   ├─ 06 Design calibration ····· master pages, shared type scale, reviewed text-on-image samples
+   ├─ 07 Page production ········ best carrier per page → full-page Image2 + HTML text (or image_full)
+   ├─    Design review ·········· box comments → agent fixes → Owner resolves → assembly library
+   ├─    Independent review ····· measured layout QA + second agent slide-by-slide check
+   ├─ 08 Notes & final check ···· speaker notes against final order + low-level proofread
+   └─    Multi-format export ···· PNG / Vector PDF / Semi-editable PPTX / Offline HTML Presenter
 ```
-
-Every phase answers three questions: what checkable object it produces, who may confirm it, and which conditions stop the flow. At the start of each phase the agent loads the memory relevant to it.
-
-<a id="gates"></a>
-
-## Gates
-
-Two kinds of gate: scripts check what a machine can judge, and the Owner confirms what needs judgement. A passing script is not an Owner approval.
 
 | Phase | Script checks | Owner confirms |
 |---|---|---|
-| Manuscript | Single draft format, on-screen caution lint, title chain, revision and registration hashes | Each chapter |
-| Full-draft review | Independent agent report and id | Content freeze |
-| Visual direction and calibration | Real image assets, brand sources, `DESIGN.md` content | Direction choice, calibration |
-| Page production | Page contract, build identity, line-by-line on-screen text, no open design comments | Each page into the assembly-ready library |
-| Visual review | Zero measured layout problems; independent review covers every page with matching hashes | — |
-| Export | Final check passed, speaker notes match the page order, PPTX text checked again | Final delivery |
+| **Manuscript** | `proposal-draft-v2` schema, caution lint, title chain, revision hashes | Each chapter / page |
+| **Full-draft review** | Independent report presence and id | Content freeze |
+| **Visuals &amp; calibration** | Real assets, official product references, `DESIGN.md` &amp; token values | Direction &amp; calibration |
+| **Page production** | Page contract, build id, exact on-screen text match, zero open comments | Each slide into library |
+| **Visual review** | Zero measured layout issues; full-deck independent review with hashes | — |
+| **Export &amp; stage** | Final check, speaker-note order, PPTX parity; motion plan &amp; pacing scan | Motion plan &amp; final delivery |
 
-A memory gate sits between phases: signals must be distilled before leaving a phase, and updated memory must be read before validation passes.
-
-## Task modes
+### Three task modes
 
 | Mode | Use it for | What remains controlled |
 |---|---|---|
-| `full_deck` | A new proposal, report or presentation | Full strategy, full-draft review, freeze, visual direction, notes, export |
-| `inherited_module` | Adding or replacing a module in an existing governed deck | Parent strategy and design, module interfaces, page quality |
-| `standalone_module` | A single page or a 2–8 page module | Lightweight brief, module logic, visual baseline, page loop, export |
+| `full_deck` | 0–1 commercial proposals, brand books or keynotes | Full strategy, review, freeze, visual calibration, notes and export |
+| `inherited_module` | Adding or replacing sections in an existing governed deck | Parent strategy and design tokens, module interfaces and slide QA |
+| `standalone_module` | Single slide or 2–8 slide module | Lightweight brief, core claim, visual baseline, review loop and export |
 
 ---
 
 <a id="quickstart"></a>
 
-## Quick start
+## Quick Start
 
-### 1. Download and check the environment
+### 1. Clone and bootstrap
 
 ```bash
 git clone https://github.com/chenxupeng1990-eng/qifei-proposal-skill.git
@@ -233,7 +289,7 @@ cd qifei-proposal-skill
 python3 scripts/bootstrap.py --suite v2
 ```
 
-On macOS you can double-click [`scripts/install_v2.command`](scripts/install_v2.command); on Windows use [`scripts/install_v2.ps1`](scripts/install_v2.ps1). The installer checks Python, Node.js, npm and a browser.
+On macOS double-click [`scripts/install_v2.command`](scripts/install_v2.command); on Windows run [`scripts/install_v2.ps1`](scripts/install_v2.ps1).
 
 ### 2. Install the skill suite
 
@@ -241,124 +297,114 @@ On macOS you can double-click [`scripts/install_v2.command`](scripts/install_v2.
 python3 scripts/install_skills.py --suite v2
 ```
 
-Skills install to `~/.codex/skills` by default. The installer stops if a skill with the same name exists; add `--force` to replace it. Restart your agent and call:
+Installs to `~/.codex/skills` by default (stops if a folder already exists; pass `--force` to overwrite). Restart your agent and invoke `$qifei-proposal-v2` (or `/qifei-proposal-v2`).
 
-```text
-$qifei-proposal-v2
-```
-
-### 3. Create a project
+### 3. Doctor, initialise and open studios
 
 ```bash
-# See how far the current agent and machine can go
+# Detect real local & agent capabilities
 python3 skills/qifei-proposal-v2/scripts/doctor.py --task-mode full_deck --json
 
-# Start a full proposal
+# Create a full proposal project
 python3 skills/qifei-proposal-v2/scripts/init_project.py \
   --project <project-dir> --name <project-name> --owner <owner> --task-mode full_deck
-```
 
-### 4. Open the studio and the memory box
-
-```bash
-# Draft studio (with the /design review page); keeps running after the agent's turn
+# Launch draft studio (including /design box review) and memory box
 python3 skills/qifei-proposal-v2/scripts/draft_studio.py serve <project-dir> --detach
-
-# Proposal memory box
 python3 skills/qifei-proposal-v2/scripts/memory_box.py
 ```
 
-On Windows replace `python3` with `py -3` or `python`, and quote paths that contain spaces or non-ASCII characters.
+On Windows replace `python3` with `py -3` or `python`, and quote paths containing spaces or non-ASCII characters.
 
-### 5. Updating
+### 4. Updates
 
-No commands to remember. When a newer release is out, the agent mentions it at the start of a task (at most once a day); say "update the proposal skill" and it updates for you. Only the Skill folders are replaced: projects and proposal memory are untouched, and a new copy that fails its self-check is rolled back. To run it yourself:
+When a new release lands, the agent alerts you at task start (at most once a day). Say "update the proposal skill" to upgrade safely (projects and memory are untouched; failed self-checks roll back automatically), or run directly:
 
 ```bash
-python3 ~/.codex/skills/qifei-proposal-v2/scripts/update_skill.py run   # update
-python3 ~/.codex/skills/qifei-proposal-v2/scripts/update_skill.py off   # stop checking
+python3 ~/.codex/skills/qifei-proposal-v2/scripts/update_skill.py run
+python3 ~/.codex/skills/qifei-proposal-v2/scripts/update_skill.py off
 ```
+
+---
 
 <a id="runtime"></a>
 
-## Runtime tiers: not tied to a Codex subscription
+## Runtime Tiers &amp; Suite
 
-Doctor detects what the agent and the machine can actually do and picks the highest tier available, regardless of the agent's brand. A script cannot see the agent's own tools, so the agent declares image generation, image reading and native comments: `doctor.py --image-provider <name> --visual-understanding [--native-comments]`, with `--remember` to keep it for the machine. Missing abilities never trigger a silent downgrade: doctor lists how to fill each one, the agent asks the user first, and a downgrade is recorded only when the user chooses it.
+Not locked to any single model or subscription. `doctor.py` probes real local and declared agent capabilities and never downgrades silently:
 
-| Tier | What it can do |
+| Tier | What it supports |
 |---|---|
-| `codex_full` | Native image generation, visual understanding, local rendering and comments: full production |
-| `api_full` | Another agent with files, commands, an image API, visual understanding and a local runtime: full production |
-| `local_production` | Rendering, review and export; without formal image capability the visual-direction gate cannot pass |
-| `content_only` | Strategy, manuscript, page routes and prompt packages, without pretending to deliver visuals or a PPTX |
-
-Swappable adapters: image generation (Codex native images, an OpenAI-compatible API, a custom command), source of truth (studio, Feishu, parent project, local Markdown) and independent review (another agent, a separate API call, a named human reviewer). API keys and tokens are never written into project state, prompt logs or logs. See [`task-modes-and-runtime.md`](skills/qifei-proposal-v2/references/task-modes-and-runtime.md).
-
-## Suite
+| `codex_full` | Built-in image gen, vision, local rendering &amp; comments: end-to-end production |
+| `api_full` | Any agent with files, shell, image API, vision &amp; local runtime: full production |
+| `local_production` | Rendering, review &amp; export; cannot pass visual direction gate without formal image gen |
+| `content_only` | Strategy, manuscript, page routes &amp; prompt packages without faking visual delivery |
 
 | Skill | Role | Install |
 |---|---|---|
-| `qifei-proposal-v2` | Entry point: phases, state, gates, draft studio, memory box | Required |
+| `qifei-proposal-v2` | Main orchestrator: phases, gates, draft studio, memory box, offline HTML presenter | Required |
 | `grill-me-lite` | One-question-at-a-time decision interview | Required |
-| `proposal-ppt-production` | Page carriers, visual production and assembly | Recommended |
-| `ppt-html-calibration-editor` | Fine calibration of 16:9 HTML pages | Optional |
+| `proposal-ppt-production` | Carrier selection, visual production &amp; assembly | Recommended |
+| `ppt-html-calibration-editor` | Pixel-level calibration editor for 16:9 HTML slides | Optional |
 
-## Delivery and editability
+### Delivery formats
 
-- **Base delivery**: PNG, PDF and image-based PPTX that keep the approved visuals intact.
-- **Enhanced delivery**: on request, a semi-editable PPTX with native PowerPoint text, checked line by line against the manuscript.
-- **Traceability**: HTML, approved PNGs, content hashes and project state support review and re-export.
-
-Charts, complex SVG and generated images are not promised to be fully native-editable, and rendering in different office suites still needs a human look. Passing scripts is not visual sign-off.
+- **Base delivery**: approved PNGs, selectable vector PDF (`exports/proposal-vector.pdf`), and image-based PPTX.
+- **Enhanced delivery**: semi-editable PPTX with native PowerPoint text layers checked line by line against the manuscript.
+- **Visual-showcase route**: whole-page image generation (`render_route: image_full`) with text verification for brand books and monographs.
+- **Offline HTML presenter (optional)**: single-file offline presentation, bilingual switching, live-editable speaker notes, dual-screen console and tiered motion.
 
 <details>
 <summary><strong>Governance rules</strong></summary>
 
-- Accuracy is the boundary; a point of view that moves the decision is the goal. A page that is correct but says nothing goes back.
-- On screen: claims, evidence and sources only. Boundaries live in the wording; internal caveats go to speaker notes or the evidence ledger.
-- The strategy compiles into chapter interfaces, then into page argument chains; each chapter's output is the next chapter's input.
-- Once the page chain is confirmed, a whole chapter is written at once, then reviewed page by page.
-- After all content is confirmed there is exactly one full-draft review, which does not re-litigate decisions the Owner has made.
-- Formal visuals require real image assets in direction calibration. The default route is a full-page Image2 base with an HTML text layer; every page picks its best carrier and is generated from its master.
-- Parallel work happens only in page production; the main agent owns shared files and re-verifies every wave.
-- Speaker notes are written once, after all pages and the final order are confirmed.
+- Accuracy is the boundary; a point of view that moves a decision is the goal.
+- On screen: claims, evidence and sources only. Internal caveats belong in speaker notes or the evidence ledger.
+- Strategy compiles into chapter interfaces, then page argument chains; each chapter's output feeds the next.
+- Whole chapters are generated at once after page chains are confirmed, then reviewed page by page.
+- One independent full-draft review runs after content confirmation and never re-litigates settled Owner calls.
+- Real image assets are required in direction calibration; default route is full-page Image2 base + HTML text layer.
+- Speaker notes are written once against final slide numbers; HTML motion layers only after final check passes.
 
 </details>
 
 <details>
-<summary><strong>Company facts and project isolation</strong></summary>
+<summary><strong>Company facts &amp; project isolation</strong></summary>
 
-The default `company-facts.json` is an empty template. Before real use, register approved company facts in a private project, each with its source and external-use status.
-
-Client material, brand assets, project `AGENTS.md`, review pages and final deliverables stay in their own project folders; memory lives in `~/.qifei-proposal/memory/`. This repository holds only reusable rules, templates, scripts, tests and an anonymised demo.
+`company-facts.json` ships as an empty template. Client briefs, brand assets, review boards and final exports stay inside each private project directory; memories live in `~/.qifei-proposal/memory/`. This repository contains only reusable rules, templates, scripts, tests and anonymised demos.
 
 </details>
 
-## Repository layout
+<details>
+<summary><strong>Repository layout</strong></summary>
 
 ```text
-skills/qifei-proposal-v2/            Main skill: phase packs, references, templates, scripts, tests
-  ├─ scripts/draft_studio.py         Draft studio and design review page
-  ├─ scripts/memory_box.py           Proposal memory box
-  └─ scripts/validate_project.py     Phase gates
-skills/grill-me-lite/                Decision interview
-skills/proposal-ppt-production/      Page production and assembly
-skills/ppt-html-calibration-editor/  HTML calibration editor
-demo/visual-sample/                  Anonymised visual demo
-scripts/                             Install, bootstrap and release self-test
-docs/readme-assets/                  Images for this page
+skills/qifei-proposal-v2/               Main skill: phase packs, references, templates, scripts, tests
+  ├─ references/presenter-html-and-motion.md  Offline HTML presenter, dual-screen & motion spec
+  ├─ scripts/draft_studio.py            Draft studio & /design box-comment review
+  ├─ scripts/memory_box.py              Three-layer proposal memory box
+  ├─ scripts/build_presenter_html.py    Single-file offline HTML presenter builder & pacing scan
+  └─ scripts/validate_project.py        Phase & delivery gates
+skills/grill-me-lite/                   Decision interview
+skills/proposal-ppt-production/         Page production & assembly
+skills/ppt-html-calibration-editor/     HTML calibration editor
+demo/visual-sample/                     Anonymised visual demo
+scripts/                                Install, bootstrap & release self-test
+docs/readme-assets/                     Videos, animated reel & studio screenshots
 ```
 
-Phase details are in [`SKILL.md`](skills/qifei-proposal-v2/SKILL.md); release notes in [`CHANGELOG.md`](CHANGELOG.md).
+</details>
+
+---
 
 ## Status
 
-v0.3.2 is released on [`codex/qifei-proposal-base`](https://github.com/chenxupeng1990-eng/qifei-proposal-skill/tree/codex/qifei-proposal-base), adding a whole-page image route for visual decks such as brand books and an update notice at startup. All 211 Python tests and the release self-test (`python3 scripts/self_test.py`) pass, and the draft studio, design review and memory box have been walked through end to end in a browser on a mock project. Feedback from real projects is welcome.
+Active development lives on [`codex/qifei-proposal-base`](https://github.com/chenxupeng1990-eng/qifei-proposal-skill/tree/codex/qifei-proposal-base) (baseline `v0.3.2`, now including the upcoming `v0.3.3` offline HTML presenter, native dual-screen stage, tiered motion spec and pacing guardrail). All **244 Python tests (239 core + 5 installer)** pass. Real-world feedback and issues are welcome.
 
 <a id="license"></a>
 
 ## License
 
-This repository is **not unrestricted open source and grants no commercial-use rights**. By default it may be used only for personal learning, research, testing and non-commercial internal evaluation.
+This repository is **not unrestricted open source and does not grant commercial usage rights**. By default it is licensed only for personal learning, research, testing and non-commercial internal evaluation.
 
-It is licensed under [PolyForm Noncommercial 1.0.0](LICENSE); see [`LICENSE`](LICENSE) for the full terms. Commercial projects, paid delivery, commercial services, resale, commercial training, enterprise deployment, redistribution or product integration require prior written permission from the repository Owner. No commercial licence is granted without that written permission.
+- Full terms in [`LICENSE`](LICENSE) (PolyForm Noncommercial License 1.0.0).
+- Commercial use, team deployment, paid client delivery, redistribution or closed-source integration require prior written commercial authorisation from the author.
