@@ -787,6 +787,24 @@ body.is-presenter .next-preview-box {{ display: flex; }}
     else if ((e.key === "r" || e.key === "R") && !isAudience && audWin && !audWin.closed) postToAudience({{ type: "replay" }});
   }});
 
+  // Keep speaker notes scrollable via trackpad/mouse wheel even when pointer sits on stage/buttons
+  if (!isAudience) {{
+    window.addEventListener("wheel", e => {{
+      if (e.ctrlKey || Math.abs(e.deltaY) < 0.01) return;
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.8) return;
+      if (document.body.classList.contains("is-fs")) return;
+      const np = $("notes-pane"), nb = $("notes-body");
+      if (!nb) return;
+      if (np && np.classList.contains("collapsed") && !document.body.classList.contains("is-presenter")) return;
+      if (nb.clientHeight <= 0 || nb.scrollHeight <= nb.clientHeight + 1) return;
+      const t = e.target;
+      if (t && typeof t.closest === "function" && t.closest("#notes-body, .sidebar-list, textarea")) return;
+      const mult = e.deltaMode === 1 ? 28 : (e.deltaMode === 2 ? nb.clientHeight * 0.85 : 1);
+      nb.scrollTop += e.deltaY * mult;
+      e.preventDefault();
+    }}, {{ passive: false }});
+  }}
+
   loadEdits();
   readHash();
   buildNav();
