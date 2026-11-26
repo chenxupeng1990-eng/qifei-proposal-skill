@@ -190,7 +190,7 @@ class DraftStudioExportTests(unittest.TestCase):
         out = self.project / "deck" / "review" / "draft-studio.html"
         result = subprocess.run(
             [sys.executable, str(SCRIPTS / "draft_studio.py"), "render", str(self.project)],
-            capture_output=True, text=True, check=False,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", check=False,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         html = out.read_text(encoding="utf-8")
@@ -211,7 +211,7 @@ class DraftStudioExportTests(unittest.TestCase):
         result = subprocess.run(
             [sys.executable, str(SCRIPTS / "draft_studio.py"), "export-md", str(self.project),
              "--profile", "brief", "--out", "exports/draft-brief.md"],
-            capture_output=True, text=True, check=False,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", check=False,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue((self.project / "exports" / "draft-brief.md").read_text(encoding="utf-8").startswith("# "))
@@ -229,7 +229,7 @@ class DraftStudioBrowserTests(unittest.TestCase):
             html.write_text(draft_studio.render_html(draft_studio.build_model(project, None)), encoding="utf-8")
             result = subprocess.run(
                 ["node", str(SCRIPTS / "check_draft_studio.mjs"), str(html)],
-                cwd=SKILL_ROOT, capture_output=True, text=True, check=False,
+                cwd=SKILL_ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace", check=False,
             )
             if "not found" in result.stderr and "Chrome" in result.stderr:
                 self.skipTest("no Chromium-based browser available")

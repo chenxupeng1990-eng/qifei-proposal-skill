@@ -91,9 +91,9 @@ class ScreenFieldPreviewTests(unittest.TestCase):
         (project / "content" / "draft" / "proposal-draft.md").write_text(DRAFT, encoding="utf-8")
         out = project / "studio.html"
         subprocess.run([sys.executable, str(SCRIPTS / "draft_studio.py"), "render", str(project), "--out", str(out)],
-                       check=True, capture_output=True, text=True)
+                       check=True, capture_output=True, text=True, encoding="utf-8", errors="replace")
         result = subprocess.run(["node", str(Path(__file__).with_name("draft-studio-screen.e2e.mjs")), str(out)],
-                                cwd=SKILL_ROOT, capture_output=True, text=True, check=False, timeout=60)
+                                cwd=SKILL_ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace", check=False, timeout=60)
         if result.returncode == 3:
             raise unittest.SkipTest("no Chromium-based browser available")
         assert result.returncode == 0, result.stdout + result.stderr
